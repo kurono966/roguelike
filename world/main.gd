@@ -10,56 +10,74 @@ var _current_game_state = GameState.PLAYER_TURN
 @onready var player_ui = $PlayerUI
 
 const EnemyScene = preload("res://actors/enemy/enemy.tscn")
+const StairsScene = preload("res://world/stairs.tscn")
 
-const TILE_SIZE = 32  # 1タイルのサイズ（ピクセル）
-const MAP_WIDTH = 50   # マップの幅（タイル数）
-const MAP_HEIGHT = 30  # マップの高さ（タイル数）
+const TILE_SIZE = 32
+const MAP_WIDTH = 50
+const MAP_HEIGHT = 30
 
-const FOV_RADIUS = 8 # Field of View radius
+const FOV_RADIUS = 8
 
-# ダンジョン生成の設定
-const ROOM_MAX_COUNT = 20      # 部屋の最大数
-const ROOM_MIN_SIZE = 3        # 部屋の最小サイズ（タイル数）
-const ROOM_MAX_SIZE = 8        # 部屋の最大サイズ（タイル数）
+const ROOM_MAX_COUNT = 20
+const ROOM_MIN_SIZE = 3
+const ROOM_MAX_SIZE = 8
 const MAX_ENEMIES_PER_ROOM = 2
 
 enum CellType { WALL, FLOOR }
 var _map_data = []
-var _visible_tiles = [] # Stores current visibility state
-var _explored_tiles = [] # Stores tiles the player has seen
+var _visible_tiles = []
+var _explored_tiles = []
 var _rooms = []
 var _astar_grid = AStarGrid2D.new()
+
+var current_floor = 0
 
 func _ready():
 	randomize()
 	_create_tileset()
+	_generate_new_level()
+
+func _generate_new_level():
+	current_floor += 1
+	print("Welcome to floor ", current_floor)
+
+	_clear_level()
+
 	_generate_map()
-	_setup_pathfinding() # Setup A* grid
-	_draw_map()
+	_setup_pathfinding()
 	
 	# Add a layer for debug drawing
 	tile_map.add_layer(-1)
 	
-	# プレイヤーを最初の部屋の中心に配置
 	if not _rooms.is_empty():
+		# Place player in the first room
 		var first_room_center = _rooms[0].get_center()
 		player.position = first_room_center * TILE_SIZE
 		
-		# カメラを設定
 		camera.position = player.position
 		camera.make_current()
-		camera.zoom = Vector2(1.0, 1.0)  # ズームアップ
-		camera.position_smoothing_speed = 5.0  # スムーズな追従
+		camera.zoom = Vector2(1.0, 1.0)
+		camera.position_smoothing_speed = 5.0
+		
+		_spawn_stairs()
 	
 	_spawn_enemies()
-	_current_game_state = GameState.PLAYER_TURN # Set initial state
-	_calculate_fov() # Calculate initial FOV
+	_current_game_state = GameState.PLAYER_TURN
+	_calculate_fov()
+	_draw_map()
 	
-	# プレイヤーのHPをUIに反映
 	if player_ui and player:
 		player_ui.update_hp(player.hp, player.MAX_HP)
 
-# Reference to InputManager's action names
+func _clear_level():
+	# Remove all enemies and stairs from the previous level
+	for child in get_children():
+		if child.is_in_group("enemies") or child.is_in_group("stairs"):
+			child.queue_free()
+	
+	tile_map.clear_layer(1) # Clear debug path layer
+	tile_map.clear_layer(-1) # Clear debug drawing layer
+
 const ACTION_UP_LEFT = "ui_up_left"
 const ACTION_UP_RIGHT = "ui_up_right"
 const ACTION_DOWN_LEFT = "ui_down_left"
@@ -67,16 +85,14 @@ const ACTION_DOWN_RIGHT = "ui_down_right"
 
 func _unhandled_input(event):
 	if _current_game_state != GameState.PLAYER_TURN:
-		return # Only process input during player's turn
+		return
 
 	if event is InputEventKey and event.pressed and not event.is_echo():
 		var action_taken = false
-		# Check for wait action (Space or Numpad 5 / Clear key)
 		if event.keycode == KEY_SPACE or event.keycode == KEY_KP_5 or event.keycode == KEY_CLEAR:
 			action_taken = true
 
 		var direction = Vector2.ZERO
-		# First check for diagonal movement
 		if Input.is_action_pressed(ACTION_UP_LEFT):
 			direction = Vector2(-1, -1)
 		elif Input.is_action_pressed(ACTION_UP_RIGHT):
@@ -86,7 +102,6 @@ func _unhandled_input(event):
 		elif Input.is_action_pressed(ACTION_DOWN_RIGHT):
 			direction = Vector2(1, 1)
 		else:
-			# If no diagonal movement, check for cardinal directions
 			if Input.is_action_pressed("ui_up"):
 				direction.y = -1
 			if Input.is_action_pressed("ui_down"):
@@ -112,54 +127,44 @@ func _try_move_character(character, direction: Vector2):
 	   target_grid_pos.y < 0 or target_grid_pos.y >= MAP_HEIGHT:
 		return false
 
-	# Check for walls
 	if _map_data[target_grid_pos.x][target_grid_pos.y] == CellType.WALL:
 		return false
 
-	# Check for other characters
 	for child in get_children():
 		if child.has_method("move") and child != character:
 			var other_character_grid_pos = Vector2i(child.position / TILE_SIZE)
 			if other_character_grid_pos == target_grid_pos:
-				# If the target is the player, or the attacker is the player, handle attack
 				if child == player or character == player:
 					_handle_attack(character, child)
-					return true # Action taken (attack), so turn is over
+					return true
 				else:
-					# It's an enemy-enemy collision, so block the move
 					return false
 
-	# No collisions, so move
 	character.move(direction)
-	# If player moved, recalculate FOV
 	if character == player:
 		_calculate_fov()
-		_draw_map() # Redraw map after FOV change
+		_draw_map()
 	return true
 
 func _process(delta):
-	# プレイヤーのHPを常にUIに反映
 	if player_ui and player:
 		player_ui.update_hp(player.hp, player.MAX_HP)
 
 func _process_enemy_turns():
-	tile_map.clear_layer(1) # Clear previous debug path
+	tile_map.clear_layer(1)
 	var player_grid_pos = Vector2i(player.position / TILE_SIZE)
 	for child in get_children():
-		if child.has_method("move") and child != player:
+		if child.is_in_group("enemies"):
 			var enemy = child
 			var enemy_grid_pos = Vector2i(enemy.position / TILE_SIZE)
 			
-			# Update enemy visibility based on FOV
 			if enemy_grid_pos.x >= 0 and enemy_grid_pos.x < MAP_WIDTH and \
 			   enemy_grid_pos.y >= 0 and enemy_grid_pos.y < MAP_HEIGHT:
 				enemy.visible = _visible_tiles[enemy_grid_pos.x][enemy_grid_pos.y]
 			
-			# Only move visible enemies
 			if enemy.visible:
 				var path = _astar_grid.get_point_path(enemy_grid_pos, player_grid_pos)
 				
-				# Draw the path for debugging
 				for point in path:
 					tile_map.set_cell(1, Vector2i(point), 1, Vector2i(0,0))
 				
@@ -172,10 +177,10 @@ func _process_enemy_turns():
 func _handle_attack(attacker, defender):
 	print("Attempting to play hit sound.")
 	hit_sound_player.play()
-	defender.take_damage(1) # Apply 1 damage
+	defender.take_damage(1)
 
 func _spawn_enemies():
-	for i in range(1, _rooms.size()): # Skip the first room (player's room)
+	for i in range(1, _rooms.size()):
 		var room = _rooms[i]
 		var enemy_count = randi_range(1, MAX_ENEMIES_PER_ROOM)
 		
@@ -186,8 +191,27 @@ func _spawn_enemies():
 			
 			var enemy = EnemyScene.instantiate()
 			enemy.position = enemy_pos
+			enemy.add_to_group("enemies")
 			add_child(enemy)
-			enemy.visible = false # Enemies start hidden
+			enemy.visible = false
+
+func _spawn_stairs():
+	if _rooms.size() < 2:
+		return
+
+	var last_room = _rooms.back()
+	var stairs_pos = last_room.get_center() * TILE_SIZE
+	
+	var stairs = StairsScene.instantiate()
+	stairs.position = stairs_pos
+	stairs.add_to_group("stairs")
+	stairs.player_entered_stairs.connect(_on_player_entered_stairs)
+	add_child(stairs)
+	print("Stairs spawned at ", stairs_pos / TILE_SIZE)
+
+func _on_player_entered_stairs():
+	print("Player entered stairs! Generating new level.")
+	_generate_new_level()
 
 func _create_tileset():
 	var tileset = TileSet.new()
@@ -212,11 +236,10 @@ func _create_tileset():
 	source.create_tile(Vector2i(0, 0))
 	source.create_tile(Vector2i(1, 0))
 	
-	tileset.add_source(source, 0)
+tileset.add_source(source, 0)
 	
-	# Add a debug tile
 	var debug_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
-	debug_image.fill(Color(1, 0, 0, 0.5)) # Semi-transparent red
+	debug_image.fill(Color(1, 0, 0, 0.5))
 	var debug_texture = ImageTexture.create_from_image(debug_image)
 	var debug_source = TileSetAtlasSource.new()
 	debug_source.texture = debug_texture
@@ -224,7 +247,7 @@ func _create_tileset():
 	debug_source.create_tile(Vector2i(0,0))
 	tileset.add_source(debug_source, 1)
 	
-	tile_map.tile_set = tileset
+tile_map.tile_set = tileset
 
 func _generate_map():
 	_map_data.resize(MAP_WIDTH)
@@ -323,6 +346,11 @@ func _calculate_fov():
 			_visible_tiles[x][y] = false
 	
 	var player_grid_pos = Vector2i(player.position / TILE_SIZE)
+	
+	if player_grid_pos.x >= 0 and player_grid_pos.x < MAP_WIDTH and \
+	   player_grid_pos.y >= 0 and player_grid_pos.y < MAP_HEIGHT:
+		_visible_tiles[player_grid_pos.x][player_grid_pos.y] = true
+		_explored_tiles[player_grid_pos.x][player_grid_pos.y] = true
 	
 	for angle in range(0, 360, 5):
 		var rad = deg_to_rad(angle)
