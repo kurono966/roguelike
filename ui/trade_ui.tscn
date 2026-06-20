@@ -1,0 +1,88 @@
+[gd_scene load_steps=2 format=3 uid="uid://trade_ui_001"]
+
+[ext_resource type="Script" path="res://ui/trade_ui.gd" id="1_script"]
+
+[node name="TradeUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -300.0
+offset_right = 500.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 30
+
+[node name="PlayerPanel" type="PanelContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/PlayerPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/PlayerPanel/VBoxContainer"]
+layout_mode = 2
+text = "Your Inventory (Drag to sell)"
+horizontal_alignment = 1
+
+[node name="GoldLabel" type="Label" parent="HBoxContainer/PlayerPanel/VBoxContainer"]
+layout_mode = 2
+text = "Gold: 0"
+horizontal_alignment = 1
+
+[node name="PlayerInventoryContainer" type="Control" parent="HBoxContainer/PlayerPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="NPCPanel" type="PanelContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/NPCPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/NPCPanel/VBoxContainer"]
+layout_mode = 2
+text = "Merchant's Shop (Drag to buy)"
+horizontal_alignment = 1
+
+[node name="NPCNameLabel" type="Label" parent="HBoxContainer/NPCPanel/VBoxContainer"]
+layout_mode = 2
+text = "Merchant"
+horizontal_alignment = 1
+
+[node name="NPCInventoryContainer" type="Control" parent="HBoxContainer/NPCPanel/VBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="CloseButton" type="Button" parent="."]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -100.0
+offset_bottom = 50.0
+offset_right = -20.0
+text = "Close (ESC)"

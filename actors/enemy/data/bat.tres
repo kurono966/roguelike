@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "bat"
+name = "ワイルド・コウモリ"
+hp = 8
+attack = 2
+defense = 0
+color = Color.PURPLE
+can_swim = true
+sprite = "res://assets/bat.png"
+exp = 2
+penetration = 1
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {"scroll_teleport": 0.05}
+on_hit = {}
+trade_items = []
+weak = ["ice", "electric"]
+resist = []

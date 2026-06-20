@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "flame_scatterer"
+name = "フレイムスキャッター"
+hp = 16
+attack = 3
+defense = 2
+color = Color.ORANGE_RED
+can_swim = false
+sprite = "res://assets/flame_scatterer.png"
+exp = 9
+penetration = 0.0
+intelligence = 0
+skill = "flame_scatter"
+range = 4
+cooldown = 10
+ai = 5
+knockback = false
+fire_immune = true
+grass_ignition_chance = 0.7
+is_npc = false
+loot = {"ether": 0.08}
+on_hit = {}
+trade_items = []
+weak = ["water", "ice"]
+resist = ["fire"]

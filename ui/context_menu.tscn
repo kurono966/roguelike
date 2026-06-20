@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://c8q7j2w5k3x4y"]
+
+[ext_resource type="Script" path="res://ui/context_menu.gd" id="1_context"]
+
+[node name="ContextMenu" type="PopupMenu"]
+size = Vector2i(100, 80)
+visible = true
+script = ExtResource("1_context")

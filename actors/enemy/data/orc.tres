@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "orc"
+name = "オーク"
+hp = 30
+attack = 6
+defense = 4
+color = Color.DARK_GREEN
+can_swim = false
+sprite = "res://assets/orc.png"
+exp = 8
+penetration = 0.3
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {"leather_armor": 0.15, "potion_str": 0.05}
+on_hit = {}
+trade_items = []
+weak = ["fire"]
+resist = []

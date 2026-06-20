@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "squid_deep"
+name = "深海イカ"
+hp = 80
+attack = 15
+defense = 6
+color = Color.NAVY_BLUE
+can_swim = true
+sprite = ""
+exp = 45
+penetration = 0.0
+intelligence = 5
+skill = "lightning"
+range = 4
+cooldown = 6
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {"high_potion": 0.2}
+on_hit = {}
+trade_items = []
+weak = ["electric"]
+resist = ["water"]

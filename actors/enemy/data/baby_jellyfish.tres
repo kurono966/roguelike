@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "baby_jellyfish"
+name = "迷子クラゲ"
+hp = 12
+attack = 3
+defense = 0
+color = Color(0.6, 0.8, 1.0)
+can_swim = true
+sprite = "res://assets/hitodama.png"
+exp = 2
+penetration = 0.0
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {}
+on_hit = {}
+trade_items = []
+weak = ["electric"]
+resist = ["water"]

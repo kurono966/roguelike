@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BaseItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "pistol"
+display_name = "ピストル"
+equipment_type = -1
+attack = 3
+defense = 0
+max_hp = 0
+max_mp = 0
+strength = 0
+dexterity = 0
+intelligence = 0
+value = 0
+description = "[武器] 標準的な自動拳銃。\nリロードで即座に全弾補充できる。\n(Fキーで射撃 / 弾倉10発 / Rキーでリロード)"
+shape = [Vector2i(0, 0)]
+effects = {"range": 6, "is_ranged": true, "magazine_size": 10, "reload_type": "full", "cooldown": 0}
+granted_skills = []
+

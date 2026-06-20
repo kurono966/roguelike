@@ -1,0 +1,198 @@
+[gd_scene load_steps=2 format=3 uid="uid://da0atatatatas"]
+
+[ext_resource type="Script" path="res://ui/character_creation.gd" id="1_script"]
+
+[node name="CharacterCreation" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 13
+anchor_left = 0.5
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -300.0
+offset_right = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Title" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 32
+text = "Character Creation"
+horizontal_alignment = 1
+
+[node name="ClassContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="BtnBalanced" type="Button" parent="Panel/VBoxContainer/ClassContainer"]
+layout_mode = 2
+text = "Balanced"
+
+[node name="BtnWarrior" type="Button" parent="Panel/VBoxContainer/ClassContainer"]
+layout_mode = 2
+text = "Warrior"
+
+[node name="BtnRogue" type="Button" parent="Panel/VBoxContainer/ClassContainer"]
+layout_mode = 2
+text = "Rogue"
+
+[node name="BtnMage" type="Button" parent="Panel/VBoxContainer/ClassContainer"]
+layout_mode = 2
+text = "Mage"
+
+[node name="BtnSwimmer" type="Button" parent="Panel/VBoxContainer/ClassContainer"]
+layout_mode = 2
+text = "Swimmer"
+
+[node name="BtnDebug" type="Button" parent="Panel/VBoxContainer/ClassContainer"]
+layout_mode = 2
+text = "DEBUG"
+
+[node name="DetailedContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="NameEdit" type="LineEdit" parent="Panel/VBoxContainer/DetailedContainer"]
+layout_mode = 2
+placeholder_text = "Name"
+text = "Hero"
+
+[node name="StatGrid" type="GridContainer" parent="Panel/VBoxContainer/DetailedContainer"]
+layout_mode = 2
+columns = 4
+
+[node name="StrLabel" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "Strength"
+
+[node name="StrMinus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "-"
+
+[node name="StrPlus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "+"
+
+[node name="StrValue" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "2"
+horizontal_alignment = 1
+
+[node name="DexLabel" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "Dexterity"
+
+[node name="DexMinus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "-"
+
+[node name="DexPlus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "+"
+
+[node name="DexValue" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "2"
+horizontal_alignment = 1
+
+[node name="IntLabel" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "Intelligence"
+
+[node name="IntMinus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "-"
+
+[node name="IntPlus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "+"
+
+[node name="IntValue" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "2"
+horizontal_alignment = 1
+
+[node name="HpLabel" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "HP Bonus"
+
+[node name="HpMinus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "-"
+
+[node name="HpPlus" type="Button" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "+"
+
+[node name="HpValue" type="Label" parent="Panel/VBoxContainer/DetailedContainer/StatGrid"]
+layout_mode = 2
+text = "1"
+horizontal_alignment = 1
+
+[node name="SwimCheck" type="CheckBox" parent="Panel/VBoxContainer/DetailedContainer"]
+layout_mode = 2
+text = "Swimming ability (cost 1)"
+
+[node name="GrowthLabel" type="Label" parent="Panel/VBoxContainer/DetailedContainer"]
+layout_mode = 2
+text = "Growth Focus"
+
+[node name="GrowthOption" type="OptionButton" parent="Panel/VBoxContainer/DetailedContainer"]
+layout_mode = 2
+
+[node name="SkillLabel" type="Label" parent="Panel/VBoxContainer/DetailedContainer"]
+layout_mode = 2
+text = "Starting Skill"
+
+[node name="SkillOption" type="OptionButton" parent="Panel/VBoxContainer/DetailedContainer"]
+layout_mode = 2
+
+[node name="StatsLabel" type="RichTextLabel" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 190)
+layout_mode = 2
+bbcode_enabled = true
+text = "Stats..."
+
+[node name="StartButton" type="Button" parent="Panel/VBoxContainer"]
+custom_minimum_size = Vector2(0, 70)
+layout_mode = 2
+theme_override_font_sizes/font_size = 30
+text = "Enter Dungeon"
+
+[connection signal="pressed" from="Panel/VBoxContainer/ClassContainer/BtnBalanced" to="." method="_on_class_selected" binds= [0]]
+[connection signal="pressed" from="Panel/VBoxContainer/ClassContainer/BtnWarrior" to="." method="_on_class_selected" binds= [1]]
+[connection signal="pressed" from="Panel/VBoxContainer/ClassContainer/BtnRogue" to="." method="_on_class_selected" binds= [2]]
+[connection signal="pressed" from="Panel/VBoxContainer/ClassContainer/BtnMage" to="." method="_on_class_selected" binds= [3]]
+[connection signal="pressed" from="Panel/VBoxContainer/ClassContainer/BtnSwimmer" to="." method="_on_class_selected" binds= [4]]
+[connection signal="pressed" from="Panel/VBoxContainer/ClassContainer/BtnDebug" to="." method="_on_class_selected" binds= [99]]
+[connection signal="text_changed" from="Panel/VBoxContainer/DetailedContainer/NameEdit" to="." method="_on_name_changed"]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/StrMinus" to="." method="_on_adjust_stat" binds= ["str", -1]]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/StrPlus" to="." method="_on_adjust_stat" binds= ["str", 1]]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/DexMinus" to="." method="_on_adjust_stat" binds= ["dex", -1]]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/DexPlus" to="." method="_on_adjust_stat" binds= ["dex", 1]]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/IntMinus" to="." method="_on_adjust_stat" binds= ["int", -1]]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/IntPlus" to="." method="_on_adjust_stat" binds= ["int", 1]]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/HpMinus" to="." method="_on_adjust_stat" binds= ["hp", -1]]
+[connection signal="pressed" from="Panel/VBoxContainer/DetailedContainer/StatGrid/HpPlus" to="." method="_on_adjust_stat" binds= ["hp", 1]]
+[connection signal="toggled" from="Panel/VBoxContainer/DetailedContainer/SwimCheck" to="." method="_on_swim_toggled"]
+[connection signal="item_selected" from="Panel/VBoxContainer/DetailedContainer/GrowthOption" to="." method="_on_growth_selected"]
+[connection signal="item_selected" from="Panel/VBoxContainer/DetailedContainer/SkillOption" to="." method="_on_skill_selected"]
+[connection signal="pressed" from="Panel/VBoxContainer/StartButton" to="." method="_on_start_button_pressed"]

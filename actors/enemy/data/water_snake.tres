@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "water_snake"
+name = "水蛇"
+hp = 25
+attack = 6
+defense = 2
+color = Color.AQUAMARINE
+can_swim = true
+sprite = "res://assets/water_snake.png"
+exp = 10
+penetration = 0.0
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {}
+on_hit = {"poison": {"chance": 0.5, "duration": 5}}
+trade_items = []
+weak = ["electric"]
+resist = ["water"]

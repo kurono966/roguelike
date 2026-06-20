@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BaseItem" format=3 uid="uid://cn3pm3l3f6u3o"]
+
+[ext_resource type="Script" uid="uid://br0kwnogpbfx4" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "silver_gummy"
+display_name = "銀のグミ"
+description = "上質な素材で作られたグミ。
+空腹を大いに満たす。"
+shape = Array[Vector2i]([Vector2i(0, 0)])
+restore_hunger = 80

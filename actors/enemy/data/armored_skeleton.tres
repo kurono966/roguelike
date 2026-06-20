@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "armored_skeleton"
+name = "重装骸骨"
+hp = 70
+attack = 16
+defense = 10
+color = Color.DIM_GRAY
+can_swim = false
+sprite = "res://assets/armored_skeleton.png"
+exp = 40
+penetration = 0.0
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {"round_shield": 0.2}
+on_hit = {}
+trade_items = []
+weak = ["electric", "blunt"]
+resist = ["pierce", "fire"]

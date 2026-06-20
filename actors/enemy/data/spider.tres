@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "spider"
+name = "土蜘蛛"
+hp = 20
+attack = 3
+defense = 2
+color = Color.BLACK
+can_swim = false
+sprite = "res://assets/spider.png"
+exp = 15
+penetration = 0.1
+intelligence = 0
+skill = "web_shot"
+range = 4
+cooldown = 10
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {"spider_leg": 0.2}
+on_hit = {"paralyze": {"chance": 0.4, "duration": 3}}
+trade_items = []
+weak = ["fire"]
+resist = []

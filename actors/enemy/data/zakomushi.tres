@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "zakomushi"
+name = "雑魚虫"
+hp = 10
+attack = 4
+defense = 1
+color = Color.GREEN
+can_swim = false
+sprite = "res://assets/zakomushi.png"
+exp = 2
+penetration = 0.1
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {"potion": 0.1, "gummy": 0.4, "zakomushi_shell": 0.15}
+on_hit = {}
+trade_items = []
+weak = ["fire"]
+resist = []

@@ -1,0 +1,84 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://ui/skill_menu.gd" id="1_script"]
+
+[node name="SkillMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -375.0
+offset_top = -225.0
+offset_right = 375.0
+offset_bottom = 225.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Label" type="Label" parent="Panel"]
+layout_mode = 1
+anchors_preset = 10
+anchor_right = 1.0
+offset_bottom = 60.0
+grow_horizontal = 2
+text = "Skills"
+horizontal_alignment = 1
+vertical_alignment = 1
+custom_minimum_size = Vector2(0, 60)
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 30.0
+offset_top = 75.0
+offset_right = -30.0
+offset_bottom = -30.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 30
+
+[node name="SkillListContainer" type="VBoxContainer" parent="Panel/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_constants/margin_top = 45
+custom_constants/margin_bottom = 45
+
+[node name="SkillList" type="ItemList" parent="Panel/HBoxContainer/SkillListContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="DescriptionContainer" type="VBoxContainer" parent="Panel/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DescriptionLabel" type="RichTextLabel" parent="Panel/HBoxContainer/DescriptionContainer"]
+layout_mode = 2
+size_flags_vertical = 3
+bbcode_enabled = true
+text = "Select a skill to see details."
+
+[node name="MPLabel" type="Label" parent="Panel/HBoxContainer/DescriptionContainer"]
+layout_mode = 2
+
+[node name="CDLabel" type="RichTextLabel" parent="Panel/HBoxContainer/DescriptionContainer"]
+layout_mode = 2
+fit_content = true
+bbcode_enabled = true
+
+[node name="UseButton" type="Button" parent="Panel/HBoxContainer/DescriptionContainer"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+disabled = true
+text = "Cast Skill"

@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "villager"
+name = "村人"
+hp = 20
+attack = 2
+defense = 1
+color = Color.BEIGE
+can_swim = false
+sprite = "res://assets/villager.png"
+exp = 0
+penetration = 0.0
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = true
+loot = {}
+on_hit = {}
+trade_items = [{"id": "potion", "price": 12}]
+weak = []
+resist = []

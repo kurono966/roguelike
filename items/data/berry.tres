@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="BaseItem" format=3]
+
+[ext_resource type="Script" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "berry"
+display_name = "木の実"
+description = "森の木々から採れた小さな実。
+ほんのり甘く、空腹を満たす。"
+shape = Array[Vector2i]([Vector2i(0, 0)])
+restore_hunger = 20

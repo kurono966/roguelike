@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BaseItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "plate_armor"
+display_name = "プレートアーマー"
+equipment_type = -1
+attack = 0
+defense = 2
+max_hp = 2
+max_mp = 0
+strength = 0
+dexterity = 0
+intelligence = 0
+value = 0
+description = "[防具] 重厚な金属の鎧。\nウォリアーの初期装備。\n最大HPが上昇する。"
+shape = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(0, 2), Vector2i(1, 2)]
+effects = {}
+granted_skills = []
+

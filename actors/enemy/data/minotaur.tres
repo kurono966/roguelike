@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "minotaur"
+name = "牛頭鬼"
+hp = 80
+attack = 16
+defense = 8
+color = Color.BROWN
+can_swim = false
+sprite = "res://assets/minotaur.png"
+exp = 30
+penetration = 0.7
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = true
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {"long_sword": 0.2, "high_potion": 0.1, "minotaur_horn": 0.2}
+on_hit = {}
+trade_items = []
+weak = []
+resist = []

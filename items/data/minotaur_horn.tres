@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BaseItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "minotaur_horn"
+display_name = "牛頭鬼の角"
+equipment_type = -1
+attack = 3
+defense = 0
+max_hp = 0
+max_mp = 0
+strength = 0
+dexterity = 0
+intelligence = 0
+value = 0
+description = "[頭] 荒々しい猛牛の角。\n攻撃に吹き飛ばし効果を追加。\n付与スキル: ブルラッシュ"
+shape = [Vector2i(0, 0), Vector2i(0, 1)]
+effects = {"knockback": true}
+granted_skills = ["charge"]
+

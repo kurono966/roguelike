@@ -1,17 +1,20 @@
-[gd_scene load_steps=2 format=3 uid="uid://dbtm7mqgu3fgq"]
+[gd_scene format=3 uid="uid://dbtm7mqgu3fgq"]
 
 [ext_resource type="Script" uid="uid://cndhkc650kevj" path="res://ui/PlayerUI.gd" id="1_vvwbu"]
+[ext_resource type="Theme" path="res://ui/themes/main_theme.tres" id="2_theme"]
 
-[node name="PlayerUI" type="CanvasLayer"]
+[node name="PlayerUI" type="CanvasLayer" unique_id=286207943]
 script = ExtResource("1_vvwbu")
 
-[node name="HPContainer" type="Panel" parent="."]
+[node name="HPContainer" type="Panel" parent="." unique_id=978400904]
 offset_left = 20.0
 offset_top = 20.0
-offset_right = 220.0
-offset_bottom = 60.0
+offset_right = 330.0
+offset_bottom = 90.0
+theme = ExtResource("2_theme")
 
-[node name="Background" type="Panel" parent="HPContainer"]
+[node name="Background" type="Panel" parent="HPContainer" unique_id=854650423]
+self_modulate = Color(0.3, 0.3, 0.35, 0.9)
 z_index = -2
 z_as_relative = false
 layout_mode = 1
@@ -21,7 +24,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="HPBar" type="Panel" parent="HPContainer"]
+[node name="HPBar" type="Panel" parent="HPContainer" unique_id=1414589582]
 light_mask = 16
 visibility_layer = 16
 z_index = 5
@@ -29,11 +32,11 @@ z_as_relative = false
 layout_mode = 0
 offset_left = 5.0
 offset_top = 5.0
-offset_right = 195.0
-offset_bottom = 35.0
+offset_right = 292.0
+offset_bottom = 52.0
 
-[node name="HPLabel" type="Label" parent="HPContainer"]
-z_index = -1
+[node name="HPLabel" type="Label" parent="HPContainer" unique_id=2108562410]
+z_index = 10
 z_as_relative = false
 layout_mode = 1
 anchors_preset = 15
@@ -41,8 +44,35 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_theme")
 theme_override_colors/font_color = Color(1, 1, 1, 1)
+theme_override_colors/font_outline_color = Color(0, 0, 0, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 27
 horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 2
 max_lines_visible = 1
+
+[node name="FloorContainer" type="Panel" parent="." unique_id=2089099352]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -180.0
+offset_top = 30.0
+offset_right = -30.0
+offset_bottom = 75.0
+grow_horizontal = 0
+theme = ExtResource("2_theme")
+
+[node name="FloorLabel" type="Label" parent="FloorContainer" unique_id=1351563305]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("2_theme")
+text = "B1F"
+horizontal_alignment = 1
+vertical_alignment = 1

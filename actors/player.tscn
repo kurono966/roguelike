@@ -1,7 +1,19 @@
-[gd_scene load_steps=4 format=3 uid="uid://dpgoxl35bsoik"]
+[gd_scene load_steps=8 format=3 uid="uid://dpgoxl35bsoik"]
 
 [ext_resource type="Script" uid="uid://beo3lfuafkvuk" path="res://actors/player.gd" id="1_abcde"]
-[ext_resource type="Texture2D" uid="uid://kpinan8qo8qn" path="res://icon.svg" id="2_fghij"]
+[ext_resource type="Texture2D" uid="uid://dobpg3uh78pgt" path="res://assets/a38b78e9-b824-4db1-aabc-d3f18a0b1007.png" id="2_mvpqy"]
+[ext_resource type="Script" path="res://actors/equipment/equipment_component.gd" id="3_eqcmp"]
+
+[sub_resource type="Gradient" id="Gradient_torch"]
+offsets = PackedFloat32Array(0, 0.18, 0.58, 0.82, 1)
+colors = PackedColorArray(0.72, 0.58, 0.43, 1, 0.68, 0.50, 0.34, 0.96, 0.36, 0.22, 0.12, 0.62, 0.10, 0.05, 0.02, 0.18, 0, 0, 0, 0)
+
+[sub_resource type="GradientTexture2D" id="GradientTexture2D_torch"]
+gradient = SubResource("Gradient_torch")
+width = 128
+height = 128
+fill = 1
+fill_from = Vector2(0.5, 0.5)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_12345"]
 size = Vector2(16, 16)
@@ -11,9 +23,21 @@ script = ExtResource("1_abcde")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(16, 16)
-scale = Vector2(0.25, 0.25)
-texture = ExtResource("2_fghij")
+scale = Vector2(0.03, 0.03)
+texture = ExtResource("2_mvpqy")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 position = Vector2(16, 16)
 shape = SubResource("RectangleShape2D_12345")
+
+[node name="EquipmentComponent" type="Node" parent="."]
+script = ExtResource("3_eqcmp")
+
+[node name="PointLight2D" type="PointLight2D" parent="."]
+position = Vector2(16, 16)
+color = Color(1, 0.8, 0.58, 1)
+energy = 0.72
+texture_scale = 2.0
+shadow_enabled = true
+shadow_filter = 0
+texture = SubResource("GradientTexture2D_torch")

@@ -8,20 +8,36 @@
 
 config_version=5
 
+[animation]
+
+compatibility/default_parent_skeleton_in_mesh_instance_3d=true
+
 [application]
 
 config/name="Roguelike"
-run/main_scene="uid://c6vqb8f26wfgv"
-config/features=PackedStringArray("4.4", "GL Compatibility")
+run/main_scene="res://ui/start_menu.tscn"
+config/features=PackedStringArray("4.6", "GL Compatibility")
 config/icon="res://icon.svg"
-config/run/main_scene="res://world/main.tscn"
+config/run/main_scene="res://ui/start_menu.tscn"
 
 [autoload]
 
+SaveManager="res://save_manager.gd"
+GameState="res://autoloads/game_state.gd"
 InputManager="res://autoloads/input_manager.gd"
-PlayerUi="res://ui/PlayerUI.tscn"
+EquipmentEvents="res://autoloads/equipment_events.gd"
+PlayerUi="*res://ui/PlayerUI.tscn"
+LogUI="*res://ui/log_ui.tscn"
+GameUI="*res://ui/game_ui.tscn"
+
+[gui]
+
+theme/custom_font="uid://rbwgxs50mps7"
+theme/default_font="res://assets/fonts/DotGothic16-Regular.ttf"
+theme/default_font_size=16
 
 [rendering]
 
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+renderer/rendering_method.mobile="forward_plus"
+environment/defaults/default_clear_color=Color(0.02, 0.02, 0.03, 1)
+environment/defaults/default_environment="res://default_environment.tres"

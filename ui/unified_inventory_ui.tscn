@@ -1,0 +1,95 @@
+[gd_scene load_steps=2 format=3 uid="uid://unified_inv_ui_001"]
+
+[ext_resource type="Script" path="res://ui/unified_inventory_ui.gd" id="1_script"]
+
+[node name="UnifiedInventoryUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.7)
+
+[node name="HBoxContainer" type="HBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -450.0
+offset_top = -300.0
+offset_right = 450.0
+offset_bottom = 300.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 30
+
+[node name="EquipmentPanel" type="PanelContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/EquipmentPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/EquipmentPanel/VBoxContainer"]
+layout_mode = 2
+text = "Equipment"
+horizontal_alignment = 1
+
+[node name="StatsContainer" type="HBoxContainer" parent="HBoxContainer/EquipmentPanel/VBoxContainer"]
+layout_mode = 2
+alignment = 1
+
+[node name="AttackLabel" type="Label" parent="HBoxContainer/EquipmentPanel/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "ATK: 0"
+
+[node name="VSeparator" type="VSeparator" parent="HBoxContainer/EquipmentPanel/VBoxContainer/StatsContainer"]
+layout_mode = 2
+
+[node name="DefenseLabel" type="Label" parent="HBoxContainer/EquipmentPanel/VBoxContainer/StatsContainer"]
+layout_mode = 2
+text = "DEF: 0"
+
+[node name="DetailedStatsPanel" type="PanelContainer" parent="HBoxContainer"]
+layout_mode = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/DetailedStatsPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/DetailedStatsPanel/VBoxContainer"]
+layout_mode = 2
+text = "Character Stats"
+horizontal_alignment = 1
+
+[node name="DetailedStatsLabel" type="RichTextLabel" parent="HBoxContainer/DetailedStatsPanel/VBoxContainer"]
+custom_minimum_size = Vector2(225, 0)
+layout_mode = 2
+size_flags_vertical = 3
+text = "STR: 1
+DEX: 1
+INT: 1
+..."
+
+[node name="BagPanel" type="PanelContainer" parent="HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="VBoxContainer" type="VBoxContainer" parent="HBoxContainer/BagPanel"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="HBoxContainer/BagPanel/VBoxContainer"]
+layout_mode = 2
+text = "Inventory"
+horizontal_alignment = 1

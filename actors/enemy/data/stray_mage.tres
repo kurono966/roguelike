@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "stray_mage"
+name = "はぐれ魔道士"
+hp = 40
+attack = 8
+defense = 4
+color = Color.TURQUOISE
+can_swim = true
+sprite = "res://assets/stray_mage.png"
+exp = 0
+penetration = 0.0
+intelligence = 0
+skill = "fireball"
+range = 4
+cooldown = 3
+ai = 0
+knockback = false
+fire_immune = false
+grass_ignition_chance = 0.0
+is_npc = true
+loot = {}
+on_hit = {}
+trade_items = [{"id": "ether", "price": 15}]
+weak = []
+resist = []

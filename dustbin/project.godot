@@ -1,0 +1,38 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Roguelike"
+run/main_scene="res://ui/start_menu.tscn"
+config/features=PackedStringArray("4.4", "GL Compatibility")
+config/icon="res://icon.svg"
+config/run/main_scene="res://ui/start_menu.tscn"
+
+[autoload]
+
+GameState="res://autoloads/game_state.gd"
+InputManager="res://autoloads/input_manager.gd"
+EquipmentEvents="res://autoloads/equipment_events.gd"
+PlayerUi="*res://ui/PlayerUI.tscn"
+LogUI="*res://ui/log_ui.tscn"
+GameUI="*res://ui/game_ui.tscn"
+
+[gui]
+
+theme/custom_font="uid://rbwgxs50mps7"
+theme/default_font="res://assets/fonts/DotGothic16-Regular.ttf"
+theme/default_font_size=16
+
+[rendering]
+
+renderer/rendering_method.mobile="forward_plus"
+environment/defaults/default_clear_color=Color(0.1, 0.1, 0.1, 1)
+environment/defaults/default_environment="res://default_environment.tres"

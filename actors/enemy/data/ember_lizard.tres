@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="EnemyData" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://actors/enemy/enemy_data.gd" id="1_enemy_data"]
+
+[resource]
+script = ExtResource("1_enemy_data")
+id = "ember_lizard"
+name = "火の粉トカゲ"
+hp = 16
+attack = 4
+defense = 1
+color = Color(1.0, 0.5, 0.2)
+can_swim = false
+sprite = "res://assets/water_snake.png"
+exp = 3
+penetration = 0.0
+intelligence = 0
+skill = ""
+range = 0
+cooldown = 0
+ai = 0
+knockback = false
+fire_immune = true
+grass_ignition_chance = 0.0
+is_npc = false
+loot = {}
+on_hit = {}
+trade_items = []
+weak = ["water", "ice"]
+resist = ["fire"]

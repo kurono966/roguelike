@@ -1,0 +1,25 @@
+[gd_resource type="Resource" script_class="BaseItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "ether"
+display_name = "エーテル"
+equipment_type = -1
+attack = 0
+defense = 0
+max_hp = 0
+max_mp = 0
+strength = 0
+dexterity = 0
+intelligence = 0
+value = 0
+description = "魔力を回復する青い霊薬。\nMPを回復する。"
+shape = [Vector2i(0, 0)]
+effects = {}
+granted_skills = []
+heal = 0
+restore_mp = 10
+restore_hunger = 3
+

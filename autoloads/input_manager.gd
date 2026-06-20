@@ -5,6 +5,10 @@ const ACTION_UP_LEFT = "ui_up_left"
 const ACTION_UP_RIGHT = "ui_up_right"
 const ACTION_DOWN_LEFT = "ui_down_left"
 const ACTION_DOWN_RIGHT = "ui_down_right"
+const ACTION_TARGET_ENEMY = "target_enemy"
+const ACTION_TOGGLE_INVENTORY = "toggle_inventory"
+const ACTION_TOGGLE_LOG = "toggle_log"
+const ACTION_TOGGLE_SKILLS = "toggle_skills"
 
 func _ready():
 	print("InputManager: _ready() called")
@@ -19,7 +23,15 @@ func _ready():
 
 func _clear_all_actions():
 	# すべてのアクションを削除して再作成
-	var actions = [ACTION_UP_LEFT, ACTION_UP_RIGHT, ACTION_DOWN_LEFT, ACTION_DOWN_RIGHT]
+	var actions = [
+		ACTION_UP_LEFT, 
+		ACTION_UP_RIGHT, 
+		ACTION_DOWN_LEFT, 
+		ACTION_DOWN_RIGHT, 
+		ACTION_TARGET_ENEMY,
+		ACTION_TOGGLE_INVENTORY,
+		ACTION_TOGGLE_LOG
+	]
 	for action in actions:
 		if InputMap.has_action(action):
 			InputMap.erase_action(action)
@@ -27,10 +39,59 @@ func _clear_all_actions():
 
 func _setup_numpad_inputs():
 	print("Setting up numpad inputs...")
+	
+	# インベントリ切り替えキーの設定
+	if not InputMap.has_action(ACTION_TOGGLE_INVENTORY):
+		InputMap.add_action(ACTION_TOGGLE_INVENTORY)
+	
+	# Iキーをインベントリ切り替えに割り当て
+	var key = InputEventKey.new()
+	key.keycode = KEY_I
+	InputMap.action_add_event(ACTION_TOGGLE_INVENTORY, key)
+	
+	# ESCキーもインベントリを閉じるために使用可能に
+	var esc_key = InputEventKey.new()
+	esc_key.keycode = KEY_ESCAPE
+	InputMap.action_add_event(ACTION_TOGGLE_INVENTORY, esc_key)
+	
+	print("Inventory toggle key (I/ESC) has been set up")
+	
+	# ログ切り替えキーの設定
+	if not InputMap.has_action(ACTION_TOGGLE_LOG):
+		InputMap.add_action(ACTION_TOGGLE_LOG)
+	
+	# Lキーをログ切り替えに割り当て
+	var log_key = InputEventKey.new()
+	log_key.keycode = KEY_L
+	InputMap.action_add_event(ACTION_TOGGLE_LOG, log_key)
+	print("Log toggle key (L) has been set up")
+
+	# スキル切り替えキーの設定
+	if not InputMap.has_action(ACTION_TOGGLE_SKILLS):
+		InputMap.add_action(ACTION_TOGGLE_SKILLS)
+	
+	var skill_key = InputEventKey.new()
+	skill_key.keycode = KEY_K
+	InputMap.action_add_event(ACTION_TOGGLE_SKILLS, skill_key)
+	print("Skill toggle key (K) has been set up")
 	# 既存のイベントをクリア
-	for action in [ACTION_UP_LEFT, ACTION_UP_RIGHT, ACTION_DOWN_LEFT, ACTION_DOWN_RIGHT]:
+	for action in [ACTION_UP_LEFT, ACTION_UP_RIGHT, ACTION_DOWN_LEFT, ACTION_DOWN_RIGHT, ACTION_TARGET_ENEMY]:
 		if InputMap.has_action(action):
 			InputMap.action_erase_events(action)
+	
+	# タブキーで敵をターゲット
+	var target_enemy = InputEventKey.new()
+	target_enemy.keycode = KEY_TAB
+	target_enemy.pressed = true
+	InputMap.action_add_event(ACTION_TARGET_ENEMY, target_enemy)
+	
+	# ブラウザでタブキーが使えないためSキーも追加
+	var target_enemy_s = InputEventKey.new()
+	target_enemy_s.keycode = KEY_S
+	target_enemy_s.pressed = true
+	InputMap.action_add_event(ACTION_TARGET_ENEMY, target_enemy_s)
+	
+	print("  - Mapped TAB and S to ", ACTION_TARGET_ENEMY)
 	
 	# テンキー7/Home: 左上
 	var up_left1 = InputEventKey.new()
@@ -83,3 +144,20 @@ func _setup_numpad_inputs():
 	down_right2.pressed = true
 	InputMap.action_add_event(ACTION_DOWN_RIGHT, down_right2)
 	print("  - Mapped ", OS.get_keycode_string(KEY_PAGEDOWN), " to ", ACTION_DOWN_RIGHT)
+
+	# Fullscreen Toggle (F11)
+	if not InputMap.has_action("toggle_fullscreen"):
+		InputMap.add_action("toggle_fullscreen")
+	
+	var f11_key = InputEventKey.new()
+	f11_key.keycode = KEY_F11
+	InputMap.action_add_event("toggle_fullscreen", f11_key)
+
+func _unhandled_input(event):
+	if event.is_action_pressed("toggle_fullscreen"):
+		var mode = DisplayServer.window_get_mode()
+		if mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
+		else:
+			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
+		get_viewport().set_input_as_handled()

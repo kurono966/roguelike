@@ -1,0 +1,7 @@
+[gd_scene load_steps=2 format=3 uid="uid://dpsk1j1e2xfe1"]
+
+[ext_resource type="Script" uid="uid://du2153wukdf3f" path="res://ui/log_ui.gd" id="1_v8hqa"]
+
+[node name="LogUI" type="CanvasLayer"]
+layer = 5
+script = ExtResource("1_v8hqa")

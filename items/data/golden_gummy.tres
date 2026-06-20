@@ -1,0 +1,13 @@
+[gd_resource type="Resource" script_class="BaseItem" format=3 uid="uid://cu66rd1b7331w"]
+
+[ext_resource type="Script" uid="uid://br0kwnogpbfx4" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "golden_gummy"
+display_name = "黄金のグミ"
+description = "光り輝く伝説のグミ。
+空腹と体力を完全に回復する。"
+shape = Array[Vector2i]([Vector2i(0, 0)])
+restore_hunger = 999
+heal = 50

@@ -1,0 +1,22 @@
+[gd_resource type="Resource" script_class="BaseItem" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://items/base_item.gd" id="1_base_item"]
+
+[resource]
+script = ExtResource("1_base_item")
+id = "mage_robe"
+display_name = "魔法のローブ"
+equipment_type = -1
+attack = 0
+defense = 1
+max_hp = 0
+max_mp = 3
+strength = 0
+dexterity = 0
+intelligence = 2
+value = 0
+description = "[防具] 魔力を高めるローブ。\nメイジの初期装備。"
+shape = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(0, 1), Vector2i(1, 1), Vector2i(0, 2), Vector2i(1, 2)]
+effects = {}
+granted_skills = []
+
