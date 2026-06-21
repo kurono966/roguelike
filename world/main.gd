@@ -102,6 +102,8 @@ var _steam_exposure: Dictionary = {} # { instance_id: consecutive turns in steam
 var _jammed_doors: Dictionary = {} # { Vector2i: true } - Doors with broken locks that cannot be picked
 
 var _turn_count: int = 0
+const WORLD_MAP_MOVE_TURN_COST: int = 10
+var _world_map_move_turn_cost_pending: bool = false
 var _swimmer_cooldown: bool = false # Tracks swimmer bonus action state
 const SPAWN_INTERVAL: int = 50
 const MAX_ACTIVE_ENEMIES: int = 105
@@ -463,9 +465,39 @@ func _can_player_recognize_entity(entity) -> bool:
 	if not visibility_manager: return false
 	return visibility_manager.is_entity_visible_to_player(entity)
 
+# 強制移動（ノックバック・投げ飛ばし）の着地時に、穴へ落下するかを処理する。
+# 通常移動では既存の移動処理がプレイヤーの落下を処理するため、ここでは強制移動だけから呼び出す。
+func _resolve_forced_landing(entity, landing_grid: Vector2i) -> bool:
+	if not is_instance_valid(entity) or not _is_grid_in_bounds(landing_grid):
+		return false
+	if _map_data[landing_grid.x][landing_grid.y] != CellType.PIT:
+		return false
+	if "is_flying" in entity and entity.is_flying:
+		return false
+
+	if entity == player:
+		var damage_amount = 10
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("落とし穴に落ちて %d のダメージを受けた！" % damage_amount, Color(0.9, 0.2, 0.2))
+		if player.has_method("play_fall_sound"):
+			player.play_fall_sound()
+		player.take_damage(damage_amount, null, ["normal"])
+		if is_instance_valid(player) and player.hp > 0:
+			_change_floor(current_floor + 1, _current_branch, false, true)
+	else:
+		var entity_name = entity.enemy_name if "enemy_name" in entity else entity.name
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("%s は落とし穴に落ちた！" % entity_name, Color.ORANGE)
+		entity.queue_free()
+
+	return true
+
 # プレイヤーのターン終了処理
 func _end_player_turn():
 	if _is_on_world_map:
+		if _world_map_move_turn_cost_pending:
+			_world_map_move_turn_cost_pending = false
+			_advance_world_map_turns(WORLD_MAP_MOVE_TURN_COST)
 		_current_game_state = TurnPhase.PLAYER_TURN
 		return
 		
@@ -473,6 +505,15 @@ func _end_player_turn():
 		await turn_manager.end_player_turn()
 	else:
 		push_error("TurnManager not initialized")
+
+func _advance_world_map_turns(turn_cost: int) -> void:
+	if not is_instance_valid(player) or not player.has_method("on_turn_end"):
+		return
+
+	for _turn in range(turn_cost):
+		if not is_instance_valid(player) or player.hp <= 0:
+			break
+		player.on_turn_end()
 
 func _try_spawn_periodic_enemy():
 	# Skip periodic spawn in deep village (Floor 6) or overworld villages (Floor 0)
@@ -588,6 +629,7 @@ func _try_move_character(character, direction: Vector2):
 				var is_fast = _is_auto_moving or _is_path_following or _is_auto_exploring
 				player.move_to_grid(target_grid_pos, is_fast)
 				_last_player_grid_pos = target_grid_pos
+				_world_map_move_turn_cost_pending = true
 				_draw_world_map()
 				
 				var cell_names = {
@@ -4469,12 +4511,17 @@ func _execute_charge_skill(target_pos: Vector2):
 			var final_push = Vector2i(hit_entity.position/TILE_SIZE)
 			for k in range(1, 3):
 				var next = Vector2i(hit_entity.position/TILE_SIZE) + knock_dir * k
+				if not _is_grid_in_bounds(next):
+					break
 				if _map_data[next.x][next.y] != CellType.WALL and _map_data[next.x][next.y] != CellType.DOOR_CLOSED and _map_data[next.x][next.y] != CellType.DOOR_LOCKED:
 					final_push = next
+					if _map_data[next.x][next.y] == CellType.PIT:
+						break
 				else:
 					break
 			
 			hit_entity.position = Vector2(final_push) * TILE_SIZE
+			_resolve_forced_landing(hit_entity, final_push)
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("%s を体当たりで吹っ飛ばした！" % hit_entity.name, Color.ORANGE)
 
@@ -6638,6 +6685,7 @@ func _execute_gale_thrust_skill(target_pos: Vector2, skill: Dictionary):
 									var dest_world_pos = Vector2(dest) * TILE_SIZE
 									var move_tween = create_tween()
 									move_tween.tween_property(entity, "position", dest_world_pos, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+									move_tween.finished.connect(_resolve_forced_landing.bind(entity, dest))
 									if has_node("/root/LogUI"):
 										get_node("/root/LogUI").add_log("%s は後ろに押し戻された！" % e_name, Color.YELLOW)
 										
@@ -6779,6 +6827,8 @@ func _execute_super_seoi_nage_skill(target_pos: Vector2, skill: Dictionary):
 			break
 		landing_grid = next_grid
 		flown_distance = distance
+		if _map_data[next_grid.x][next_grid.y] == CellType.PIT:
+			break
 
 	var target_name = target_entity.name
 	if "enemy_name" in target_entity:
@@ -6797,8 +6847,9 @@ func _execute_super_seoi_nage_skill(target_pos: Vector2, skill: Dictionary):
 	var landing_damage = _calculate_throw_damage(skill, target_entity, "landing_damage")
 	target_entity.take_damage(landing_damage, player, ["blunt"])
 	_spawn_skill_particles(landing_pos + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0), "hit_physical", 0.3)
+	var landed_in_pit = _resolve_forced_landing(target_entity, landing_grid)
 
-	if hit_wall and is_instance_valid(target_entity):
+	if not landed_in_pit and hit_wall and is_instance_valid(target_entity):
 		var collision_damage = _calculate_throw_damage(skill, target_entity, "collision_damage")
 		target_entity.take_damage(collision_damage, player, ["blunt"])
 		shake_camera(6.0, 0.18)
@@ -6808,7 +6859,7 @@ func _execute_super_seoi_nage_skill(target_pos: Vector2, skill: Dictionary):
 				[target_name, landing_damage, collision_damage],
 				Color.RED
 			)
-	elif is_instance_valid(collision_entity) and is_instance_valid(target_entity):
+	elif not landed_in_pit and is_instance_valid(collision_entity) and is_instance_valid(target_entity):
 		var thrown_collision_damage = _calculate_throw_damage(skill, target_entity, "collision_damage")
 		var struck_collision_damage = _calculate_throw_damage(skill, collision_entity, "collision_damage")
 		target_entity.take_damage(thrown_collision_damage, player, ["blunt"])
@@ -6828,6 +6879,11 @@ func _execute_super_seoi_nage_skill(target_pos: Vector2, skill: Dictionary):
 				[target_name, collision_name, thrown_collision_damage, struck_collision_damage],
 				Color.RED
 			)
+	elif landed_in_pit and has_node("/root/LogUI"):
+		get_node("/root/LogUI").add_log(
+			"超背負投！ %s を落とし穴へ投げ落とした！" % target_name,
+			Color.RED
+		)
 	elif has_node("/root/LogUI"):
 		get_node("/root/LogUI").add_log(
 			"超背負投！ %s を%dマス投げ飛ばし、落下で%dダメージ！" %
@@ -6889,8 +6945,7 @@ func _can_throw_target_to(target_entity, grid_pos: Vector2i) -> bool:
 		CellType.TREE,
 		CellType.TREE_FRUIT,
 		CellType.ROCK,
-		CellType.LAVA,
-		CellType.PIT
+		CellType.LAVA
 	]:
 		return false
 

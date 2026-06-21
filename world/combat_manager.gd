@@ -170,6 +170,9 @@ func handle_attack(attacker, defender):
 					break
 				
 				land_pos = next
+				# A pit is a valid forced-movement destination, but stops further travel.
+				if cell == CellType.PIT:
+					break
 			
 			if land_pos != Vector2i(defender.position / TILE_SIZE):
 				var target_pixel_pos = Vector2(land_pos) * TILE_SIZE
@@ -182,8 +185,11 @@ func handle_attack(attacker, defender):
 				print("Knockback! Pushed to ", land_pos)
 				_log("%s は吹き飛ばされた！" % defender_name, Color(1.0, 0.5, 0.0))
 				
-				if defender == main_node.player:
-					await kb_tween.finished
+				await kb_tween.finished
+				var landed_in_pit = false
+				if main_node.has_method("_resolve_forced_landing"):
+					landed_in_pit = main_node._resolve_forced_landing(defender, land_pos)
+				if defender == main_node.player and not landed_in_pit:
 					if main_node.has_method("_calculate_fov"):
 						main_node._calculate_fov()
 					if main_node.has_method("_draw_map"):
