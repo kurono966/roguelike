@@ -153,8 +153,8 @@ func _setup_numpad_inputs():
 	f11_key.keycode = KEY_F11
 	InputMap.action_add_event("toggle_fullscreen", f11_key)
 
-func _unhandled_input(event):
-	if event.is_action_pressed("toggle_fullscreen"):
+func _input(event):
+	if event.is_action_pressed("toggle_fullscreen") or (event is InputEventKey and event.pressed and not event.is_echo() and event.keycode == KEY_F11):
 		var mode = DisplayServer.window_get_mode()
 		if mode == DisplayServer.WINDOW_MODE_FULLSCREEN or mode == DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
 			DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)

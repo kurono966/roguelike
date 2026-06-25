@@ -203,6 +203,8 @@ func draw_map():
 	
 	# Clear old fire overlays
 	main_node.get_tree().call_group("fire_overlays", "queue_free")
+	if main_node.has_method("_draw_overworld_neighbor_previews"):
+		main_node._draw_overworld_neighbor_previews()
 	
 	for x in range(MAP_WIDTH):
 		for y in range(MAP_HEIGHT):

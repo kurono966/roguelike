@@ -240,25 +240,25 @@ func _generate_overworld(main_inst: Node2D = null, is_starting_village: bool = f
 		has_right = true
 		
 	if has_left:
-		for x in range(margin, road_x + 1):
+		for x in range(0, road_x + 1):
 			map_data[x][road_y] = CellType.ASH
 			map_data[x][road_y + 1] = CellType.ASH
 			road_tiles.append(Vector2i(x, road_y))
 			road_tiles.append(Vector2i(x, road_y + 1))
 	if has_right:
-		for x in range(road_x, MAP_WIDTH - margin):
+		for x in range(road_x, MAP_WIDTH):
 			map_data[x][road_y] = CellType.ASH
 			map_data[x][road_y + 1] = CellType.ASH
 			road_tiles.append(Vector2i(x, road_y))
 			road_tiles.append(Vector2i(x, road_y + 1))
 	if has_up:
-		for y in range(margin, road_y + 1):
+		for y in range(0, road_y + 1):
 			map_data[road_x][y] = CellType.ASH
 			map_data[road_x + 1][y] = CellType.ASH
 			road_tiles.append(Vector2i(road_x, y))
 			road_tiles.append(Vector2i(road_x + 1, y))
 	if has_down:
-		for y in range(road_y, MAP_HEIGHT - margin):
+		for y in range(road_y, MAP_HEIGHT):
 			map_data[road_x][y] = CellType.ASH
 			map_data[road_x + 1][y] = CellType.ASH
 			road_tiles.append(Vector2i(road_x, y))
@@ -978,7 +978,16 @@ func generate_local_overworld(local_type: int, main_inst: Node2D = null, is_star
 				WorldCell.DUNGEON:
 					map_data[x][y] = CellType.ASH if randf() < 0.5 else (CellType.GRASS if randf() < 0.6 else CellType.FLOOR)
 				WorldCell.MOUNTAIN:
-					map_data[x][y] = CellType.WALL if randf() < 0.60 else (CellType.ROCK if randf() < 0.25 else CellType.ASH)
+					# 山中は断崖と岩場の間に林が広がる、探索可能な山道として生成する。
+					var terrain_roll = randf()
+					if terrain_roll < 0.22:
+						map_data[x][y] = CellType.WALL
+					elif terrain_roll < 0.37:
+						map_data[x][y] = CellType.ROCK
+					elif terrain_roll < 0.82:
+						map_data[x][y] = CellType.GRASS
+					else:
+						map_data[x][y] = CellType.FLOOR
 				WorldCell.SEA:
 					map_data[x][y] = CellType.WATER
 				_: # WorldCell.GRASS or ROAD
@@ -1002,7 +1011,8 @@ func generate_local_overworld(local_type: int, main_inst: Node2D = null, is_star
 			tree_chance = 0.01
 			rock_chance = 0.04
 		WorldCell.MOUNTAIN:
-			rock_chance = 0.10
+			tree_chance = 0.18
+			rock_chance = 0.05
 
 	for x in range(margin + 2, MAP_WIDTH - margin - 2):
 		for y in range(margin + 2, MAP_HEIGHT - margin - 2):
@@ -1026,6 +1036,7 @@ func generate_local_overworld(local_type: int, main_inst: Node2D = null, is_star
 	# Add a pond
 	var pond_count = randi_range(1, 3)
 	if local_type == WorldCell.FOREST: pond_count = randi_range(2, 4)
+	if local_type == WorldCell.MOUNTAIN: pond_count = 0
 	for p in range(pond_count):
 		var px = randi_range(margin + 4, MAP_WIDTH - margin - 5)
 		var py = randi_range(margin + 4, MAP_HEIGHT - margin - 5)
@@ -1056,6 +1067,12 @@ func generate_local_overworld(local_type: int, main_inst: Node2D = null, is_star
 			var w_data = main_inst._world_map_data
 			
 			var _is_road_like = func(cell_val) -> bool:
+				if local_type == WorldCell.MOUNTAIN:
+					# 山道は、ワールドマップで歩ける隣接地形からのみ出入りできる。
+					return cell_val != WorldCell.SEA and cell_val != WorldCell.MOUNTAIN
+				# 山に接するローカルマップには、山道へ通じる入口を作る。
+				if cell_val == WorldCell.MOUNTAIN:
+					return true
 				return cell_val == WorldCell.ROAD or cell_val == WorldCell.VILLAGE or cell_val == WorldCell.DUNGEON
 				
 			if wx > 0 and _is_road_like.call(w_data[wx - 1][wy]): has_left = true
@@ -1081,10 +1098,12 @@ func generate_local_overworld(local_type: int, main_inst: Node2D = null, is_star
 		var path_len_x = MAP_WIDTH / 2
 		var path_len_y = MAP_HEIGHT / 2
 		
-		# For GRASS, FOREST, MOUNTAIN, draw a short side-road (e.g. length of 7 tiles from edge)
-		if local_type == WorldCell.GRASS or local_type == WorldCell.FOREST or local_type == WorldCell.MOUNTAIN:
+		# 平原・森は端から少し入った道に留め、山道は入口から中央の林まで確実につなぐ。
+		if local_type == WorldCell.GRASS or local_type == WorldCell.FOREST:
 			path_len_x = 7
 			path_len_y = 7
+		elif local_type == WorldCell.MOUNTAIN:
+			road_width = 2
 			
 		# Draw horizontal road (Left)
 		if has_left:
@@ -1134,8 +1153,13 @@ func generate_local_overworld(local_type: int, main_inst: Node2D = null, is_star
 	for x in range(MAP_WIDTH/2 - 3, MAP_WIDTH/2 + 4):
 		for y in range(MAP_HEIGHT/2 - 3, MAP_HEIGHT/2 + 4):
 			if x >= margin and x < MAP_WIDTH - margin and y >= margin and y < MAP_HEIGHT - margin:
-				if map_data[x][y] == CellType.WALL and Vector2i(x, y) != cave_entrance:
+				if map_data[x][y] != CellType.ASH and Vector2i(x, y) != cave_entrance:
 					map_data[x][y] = CellType.FLOOR
+
+	# 道路と中央の安全地帯を残しつつ、地形のまとまりと探索対象を追加する。
+	var protected_spawn = Rect2i(MAP_WIDTH / 2 - 4, MAP_HEIGHT / 2 - 4, 9, 9)
+	_stamp_local_biomes(map_data, local_type, protected_spawn)
+	_place_wilderness_buildings(map_data, rooms, local_type, protected_spawn)
 
 	# Finally place the stairs and surrounding wall in dungeon local map (to avoid road/spawn clear overwrites)
 	if local_type == WorldCell.DUNGEON:
@@ -1154,6 +1178,193 @@ func generate_local_overworld(local_type: int, main_inst: Node2D = null, is_star
 		"map_data": map_data,
 		"rooms": rooms
 	}
+
+func _stamp_local_biomes(map_data: Array, local_type: int, protected_area: Rect2i) -> void:
+	if local_type == WorldCell.SEA:
+		return
+
+	var feature_count = 3
+	if local_type == WorldCell.FOREST:
+		feature_count = randi_range(4, 6)
+	elif local_type == WorldCell.MOUNTAIN:
+		feature_count = randi_range(4, 5)
+	elif local_type == WorldCell.ROAD:
+		feature_count = randi_range(2, 3)
+	elif local_type == WorldCell.DUNGEON:
+		feature_count = randi_range(2, 4)
+
+	for _feature in range(feature_count):
+		var center = Vector2i(randi_range(5, MAP_WIDTH - 6), randi_range(5, MAP_HEIGHT - 6))
+		if protected_area.has_point(center):
+			continue
+
+		var radius = randi_range(2, 5)
+		var kind = "grove"
+		var roll = randf()
+		if local_type == WorldCell.MOUNTAIN:
+			kind = "grove" if roll < 0.55 else "rocky"
+		elif local_type == WorldCell.FOREST:
+			kind = "grove" if roll < 0.50 else ("pond" if roll < 0.75 else "clearing")
+		elif local_type == WorldCell.DUNGEON:
+			kind = "rocky" if roll < 0.55 else "clearing"
+		else:
+			kind = "pond" if roll < 0.30 else ("grove" if roll < 0.65 else "rocky")
+
+		for x in range(center.x - radius, center.x + radius + 1):
+			for y in range(center.y - radius, center.y + radius + 1):
+				var pos = Vector2i(x, y)
+				if x < 3 or x >= MAP_WIDTH - 3 or y < 3 or y >= MAP_HEIGHT - 3:
+					continue
+				if protected_area.has_point(pos):
+					continue
+				if Vector2(pos.x - center.x, pos.y - center.y).length() > radius + randf_range(-0.7, 0.7):
+					continue
+
+				var current = map_data[x][y]
+				if current == CellType.ASH or current == CellType.STAIRS or current == CellType.STAIRS_GOLD or current == CellType.DOOR_CLOSED or current == CellType.DOOR_LOCKED:
+					continue
+
+				match kind:
+					"grove":
+						if current != CellType.WATER and randf() < 0.72:
+							map_data[x][y] = CellType.TREE_FRUIT if randf() < 0.12 else CellType.TREE
+					"rocky":
+						if current != CellType.WATER:
+							map_data[x][y] = CellType.ROCK if randf() < 0.80 else CellType.WALL
+					"pond":
+						map_data[x][y] = CellType.WATER
+					"clearing":
+						if current != CellType.WATER:
+							map_data[x][y] = CellType.GRASS if randf() < 0.65 else CellType.FLOOR
+
+func _place_wilderness_buildings(map_data: Array, rooms: Array, local_type: int, protected_area: Rect2i) -> void:
+	if local_type == WorldCell.SEA:
+		return
+
+	var target_count = 1
+	if local_type == WorldCell.GRASS or local_type == WorldCell.ROAD:
+		target_count = randi_range(1, 3)
+	elif local_type == WorldCell.FOREST or local_type == WorldCell.MOUNTAIN:
+		target_count = randi_range(1, 2)
+	elif local_type == WorldCell.DUNGEON:
+		target_count = 1
+
+	var placed = 0
+	for _attempt in range(80):
+		if placed >= target_count:
+			break
+
+		var width = randi_range(10, 15)
+		var height = randi_range(7, 10)
+		var rect = Rect2i(
+			randi_range(4, MAP_WIDTH - width - 5),
+			randi_range(4, MAP_HEIGHT - height - 5),
+			width,
+			height
+		)
+		if rect.grow(2).intersects(protected_area):
+			continue
+
+		var blocked = false
+		for room in rooms:
+			if rect.grow(2).intersects(room.grow(2)):
+				blocked = true
+				break
+		if blocked:
+			continue
+
+		for x in range(rect.position.x - 2, rect.end.x + 2):
+			for y in range(rect.position.y - 2, rect.end.y + 2):
+				if x < 2 or x >= MAP_WIDTH - 2 or y < 2 or y >= MAP_HEIGHT - 2:
+					blocked = true
+					break
+				var cell = map_data[x][y]
+				if cell == CellType.ASH or cell == CellType.WATER or cell == CellType.STAIRS or cell == CellType.STAIRS_GOLD:
+					blocked = true
+					break
+			if blocked:
+				break
+		if blocked:
+			continue
+
+		# 床材と間取りを変え、同じ箱型の建物が連続しないようにする。
+		var floor_type = CellType.CRYSTAL_FLOOR if randf() < 0.55 else CellType.FLOOR
+		for x in range(rect.position.x, rect.end.x):
+			for y in range(rect.position.y, rect.end.y):
+				var is_outer_wall = x == rect.position.x or x == rect.end.x - 1 or y == rect.position.y or y == rect.end.y - 1
+				map_data[x][y] = CellType.WALL if is_outer_wall else floor_type
+
+		var inner_left = rect.position.x + 1
+		var inner_right = rect.end.x - 2
+		var inner_top = rect.position.y + 1
+		var inner_bottom = rect.end.y - 2
+		var mid_x = rect.position.x + rect.size.x / 2
+		var mid_y = rect.position.y + rect.size.y / 2
+		var layout = randi_range(0, 4)
+
+		match layout:
+			0: # 縦に並んだ二部屋
+				for y in range(inner_top, inner_bottom + 1):
+					map_data[mid_x][y] = CellType.WALL
+				map_data[mid_x][randi_range(inner_top + 1, inner_bottom - 1)] = CellType.DOOR_CLOSED
+			1: # 横に並んだ二部屋
+				for x in range(inner_left, inner_right + 1):
+					map_data[x][mid_y] = CellType.WALL
+				map_data[randi_range(inner_left + 1, inner_right - 1)][mid_y] = CellType.DOOR_CLOSED
+			2: # 片側をさらに分割した三部屋
+				for y in range(inner_top, inner_bottom + 1):
+					map_data[mid_x][y] = CellType.WALL
+				map_data[mid_x][randi_range(inner_top + 1, inner_bottom - 1)] = CellType.DOOR_CLOSED
+				var split_y = rect.position.y + rect.size.y / 2
+				for x in range(inner_left, mid_x):
+					map_data[x][split_y] = CellType.WALL
+				map_data[randi_range(inner_left + 1, mid_x - 1)][split_y] = CellType.DOOR_CLOSED
+			3: # 中央廊下と両脇の小部屋
+				var left_divider = rect.position.x + rect.size.x / 3
+				var right_divider = rect.position.x + rect.size.x * 2 / 3
+				for y in range(inner_top, inner_bottom + 1):
+					map_data[left_divider][y] = CellType.WALL
+					map_data[right_divider][y] = CellType.WALL
+				map_data[left_divider][randi_range(inner_top + 1, inner_bottom - 1)] = CellType.DOOR_CLOSED
+				map_data[right_divider][randi_range(inner_top + 1, inner_bottom - 1)] = CellType.DOOR_CLOSED
+			4: # 十字廊下で四部屋
+				for y in range(inner_top, inner_bottom + 1):
+					map_data[mid_x][y] = CellType.WALL
+				for x in range(inner_left, inner_right + 1):
+					map_data[x][mid_y] = CellType.WALL
+				map_data[mid_x][inner_top + 1] = CellType.DOOR_CLOSED
+				map_data[mid_x][inner_bottom - 1] = CellType.DOOR_CLOSED
+				map_data[inner_left + 1][mid_y] = CellType.DOOR_CLOSED
+				map_data[inner_right - 1][mid_y] = CellType.DOOR_CLOSED
+
+		# 外への入口と短いアプローチを、建物の四辺からランダムに選ぶ。
+		var entrance_side = randi_range(0, 3)
+		var door_pos = Vector2i(mid_x, rect.end.y - 1)
+		var outward = Vector2i.DOWN
+		if entrance_side == 0:
+			door_pos = Vector2i(mid_x, rect.position.y)
+			outward = Vector2i.UP
+		elif entrance_side == 1:
+			door_pos = Vector2i(rect.end.x - 1, mid_y)
+			outward = Vector2i.RIGHT
+		elif entrance_side == 2:
+			door_pos = Vector2i(mid_x, rect.end.y - 1)
+			outward = Vector2i.DOWN
+		else:
+			door_pos = Vector2i(rect.position.x, mid_y)
+			outward = Vector2i.LEFT
+		map_data[door_pos.x][door_pos.y] = CellType.DOOR_CLOSED
+		for step in range(1, 4):
+			var approach = door_pos + outward * step
+			if approach.x < 2 or approach.x >= MAP_WIDTH - 2 or approach.y < 2 or approach.y >= MAP_HEIGHT - 2:
+				break
+			if map_data[approach.x][approach.y] == CellType.ASH:
+				break
+			if map_data[approach.x][approach.y] != CellType.WATER:
+				map_data[approach.x][approach.y] = CellType.FLOOR
+
+		rooms.append(rect)
+		placed += 1
 
 func generate_world_map() -> Array:
 	var world = []

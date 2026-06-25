@@ -55,6 +55,7 @@ var _ascii_map_label: RichTextLabel = null
 var _starting_village_pos: Vector2i = Vector2i.ZERO
 var _dungeon_village_pos: Vector2i = Vector2i.ZERO
 var _floor_caches = {} # Caches for all floors: floor_key -> cache_dict
+var _overworld_preview_maps = {} # Terrain-only local overworld previews around the current area.
 var _visible_tiles = [] # Stores current visibility state
 var _explored_tiles = [] # Stores tiles the player has seen
 var _rooms = []
@@ -665,16 +666,16 @@ func _try_move_character(character, direction: Vector2):
 			
 			if target_grid_pos.x < 0:
 				exit_dir = Vector2i.LEFT
-				new_local_pos.x = MAP_WIDTH - 2
+				new_local_pos.x = MAP_WIDTH - 1
 			elif target_grid_pos.x >= MAP_WIDTH:
 				exit_dir = Vector2i.RIGHT
-				new_local_pos.x = 1
+				new_local_pos.x = 0
 			elif target_grid_pos.y < 0:
 				exit_dir = Vector2i.UP
-				new_local_pos.y = MAP_HEIGHT - 2
+				new_local_pos.y = MAP_HEIGHT - 1
 			elif target_grid_pos.y >= MAP_HEIGHT:
 				exit_dir = Vector2i.DOWN
-				new_local_pos.y = 1
+				new_local_pos.y = 0
 				
 			if exit_dir != Vector2i.ZERO:
 				var target_world_pos = _world_player_pos + exit_dir
@@ -2083,6 +2084,24 @@ func _spawn_single_npc(type: Dictionary, pos: Vector2):
 	print("NPC Spawned: ", npc.enemy_name, " at ", pos)
 
 func _generate_map(local_type: int = -1):
+	var preview_key = "local_overworld_%d_%d" % [_world_player_pos.x, _world_player_pos.y]
+	if current_floor == 0 and _overworld_preview_maps.has(preview_key):
+		var preview = _overworld_preview_maps[preview_key]
+		_map_data = preview["map_data"].duplicate(true)
+		_rooms = preview["rooms"].duplicate(true)
+		_overworld_preview_maps.erase(preview_key)
+		_visible_tiles.resize(MAP_WIDTH)
+		_explored_tiles.resize(MAP_WIDTH)
+		for x in range(MAP_WIDTH):
+			_visible_tiles[x] = []
+			_visible_tiles[x].resize(MAP_HEIGHT)
+			_explored_tiles[x] = []
+			_explored_tiles[x].resize(MAP_HEIGHT)
+			for y in range(MAP_HEIGHT):
+				_visible_tiles[x][y] = false
+				_explored_tiles[x][y] = false
+		return
+
 	var generator = DungeonGenerator.new()
 	var is_starting = false
 	var is_dungeon = false
@@ -2170,6 +2189,163 @@ func _setup_pathfinding():
 
 
 
+func _get_map_cell_atlas_coords(map_data: Array, x: int, y: int) -> Vector2i:
+	var cell_type = map_data[x][y]
+	var atlas_coords = Vector2i(0, 0)
+	match cell_type:
+		CellType.WALL:
+			var mask = 0
+			if y > 0 and map_data[x][y-1] == CellType.WALL: mask |= 1
+			if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.WALL: mask |= 2
+			if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.WALL: mask |= 4
+			if x > 0 and map_data[x-1][y] == CellType.WALL: mask |= 8
+			atlas_coords.x = mask
+		CellType.FLOOR:
+			atlas_coords.x = 16
+		CellType.STAIRS:
+			atlas_coords.x = 17
+		CellType.WATER:
+			var mask = 0
+			if y > 0 and map_data[x][y-1] == CellType.WATER: mask |= 1
+			if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.WATER: mask |= 2
+			if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.WATER: mask |= 4
+			if x > 0 and map_data[x-1][y] == CellType.WATER: mask |= 8
+			atlas_coords.x = 18 + mask
+		CellType.GRASS:
+			atlas_coords.x = 34
+		CellType.STAIRS_BLUE:
+			atlas_coords.x = 16
+		CellType.STAIRS_GREEN:
+			atlas_coords.x = 16
+		CellType.STAIRS_RED:
+			atlas_coords.x = 16
+		CellType.STAIRS_PURPLE:
+			atlas_coords.x = 16
+		CellType.LAVA:
+			atlas_coords.x = 40
+		CellType.ASH:
+			atlas_coords.x = 41
+		CellType.CRYSTAL_FLOOR:
+			var mask = 0
+			if y > 0 and map_data[x][y-1] == CellType.CRYSTAL_FLOOR: mask |= 1
+			if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.CRYSTAL_FLOOR: mask |= 2
+			if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.CRYSTAL_FLOOR: mask |= 4
+			if x > 0 and map_data[x-1][y] == CellType.CRYSTAL_FLOOR: mask |= 8
+			atlas_coords.x = 45 + mask
+		CellType.STAIRS_GOLD:
+			atlas_coords.x = 79
+		CellType.DOOR_CLOSED:
+			atlas_coords.x = 36
+		CellType.DOOR_OPEN:
+			atlas_coords.x = 37
+		CellType.DOOR_LOCKED:
+			atlas_coords.x = 38
+		CellType.ICE:
+			atlas_coords.x = 39
+		CellType.PIT:
+			var mask = 0
+			if y > 0 and map_data[x][y-1] == CellType.PIT: mask |= 1
+			if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.PIT: mask |= 2
+			if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.PIT: mask |= 4
+			if x > 0 and map_data[x-1][y] == CellType.PIT: mask |= 8
+			atlas_coords.x = 61 + mask
+		CellType.STAIRS_UP:
+			atlas_coords.x = 77
+		CellType.TREE:
+			atlas_coords.x = 80
+		CellType.TREE_FRUIT:
+			atlas_coords.x = 81
+		CellType.ROCK:
+			atlas_coords.x = 82
+	return atlas_coords
+
+func _get_overworld_preview_map(chunk_pos: Vector2i) -> Dictionary:
+	if chunk_pos.x < 0 or chunk_pos.x >= MAP_WIDTH or chunk_pos.y < 0 or chunk_pos.y >= MAP_HEIGHT:
+		return {}
+	var cache_key = "local_overworld_%d_%d" % [chunk_pos.x, chunk_pos.y]
+	if _floor_caches.has(cache_key):
+		return {
+			"map_data": _floor_caches[cache_key]["map_data"],
+			"rooms": _floor_caches[cache_key]["rooms"]
+		}
+	if _overworld_preview_maps.has(cache_key):
+		return _overworld_preview_maps[cache_key]
+	var previous_world_pos = _world_player_pos
+	_world_player_pos = chunk_pos
+	var cell = _world_map_data[chunk_pos.x][chunk_pos.y]
+	var generator = DungeonGenerator.new()
+	var is_starting = cell == WorldCell.VILLAGE and chunk_pos == _starting_village_pos
+	var is_dungeon = cell == WorldCell.VILLAGE and chunk_pos == _dungeon_village_pos
+	var result = generator.generate_map(0, _current_branch, cell, self, is_starting, is_dungeon)
+	generator.free()
+	_world_player_pos = previous_world_pos
+	_overworld_preview_maps[cache_key] = {
+		"map_data": result["map_data"].duplicate(true),
+		"rooms": result["rooms"].duplicate(true)
+	}
+	return _overworld_preview_maps[cache_key]
+
+func _get_overworld_preview_cell(display_pos: Vector2i) -> int:
+	var chunk_delta = Vector2i.ZERO
+	if display_pos.x < 0:
+		chunk_delta.x = -1
+	elif display_pos.x >= MAP_WIDTH:
+		chunk_delta.x = 1
+	if display_pos.y < 0:
+		chunk_delta.y = -1
+	elif display_pos.y >= MAP_HEIGHT:
+		chunk_delta.y = 1
+	var local_pos = display_pos - Vector2i(chunk_delta.x * MAP_WIDTH, chunk_delta.y * MAP_HEIGHT)
+	if local_pos.x < 0 or local_pos.x >= MAP_WIDTH or local_pos.y < 0 or local_pos.y >= MAP_HEIGHT:
+		return CellType.WALL
+	if chunk_delta == Vector2i.ZERO:
+		return _map_data[local_pos.x][local_pos.y]
+	var preview = _get_overworld_preview_map(_world_player_pos + chunk_delta)
+	if preview.is_empty():
+		return CellType.WALL
+	var preview_map = preview["map_data"]
+	return preview_map[local_pos.x][local_pos.y]
+
+func _has_overworld_preview_line_of_sight(from_grid: Vector2i, to_grid: Vector2i) -> bool:
+	var line_points = _get_line_points(from_grid, to_grid)
+	for p in line_points:
+		if p == from_grid or p == to_grid:
+			continue
+		var cell = _get_overworld_preview_cell(p)
+		if cell == CellType.WALL or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED or cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
+			return false
+	return true
+
+func _is_overworld_preview_visible(player_grid: Vector2i, tile_coords: Vector2i) -> bool:
+	if (tile_coords - player_grid).length() > FOV_RADIUS:
+		return false
+	return _has_overworld_preview_line_of_sight(player_grid, tile_coords)
+
+func _draw_overworld_preview_map(preview_map: Array, offset: Vector2i, player_grid: Vector2i) -> void:
+	for x in range(MAP_WIDTH):
+		for y in range(MAP_HEIGHT):
+			var tile_coords = Vector2i(x, y) + offset
+			if not _is_overworld_preview_visible(player_grid, tile_coords):
+				continue
+			var atlas_coords = _get_map_cell_atlas_coords(preview_map, x, y)
+			tile_map.set_cell(LAYER_VISIBLE, tile_coords, 0, atlas_coords)
+
+func _draw_overworld_neighbor_previews() -> void:
+	if current_floor != 0 or _is_on_world_map:
+		return
+	if not is_instance_valid(player):
+		return
+	var player_grid = tile_map.local_to_map(player.position)
+	for dx in range(-1, 2):
+		for dy in range(-1, 2):
+			if dx == 0 and dy == 0:
+				continue
+			var chunk_pos = _world_player_pos + Vector2i(dx, dy)
+			var preview = _get_overworld_preview_map(chunk_pos)
+			if preview.is_empty():
+				continue
+			_draw_overworld_preview_map(preview["map_data"], Vector2i(dx * MAP_WIDTH, dy * MAP_HEIGHT), player_grid)
+
 func _draw_map():
 	tile_map.clear_layer(LAYER_VISIBLE)
 	tile_map.clear_layer(LAYER_MEMORY)
@@ -2181,6 +2357,7 @@ func _draw_map():
 	get_tree().call_group("fire_overlays", "queue_free")
 	get_tree().call_group("blood_decals", "queue_free")
 	get_tree().call_group("world_village_icons", "queue_free")
+	_draw_overworld_neighbor_previews()
 	
 	for x in range(MAP_WIDTH):
 		for y in range(MAP_HEIGHT):

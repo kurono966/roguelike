@@ -1,6 +1,6 @@
 63f7b34db8d8cdea90c76aacccf841ec
-::res://::1781946198
-default_environment.tres::Environment::3313013196651145678::1781347685::0::1::::<><><>0<>0<><>::
+::res://::1782412641
+default_environment.tres::Environment::3313013196651145678::1782210954::0::1::::<><><>0<>0<><>::
 export_presets.cfg::TextFile::-1::1781346222::0::1::::<><><>0<>0<><>::
 icon.svg::CompressedTexture2D/CompressedTexture2D::1822129458290916286::1755491108::1773727870::1::::<><><>0<>0<>7cb82a22d0574a7bf490d036b784160b<>res://.godot/imported/icon.svg-218a8f2b3041327d8a5756f3a245f83b.ctex::
 save_manager.gd::GDScript::5735773527282640304::1781342460::0::1::::<>Node<><>0<>0<><>::
@@ -120,7 +120,7 @@ slot_background.png::CompressedTexture2D/CompressedTexture2D::216215002837493774
 ::res://autoloads/::1781340335
 equipment_events.gd::GDScript/GDScript::8228125887009636998::1757676356::0::1::::EquipmentEvents<>Node<><>0<>0<><>::
 game_state.gd::GDScript::1385239351340006558::1780783194::0::1::::<>Node<><>0<>0<><>::
-input_manager.gd::GDScript::6848993961394979826::1767397806::0::1::::<>Node<><>0<>0<><>::
+input_manager.gd::GDScript::6848993961394979826::1782184398::0::1::::<>Node<><>0<>0<><>::
 ::res://items/::1781346471
 base_item.gd::GDScript::3631887631508235511::1781342912::0::1::::BaseItem<>Resource<><>0<>0<><>::
 inventory_grid_data.gd::GDScript/GDScript::8205080389447216876::1767839088::0::1::::InventoryGridData<>RefCounted<><>0<>0<><>::
@@ -191,7 +191,7 @@ grid_inventory_view.tscn::PackedScene::-1::1765609470::0::1::::<><><>0<>0<><>::r
 help_ui.gd::GDScript::5518178921328014451::1780498472::0::1::::<>Control<><>0<>0<><>::
 item_context_menu.gd::GDScript::6426700887215208005::1767840706::0::1::::<>Control<><>0<>0<><>::
 item_slot.gd::GDScript::2793338985088349325::1780779534::0::1::::ItemSlot<>TextureRect<><>0<>0<><>::
-log_ui.gd::GDScript::8620410844390337417::1781232612::0::1::::<>CanvasLayer<><>0<>0<><>::
+log_ui.gd::GDScript::8620410844390337417::1781946700::0::1::::<>CanvasLayer<><>0<>0<><>::
 log_ui.tscn::PackedScene/PackedScene::8249907618885855646::1765228682::0::1::::<><><>0<>0<><>::uid://du2153wukdf3f::::res://ui/log_ui.gd
 minimap_controller.gd::GDScript::7713022195814915520::1781235488::0::1::::MinimapController<>Node<><>0<>0<><>::
 PlayerUI.gd::GDScript::5691932499163723331::1781232608::0::1::::<>CanvasLayer<><>0<>0<><>::
@@ -214,14 +214,14 @@ modern_button_hover.tres::StyleBoxFlat::-1::1765207148::0::1::::<><><>0<>0<><>::
 modern_button_normal.tres::StyleBoxFlat::-1::1765207146::0::1::::<><><>0<>0<><>::
 modern_button_pressed.tres::StyleBoxFlat::-1::1765207150::0::1::::<><><>0<>0<><>::
 ::res://world/::1781345850
-combat_manager.gd::GDScript::8748553959874413228::1781316110::0::1::::CombatManager<>Node<><>0<>0<><>::
-dungeon_generator.gd::GDScript::1976013333216998990::1781236998::0::1::::DungeonGenerator<>Node<><>0<>0<><>::
+combat_manager.gd::GDScript::8748553959874413228::1781948321::0::1::::CombatManager<>Node<><>0<>0<><>::
+dungeon_generator.gd::GDScript::1976013333216998990::1782191768::0::1::::DungeonGenerator<>Node<><>0<>0<><>::
 input_handler.gd::GDScript::8048169876732713000::1781341018::0::1::::InputHandler<>Node<><>0<>0<><>::
-main.gd::GDScript::8692461950464480696::1781348456::0::1::::<>Node2D<><>0<>0<><>::
+main.gd::GDScript::8692461950464480696::1782192588::0::1::::<>Node2D<><>0<>0<><>::
 main.tscn::PackedScene::6025514682147841810::1781346532::0::1::::<><><>0<>0<><>::uid://dv3xtwtb8mhvc::::res://world/main.gd<>uid://dpgoxl35bsoik::::res://actors/player.tscn
-map_definitions.gd::GDScript::7254940514509461589::1780878714::0::1::::MapDefinitions<>RefCounted<><>0<>0<><>::
+map_definitions.gd::GDScript::7254940514509461589::1782019677::0::1::::MapDefinitions<>RefCounted<><>0<>0<><>::
 shadow_manager.gd::GDScript::3346271688406424810::1781346457::0::1::::ShadowManager<>Node2D<><>0<>0<><>::
 target_manager.gd::GDScript::2780873157055874057::1780781340::0::1::::TargetManager<>Node<><>0<>0<><>::
 tileset_manager.gd::GDScript::4192249500956156721::1781346458::0::1::::TilesetManager<>Node<><>0<>0<><>::
-turn_manager.gd::GDScript::928658320735110581::1781303286::0::1::::TurnManager<>Node<><>0<>0<><>::
-visibility_manager.gd::GDScript::5351362249757089216::1781344324::0::1::::VisibilityManager<>Node<><>0<>0<><>::
+turn_manager.gd::GDScript::928658320735110581::1782189970::0::1::::TurnManager<>Node<><>0<>0<><>::
+visibility_manager.gd::GDScript::5351362249757089216::1782192576::0::1::::VisibilityManager<>Node<><>0<>0<><>::

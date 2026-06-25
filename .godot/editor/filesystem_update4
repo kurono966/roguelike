@@ -1,4 +1,3 @@
 res://default_environment.tres
-res://ui/log_ui.gd
-res://world/combat_manager.gd
 res://world/main.gd
+res://world/visibility_manager.gd

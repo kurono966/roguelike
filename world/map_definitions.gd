@@ -3,9 +3,10 @@ extends RefCounted
 
 const TILE_SIZE = 32
 const MAP_WIDTH = 50
-const MAP_HEIGHT = 30
+const MAP_HEIGHT = 50
 
-const ROOM_MAX_COUNT = 20
+# 50×50のマップ密度を従来の50×30に近づける。
+const ROOM_MAX_COUNT = 30
 const ROOM_MIN_SIZE = 3
 const ROOM_MAX_SIZE = 8
 

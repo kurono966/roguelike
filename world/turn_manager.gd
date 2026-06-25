@@ -75,6 +75,10 @@ func start_player_turn():
 
 func process_enemy_turns():
 	tile_map.clear_layer(main_node.LAYER_DEBUG)
+	
+	if main_node.has_method("_check_and_pull_neighbor_enemies"):
+		main_node._check_and_pull_neighbor_enemies()
+		
 	var player_grid_pos = tile_map.local_to_map(player.position)
 	
 	main_node._process_hazards()
