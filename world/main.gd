@@ -2671,6 +2671,8 @@ func _draw_map():
 						atlas_coords.x = 40
 					CellType.ASH:
 						atlas_coords.x = 41
+					CellType.VOLCANIC_ASH:
+						atlas_coords.x = 42
 					CellType.CRYSTAL_FLOOR:
 						# Calculate neighbor bitmask for connecting crystal floor
 						var mask = 0
