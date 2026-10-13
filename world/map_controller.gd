@@ -59,6 +59,12 @@ func generate_map(floor: int, branch: int, local_type: int = -1, is_starting_vil
 		return res
 
 func setup_pathfinding():
+	# main側で直接生成されたマップデータも反映する（map_controllerを経由しない生成フロー対策）
+	if main_node:
+		var main_map = main_node.get("_map_data")
+		if typeof(main_map) == TYPE_ARRAY and main_map.size() >= MAP_WIDTH:
+			map_data = main_map
+
 	astar_grid = AStarGrid2D.new()
 	astar_grid_swim = AStarGrid2D.new()
 	astar_grid_fly = AStarGrid2D.new()

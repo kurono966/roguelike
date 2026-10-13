@@ -5,7 +5,6 @@ var main_node: Node2D
 var player: CharacterBody2D
 var tile_map: TileMap
 var _web_audio_initialized = false
-var _last_click_time = 0
 var _waiting_for_dig_direction: bool = false
 var debug_mode: bool = false
 const KEY_LOCATION_NUMPAD_FALLBACK := 3
@@ -91,6 +90,10 @@ func _unhandled_input(event: InputEvent) -> void:
 	if game_ui:
 		if game_ui.is_visible or game_ui.is_skill_visible or game_ui.is_trade_visible or game_ui.is_status_visible or game_ui.help_ui.visible or game_ui.dialog_menu.visible:
 			return
+
+	# キーボード操作時は保留中のクリック移動を取り消す
+	if event is InputEventKey and event.pressed and not event.is_echo():
+		main_node._has_pending_path_target = false
 
 	if _waiting_for_dig_direction:
 		if (event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_RIGHT) or event.is_action_pressed("ui_cancel"):
@@ -266,6 +269,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	if main_node._current_game_state != main_node.TurnPhase.PLAYER_TURN:
+		# ターン進行中(敵ターン等)のクリックは移動要求として保留し、プレイヤーターンで実行する
+		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
+			main_node.request_move_to_tile(tile_map.local_to_map(main_node.get_global_mouse_position()))
+			get_viewport().set_input_as_handled()
 		return
 
 	# Block input if paralyzed
@@ -428,16 +435,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 		if main_node._current_game_state == main_node.TurnPhase.PLAYER_TURN:
-			# Prevent new inputs while already moving/acting
-			if main_node._is_path_following or main_node._is_auto_moving or main_node._is_resting or main_node._is_auto_exploring:
-				return
-			
-			# Debounce clicks (prevent rapid firing bugs)
-			var current_time = Time.get_ticks_msec()
-			if current_time - _last_click_time < 250:
-				return
-			_last_click_time = current_time
-			
+			# 移動中・休憩中でもクリックで移動先を変更できる（元の経路は上書きされる）
 			var mouse_pos = main_node.get_global_mouse_position()
 			var clicked_tile = tile_map.local_to_map(mouse_pos)
 			var player_tile = tile_map.local_to_map(player.position)
@@ -476,7 +474,7 @@ func _unhandled_input(event: InputEvent) -> void:
 					get_viewport().set_input_as_handled()
 					return
 
-			main_node._handle_mouse_click(event.position)
+			main_node.request_move_to_tile(clicked_tile)
 			get_viewport().set_input_as_handled()
 			return
 
@@ -504,12 +502,8 @@ func _unhandled_input(event: InputEvent) -> void:
 				return
 
 		if main_node._is_auto_moving or main_node._is_path_following or main_node._is_resting or main_node._is_auto_exploring:
-			main_node._is_auto_moving = false
-			main_node._is_path_following = false
-			main_node._current_path.clear()
-			main_node._path_continue_after_attack = false
-			main_node._is_resting = false
-			main_node._stop_auto_explore()
+			# 実行中のコルーチンは _path_generation の管理で打ち切られる
+			main_node._cancel_active_auto_movement()
 			return
 		
 		if event.keycode == KEY_Q:

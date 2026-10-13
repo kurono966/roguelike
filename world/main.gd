@@ -99,6 +99,9 @@ var _auto_explore_index: int = 0
 const AUTO_MOVE_DELAY: float = 0.02
 var _auto_move_cooldown: float = 0.0
 var _enemies_at_path_start: int = 0  # 経路開始時の敵の数
+var _path_generation: int = 0  # キャンセル・移動先変更のたびに進める（実行中コルーチンの打ち切り判定用）
+var _pending_path_target: Vector2i = Vector2i.ZERO  # 保留中のクリック移動先
+var _has_pending_path_target: bool = false
 var _web_audio_initialized: bool = false
 var _hazards: Dictionary = {} # { Vector2i: {type, duration, damage} }
 var _burning_grass: Dictionary = {} # { Vector2i: {turns_remaining} } - Tracks burning grass tiles
@@ -495,37 +498,102 @@ func _get_walkable_mask(grid_pos: Vector2i) -> int:
 	return mask
 
 func _handle_mouse_click(screen_pos: Vector2):
-	var world_pos = get_global_mouse_position()
-	var target_grid = tile_map.local_to_map(world_pos)
-	
+	request_move_to_tile(tile_map.local_to_map(get_global_mouse_position()))
+
+# クリックされた移動先への移動要求。
+# ターン進行中(敵ターン等)や自動移動中は保留し、実行可能なタイミングで経路移動を開始する。
+func request_move_to_tile(target_grid: Vector2i) -> void:
+	# 進行中の自動移動は新しい移動先で上書きする（移動中にもクリックで目的地を変更できる）
+	_cancel_active_auto_movement()
+	_pending_path_target = target_grid
+	_has_pending_path_target = true
+	_drain_pending_path_target()
+
+# 保留中のクリック移動を、実行可能なタイミングで開始する
+func _drain_pending_path_target() -> bool:
+	if not _has_pending_path_target:
+		return false
+	if _current_game_state != TurnPhase.PLAYER_TURN:
+		return false
+	if _is_processing_action or _auto_move_cooldown > 0.0:
+		return false
+	_has_pending_path_target = false
+	return _start_path_to(_pending_path_target)
+
+# 自動移動・経路追従・休憩・自動探索を停止し、実行中のコルーチンを打ち切る
+func _cancel_active_auto_movement() -> void:
+	_is_auto_moving = false
+	_stop_path_following_state()
+	_is_resting = false
+	if _is_auto_exploring:
+		_stop_auto_explore()
+	_path_generation += 1
+
+# 経路追従の状態をクリアする（実行中のコルーチンは _path_generation の不一致で退出を検知する）
+func _stop_path_following_state() -> void:
+	_is_path_following = false
+	_current_path.clear()
+	_path_continue_after_attack = false
+
+# 指定タイルへの経路を計算して経路追従を開始する
+func _start_path_to(target_grid: Vector2i) -> bool:
+	if not is_instance_valid(player):
+		return false
 	if target_grid.x < 0 or target_grid.x >= MAP_WIDTH or target_grid.y < 0 or target_grid.y >= MAP_HEIGHT:
-		return
-	
-	if not _is_walkable(target_grid):
-		return
-	
+		_log_move_denied()
+		return false
+	var can_swim = player.can_swim if "can_swim" in player else false
+	if not _is_walkable(target_grid, can_swim):
+		_log_move_denied()
+		return false
+
 	var player_grid = tile_map.local_to_map(player.position)
-	
 	if player_grid == target_grid:
-		return
-	
+		return false
+
+	# 経路計算前にパスファインディンググリッドを更新（凍結タイルなどの変更を反映）
 	_setup_pathfinding()
 	var path_grid = _astar_grid
 	if not _is_on_world_map and player and player.can_swim:
 		path_grid = _astar_grid_swim
 	var path = path_grid.get_id_path(player_grid, target_grid)
-	
-	if path.size() > 1:
-		var enemies_in_view = _get_visible_enemies()
-		_enemies_at_path_start = enemies_in_view.size()
-		
-		# Always set full path. Safety stop is handled in _continue_path_following
-		_current_path = path
-		
-		_path_index = 1
-		_path_stop_on_new_enemy = true
-		_path_continue_after_attack = false
-		_is_path_following = true
+
+	if path.size() <= 1:
+		_log_move_denied()
+		return false
+
+	_enemies_at_path_start = _get_visible_enemies().size()
+	# Always set full path. Safety stop is handled in _continue_path_following
+	_current_path = path
+	_path_index = 1
+	_path_stop_on_new_enemy = true
+	_path_continue_after_attack = false
+	_is_path_following = true
+	return true
+
+# 経路上のタイルに敵が残っているか（前進しなかった原因が攻撃かどうかの判定用）
+func _has_hostile_on_tile(grid_pos: Vector2i) -> bool:
+	if not get_tree():
+		return false
+	for child in get_tree().get_nodes_in_group("entities"):
+		if not is_instance_valid(child) or child.is_queued_for_deletion():
+			continue
+		if not (child is Node2D) or child == player:
+			continue
+		if not _is_hostile(player, child):
+			continue
+		if tile_map.local_to_map(child.position) == grid_pos:
+			return true
+	return false
+
+func _log_move_denied() -> void:
+	if has_node("/root/LogUI"):
+		get_node("/root/LogUI").add_log("そこへは移動できない。", Color(0.7, 0.7, 0.7))
+
+func _log_path_stopped(reason: String) -> void:
+	var log_ui = get_tree().root.get_node_or_null("LogUI") if get_tree() else null
+	if log_ui and log_ui.has_method("add_log"):
+		log_ui.add_log(reason, Color(1.0, 0.8, 0.4))
 
 func _get_visible_enemies() -> Array:
 	var visible_enemies = []
@@ -1065,13 +1133,13 @@ func _try_move_character(character, direction: Vector2):
 	# Can walk on water if character can swim OR if it is frozen (ICE)
 	var is_frozen = _frozen_tiles.has(target_grid_pos) or cell_type == CellType.ICE
 	if cell_type == CellType.WATER and not is_frozen:
-		if _is_auto_exploring or _is_path_following or _is_auto_moving:
-			return false
-		elif not ("can_swim" in character and character.can_swim):
-			if character == player:
-				pass # Player can enter water but will drown
-			else:
+		# 泳げるキャラクターは自動移動・経路移動中も水中を通行できる
+		if not ("can_swim" in character and character.can_swim):
+			if _is_auto_exploring or _is_path_following or _is_auto_moving:
 				return false
+			elif character != player:
+				return false
+			# プレイヤーは手動操作なら水に入れる（溺れる可能性あり）
 
 	for child in get_tree().get_nodes_in_group("entities"):
 		if not is_instance_valid(child) or child.is_queued_for_deletion():
@@ -1224,6 +1292,9 @@ func _process(delta):
 		PlayerUi.update_hunger(player.hunger, player.max_hunger)
 		PlayerUi.update_turns(player.turn_counter)
 	
+	# 保留中のクリック移動を開始する
+	_drain_pending_path_target()
+
 	if _is_auto_moving and _current_game_state == TurnPhase.PLAYER_TURN:
 		_continue_auto_move()
 	
@@ -1422,7 +1493,7 @@ func _continue_auto_move():
 
 
 
-func _is_walkable(grid_pos: Vector2i) -> bool:
+func _is_walkable(grid_pos: Vector2i, can_swim: bool = false) -> bool:
 	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT:
 		return false
 	if _is_on_world_map:
@@ -1435,7 +1506,7 @@ func _is_walkable(grid_pos: Vector2i) -> bool:
 	# ICE is walkable (frozen water)
 	if cell == CellType.WALL or cell == CellType.DOOR_LOCKED or cell == CellType.LAVA or cell == CellType.PIT:
 		return false
-	if cell == CellType.WATER and not _frozen_tiles.has(grid_pos):
+	if cell == CellType.WATER and not _frozen_tiles.has(grid_pos) and not can_swim:
 		return false
 	return true
 
@@ -1458,23 +1529,22 @@ func _continue_path_following():
 		return
 	
 	if _path_index >= _current_path.size():
-		_is_path_following = false
-		_current_path.clear()
-		_path_continue_after_attack = false
+		_stop_path_following_state()
 		return
 
 	_is_processing_action = true
+	# 実行中にキャンセル・移動先変更されたら、この経路の後処理をしない
+	var path_gen = _path_generation
 
 	# Stop if new enemies are visible compared to start of path
 	var enemies_in_view = _get_visible_enemies()
 	# Filter out invisible enemies (just in case _get_visible_enemies doesn't check .visible property?)
 	# Whatever _get_visible_enemies returns should be trusted if implemented correctly.
 	if _path_stop_on_new_enemy and enemies_in_view.size() > _enemies_at_path_start:
-		_is_path_following = false
-		_current_path.clear()
-		_path_continue_after_attack = false
+		_stop_path_following_state()
 		_is_processing_action = false
 		print("Path following stopped: New enemy in sight")
+		_log_path_stopped("敵を発見したため移動を停止しました。")
 		return
 
 	var current_grid = tile_map.local_to_map(player.position)
@@ -1484,9 +1554,7 @@ func _continue_path_following():
 		_path_index += 1
 		
 	if _path_index >= _current_path.size():
-		_is_path_following = false
-		_current_path.clear()
-		_path_continue_after_attack = false
+		_stop_path_following_state()
 		_is_processing_action = false
 		return
 
@@ -1506,11 +1574,10 @@ func _continue_path_following():
 			next_grid = Vector2i(_current_path[_path_index])
 			diff = next_grid - current_grid
 		else:
-			_is_path_following = false
-			_current_path.clear()
-			_path_continue_after_attack = false
+			_stop_path_following_state()
 			_is_processing_action = false
 			print("Path following stopped: Invalid gap")
+			_log_path_stopped("経路が不正なため移動を停止しました。")
 			return
 			
 	var direction = Vector2(diff)
@@ -1519,28 +1586,32 @@ func _continue_path_following():
 	
 	# Try move
 	var moved = await _try_move_character(player, direction)
+
+	if path_gen != _path_generation:
+		# 移動先が変更された/キャンセルされた:移動が済んでいればターンのみ消費して新しい経路を優先する
+		if moved:
+			await _end_player_turn()
+		_is_processing_action = false
+		return
+
 	var end_grid = tile_map.local_to_map(player.position)
-	
+
 	if moved:
-		# If we attacked or swapped, `start_grid` == `end_grid` might be true (if no movement happened but action taken)
-		# Or if we moved, `end_grid` != `current_grid`.
-		# Waypoint advancement is handled naturally at the beginning of the next cycle.
-		if current_grid == end_grid and not _path_continue_after_attack:
-			# Acted but didn't move, and we shouldn't continue
-			_is_path_following = false
-			_current_path.clear()
-			_path_continue_after_attack = false
-			print("Path following stopped: Attacked")
-			
+		# 扉を開けた等、その場で消費したターンは前進しないが経路は継続する。
+		# 経路上に敵が残って攻撃した場合のみ停止する。
+		if current_grid == end_grid and not _path_continue_after_attack and _has_hostile_on_tile(next_grid):
+			_stop_path_following_state()
+			_log_path_stopped("敵が経路上にいるため移動を停止しました。")
+
 		await _end_player_turn()
-		if player and player.hp < hp_before:
-			_is_path_following = false
-			_current_path.clear()
-			_path_continue_after_attack = false
+
+		if path_gen != _path_generation:
 			_is_processing_action = false
-			var log_ui = get_tree().root.get_node_or_null("LogUI")
-			if log_ui and log_ui.has_method("add_log"):
-				log_ui.add_log("ダメージを受けたため自動移動を停止しました。", Color(1.0, 0.8, 0.4))
+			return
+		if player and player.hp < hp_before:
+			_stop_path_following_state()
+			_is_processing_action = false
+			_log_path_stopped("ダメージを受けたため自動移動を停止しました。")
 			return
 	else:
 		# Blocked - recalculate path if we're doing a long distance auto movement
@@ -1548,27 +1619,26 @@ func _continue_path_following():
 		if not _is_on_world_map and player and player.can_swim:
 			path_grid = _astar_grid_swim
 		var goal_grid = Vector2i(_current_path[_current_path.size() - 1])
-		
+
 		var rebuilt: Array = Array(path_grid.get_id_path(current_grid, goal_grid))
 		if rebuilt.size() > 1 and Vector2i(rebuilt[1]) != current_grid + Vector2i(direction):
 			# Found an alternative route to avoid dynamic obstacle
 			_current_path = rebuilt
 			_path_index = 1 # Start towards new first step
 			await _end_player_turn() # Costs a turn to recalculate / wait
-			if player and player.hp < hp_before:
-				_is_path_following = false
-				_current_path.clear()
-				_path_continue_after_attack = false
+			if path_gen != _path_generation:
 				_is_processing_action = false
-				var log_ui = get_tree().root.get_node_or_null("LogUI")
-				if log_ui and log_ui.has_method("add_log"):
-					log_ui.add_log("ダメージを受けたため自動移動を停止しました。", Color(1.0, 0.8, 0.4))
+				return
+			if player and player.hp < hp_before:
+				_stop_path_following_state()
+				_is_processing_action = false
+				_log_path_stopped("ダメージを受けたため自動移動を停止しました。")
 				return
 		else:
-			_is_path_following = false
-			_current_path.clear()
-			_path_continue_after_attack = false
+			_stop_path_following_state()
+			_is_processing_action = false
 			print("Path following stopped: Blocked permanently")
+			_log_path_stopped("進路が塞がれたため移動を停止しました。")
 	
 	_auto_move_cooldown = AUTO_MOVE_DELAY
 	_is_processing_action = false
@@ -7420,6 +7490,10 @@ func _init_world_map():
 		for y in range(MAP_HEIGHT):
 			_visible_tiles[x][y] = false
 			_explored_tiles[x][y] = false
+
+	# フロア0のマップ生成はmap_controllerを経由しないため、ここでパスファインディングを初期化する
+	map_controller.map_data = _map_data
+	_setup_pathfinding()
 
 func _zoom_out_to_world_map():
 	if _is_on_world_map:
