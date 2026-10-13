@@ -503,6 +503,13 @@ func _handle_mouse_click(screen_pos: Vector2):
 # クリックされた移動先への移動要求。
 # ターン進行中(敵ターン等)や自動移動中は保留し、実行可能なタイミングで経路移動を開始する。
 func request_move_to_tile(target_grid: Vector2i) -> void:
+	# 移動できない場所をクリックした場合は現在の移動を止めない
+	var can_swim = player.can_swim if (player and "can_swim" in player) else false
+	if target_grid.x < 0 or target_grid.x >= MAP_WIDTH or target_grid.y < 0 or target_grid.y >= MAP_HEIGHT \
+			or not _is_walkable(target_grid, can_swim):
+		_log_move_denied()
+		return
+
 	# 進行中の自動移動は新しい移動先で上書きする（移動中にもクリックで目的地を変更できる）
 	_cancel_active_auto_movement()
 	_pending_path_target = target_grid
