@@ -394,76 +394,51 @@ func create_tileset():
 				lava_image.set_pixel(x, y, Color(0.65, 0.12, 0.02, 1.0))
 
 	var ash_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
-	# Paved cobblestone road design (dark grout border, 3D shaded bricks)
-	ash_image.fill(Color(0.18, 0.14, 0.12, 1.0)) # Dark brown grout base
+	# Paved road - horizontal stripes pattern (distinct from wall bricks)
+	ash_image.fill(Color(0.35, 0.32, 0.28, 1.0)) # Gray-brown road base
 	
 	var ash_rng = RandomNumberGenerator.new()
 	ash_rng.seed = 404
 	
-	# Create a cobblestone grid pattern of bricks (horizontal bricks of size 16x8, offset every row)
+	# Create horizontal road stripes (not brick pattern)
 	for y in range(TILE_SIZE):
-		var row = y / 8
-		var offset = 8 if (row % 2 == 1) else 0
 		for x in range(TILE_SIZE):
-			var col = (x + offset) % TILE_SIZE
-			var local_x = col % 16
-			var local_y = y % 8
+			var local_y = y % 6
 			
-			# Keep grout lines
-			if local_x == 0 or local_y == 0 or local_x == 15 or local_y == 7:
-				continue
-				
-			# Stone base color
-			var base_c = Color(0.55, 0.38, 0.28, 1.0) # Warm brown cobblestone
-			var tint = ash_rng.randf_range(-0.05, 0.05)
-			var grain = _hash_noise(x, y, 404) * 0.10 - 0.05
-			var highlight = 0.0
-			
-			# 3D Highlight & Shadow
-			if local_x <= 2 or local_y <= 2:
-				highlight = 0.14 # Top-left highlight
-			elif local_x >= 13 or local_y >= 5:
-				highlight = -0.14 # Bottom-right shadow
-				
-			var shade = tint + grain + highlight
-			var final_c = base_c.lightened(max(shade, 0.0)).darkened(max(-shade, 0.0))
-			ash_image.set_pixel(x, y, final_c)
+			# Road stripe pattern
+			if local_y == 0 or local_y == 5:
+				# Dark stripe lines
+				ash_image.set_pixel(x, y, Color(0.20, 0.18, 0.15, 1.0))
+			else:
+				# Road surface with subtle variation
+				var base_c = Color(0.45, 0.42, 0.38, 1.0)
+				var noise = _hash_noise(x, y, 404) * 0.08 - 0.04
+				var final_c = base_c.lightened(max(noise, 0.0)).darkened(max(-noise, 0.0))
+				ash_image.set_pixel(x, y, final_c)
 
 	var volcanic_ash_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
-	# Volcanic ash - darker, reddish-gray cobblestone
-	volcanic_ash_image.fill(Color(0.15, 0.12, 0.10, 1.0)) # Darker reddish-gray grout base
+	# Volcanic ash - ash particles scattered on ground (distinct from wall)
+	volcanic_ash_image.fill(Color(0.45, 0.42, 0.40, 1.0)) # Lighter gray-brown background
 	
 	var volcanic_ash_rng = RandomNumberGenerator.new()
 	volcanic_ash_rng.seed = 505
 	
-	# Create a cobblestone grid pattern of bricks (horizontal bricks of size 16x8, offset every row)
+	# Create scattered ash particles (not cobblestone pattern)
 	for y in range(TILE_SIZE):
-		var row = y / 8
-		var offset = 8 if (row % 2 == 1) else 0
 		for x in range(TILE_SIZE):
-			var col = (x + offset) % TILE_SIZE
-			var local_x = col % 16
-			var local_y = y % 8
+			# Use noise to create particle distribution
+			var noise_val = _hash_noise(x, y, 505)
 			
-			# Keep grout lines
-			if local_x == 0 or local_y == 0 or local_x == 15 or local_y == 7:
-				continue
+			# Only draw particles where noise is high (scattered effect)
+			if noise_val > 0.6:
+				# Ash particle color - orange-brown
+				var base_c = Color(0.75, 0.55, 0.35, 1.0)
+				var tint = volcanic_ash_rng.randf_range(-0.08, 0.08)
+				var grain = _hash_noise(x + 100, y + 100, 505) * 0.15 - 0.075
 				
-			# Stone base color - darker, more reddish
-			var base_c = Color(0.45, 0.32, 0.25, 1.0) # Darker reddish-brown cobblestone
-			var tint = volcanic_ash_rng.randf_range(-0.05, 0.05)
-			var grain = _hash_noise(x, y, 505) * 0.10 - 0.05
-			var highlight = 0.0
-			
-			# 3D Highlight & Shadow
-			if local_x <= 2 or local_y <= 2:
-				highlight = 0.12 # Top-left highlight
-			elif local_x >= 13 or local_y >= 5:
-				highlight = -0.12 # Bottom-right shadow
-				
-			var shade = tint + grain + highlight
-			var final_c = base_c.lightened(max(shade, 0.0)).darkened(max(-shade, 0.0))
-			volcanic_ash_image.set_pixel(x, y, final_c)
+				var shade = tint + grain
+				var final_c = base_c.lightened(max(shade, 0.0)).darkened(max(-shade, 0.0))
+				volcanic_ash_image.set_pixel(x, y, final_c)
 
 	var crystal_floor_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	crystal_floor_image.blit_rect(floor_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i.ZERO)
@@ -619,6 +594,9 @@ func create_tileset():
 	
 	source.texture = ImageTexture.create_from_image(combined_image)
 	
+	# occluder付与前にソース登録(登録前にset_occluderするとout of boundsエラー)
+	tileset.add_source(source, 0)
+
 	for i in range(90):
 		source.create_tile(Vector2i(i, 0))
 		if i < 16:
@@ -672,7 +650,7 @@ func create_tileset():
 	var rock_td = source.get_tile_data(Vector2i(82, 0), 0)
 	rock_td.set_occluder(0, rock_occluder)
 
-	tileset.add_source(source, 0)
+
 	
 	var debug_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	debug_image.fill(Color(1, 0, 0, 0.5))
@@ -1092,7 +1070,6 @@ func _apply_ascii_dungeon_tiles(combined_image: Image):
 		"door_locked": {"char": "+", "fg": Color(0.55, 0.62, 1.0, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
 		"ice": {"char": "_", "fg": Color(0.72, 0.92, 1.0, 1.0), "bg": Color(0.02, 0.05, 0.07, 1.0)},
 		"lava": {"char": "~", "fg": Color(1.0, 0.28, 0.08, 1.0), "bg": Color(0.10, 0.02, 0.01, 1.0)},
-		"ash": {"char": ",", "fg": Color(0.08, 0.08, 0.10, 0.7), "bg": Color(0.60, 0.60, 0.62, 1.0)},
 		"crystal": {"char": "*", "fg": Color(0.72, 0.95, 1.0, 1.0), "bg": Color(0.02, 0.03, 0.05, 1.0)},
 		"pit": {"char": " ", "fg": Color(0.42, 0.50, 0.88, 1.0), "bg": Color(0.12, 0.18, 0.45, 1.0)},
 		"tree": {"char": "T", "fg": Color(0.28, 0.78, 0.28, 1.0), "bg": Color(0.02, 0.04, 0.02, 1.0)},
@@ -1112,6 +1089,7 @@ func _apply_ascii_dungeon_tiles(combined_image: Image):
 	_blit_ascii_tile(combined_image, 38, specs["door_locked"])
 	_blit_ascii_tile(combined_image, 39, specs["ice"])
 	_blit_ascii_tile(combined_image, 40, specs["lava"])
+	# Skip indices 41 (ash) and 42 (volcanic_ash) - use procedural tiles instead
 	_blit_ascii_tile(combined_image, 43, specs["crystal"])
 	_blit_ascii_tile(combined_image, 44, specs["stairs_down"])
 	_blit_ascii_tile(combined_image, 45, specs["stairs_down"])

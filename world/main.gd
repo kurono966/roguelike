@@ -312,6 +312,7 @@ func _ready():
 	if visibility_manager:
 		visibility_manager.calculate_fov()
 		visibility_manager.draw_map()
+
 	
 	if PlayerUi:
 		PlayerUi.update_floor(current_floor)
@@ -4992,8 +4993,60 @@ func reveal_map():
 	_update_entity_visibility()
 	_draw_map()
 
-# ... (rest of the file is similar)
-# ... (rest of the file is similar)
+func reshape_map() -> int:
+	# Reshape terrain outside player's vision
+	# Returns count of entities killed by being trapped in walls
+	if _map_data.is_empty():
+		return 0
+
+	var killed_count = 0
+
+	# Store current entity positions before reshaping
+	var entity_positions = []
+	for entity in get_tree().get_nodes_in_group("entities"):
+		if is_instance_valid(entity) and not entity.is_queued_for_deletion():
+			var grid_pos = tile_map.local_to_map(entity.position)
+			entity_positions.append({"entity": entity, "grid_pos": grid_pos})
+
+	# Reshape only tiles outside player's vision
+	for x in range(MAP_WIDTH):
+		for y in range(MAP_HEIGHT):
+			if not _visible_tiles[x][y]:
+				# Randomly reshape this tile
+				# 70% chance to become floor, 30% chance to become wall
+				# This creates new terrain patterns
+				if randf() < 0.7:
+					if _map_data[x][y] == CellType.WALL:
+						_map_data[x][y] = CellType.FLOOR
+				else:
+					if _map_data[x][y] != CellType.WALL:
+						_map_data[x][y] = CellType.WALL
+
+	# Check if any entities are now trapped in walls
+	for entity_data in entity_positions:
+		var entity = entity_data["entity"]
+		var grid_pos = entity_data["grid_pos"]
+
+		if not is_instance_valid(entity) or entity.is_queued_for_deletion():
+			continue
+
+		# Check if this position is now a wall
+		if grid_pos.x >= 0 and grid_pos.x < MAP_WIDTH and grid_pos.y >= 0 and grid_pos.y < MAP_HEIGHT:
+			if _map_data[grid_pos.x][grid_pos.y] == CellType.WALL:
+				# Entity is trapped in wall - kill it
+				if entity.has_method("take_damage"):
+					entity.take_damage(9999)  # Instant death
+					killed_count += 1
+					if entity.has_method("die"):
+						entity.die()
+
+	# Update pathfinding after terrain change
+	_setup_pathfinding()
+
+	# Redraw map
+	_draw_map()
+
+	return killed_count
 
 # --- Hazard & Special Skill System ---
 
