@@ -6,6 +6,9 @@
 z_index = 4
 script = ExtResource("1_script")
 
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(16, 16)
+
 [node name="Label" type="Label" parent="." unique_id=1439343211]
 offset_left = 6.0
 offset_top = 7.0
@@ -18,3 +21,4 @@ theme_override_font_sizes/font_size = 14
 text = "A"
 horizontal_alignment = 1
 vertical_alignment = 1
+

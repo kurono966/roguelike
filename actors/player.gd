@@ -5,7 +5,7 @@ const BASE_MAX_HP = 10  # 基本の最大HP
 const BASE_MAX_MP = 5   # 基本の最大MP
 
 @onready var camera = get_parent().get_node("Camera2D")  # カメラへの参照
-@onready var light = $Light2D  # ライトへの参照
+@onready var light = $PointLight2D  # ライトへの参照（シーン内のノード名に合わせる）
 
 # ステータス
 var max_hp: int = BASE_MAX_HP
@@ -42,6 +42,7 @@ var initial_mp_bonus: int = 0
 var _base_can_swim: bool = false # Ability to traverse water (Base)
 var is_on_water: bool = false # Current terrain status
 var is_in_grass: bool = false
+var is_on_crystal: bool = false # Standing on crystal floor
 
 var can_swim: bool:
 	get:
@@ -86,7 +87,10 @@ func _get_equipment_stats() -> Dictionary:
 		"max_mp": 0,
 		"strength": 0,
 		"dexterity": 0,
-		"intelligence": 0
+		"intelligence": 0,
+		"crit_bonus": 0.0,
+		"hit_bonus": 0.0,
+		"penetration_bonus": 0.0
 	}
 
 func _get_hunger_attack_multiplier() -> float:
@@ -133,7 +137,7 @@ var crit_rate: float:
 		# Base 5% + 1% per Dexterity point + Equipment Bonuses
 		var base = 0.05
 		var dex_bonus = float(dexterity) * 0.01
-		
+
 		var equipment_stats = _get_equipment_stats()
 		# Add equipment dexterity to bonus? Or is it already in 'dexterity'?
 		# 'dexterity' is base stat. Equipment adds separately usually.
@@ -141,7 +145,7 @@ var crit_rate: float:
 		# Let's add equipment dex to crit too.
 		var equip_dex_bonus = float(equipment_stats.dexterity) * 0.01
 		var item_crit_bonus = float(equipment_stats.get("crit_bonus", 0.0))
-		
+
 		# Inventory Adjacency Bonuses
 		var adj_bonus = 0.0
 		if equipment_component and equipment_component.bag_data:
@@ -150,13 +154,15 @@ var crit_rate: float:
 		var organization_bonus = 0.0
 		if equipment_component and equipment_component.equipment_data:
 			organization_bonus = float(get_inventory_bonus_state().get("crit_bonus", 0.0))
-			
+
 		# Grass Critical Bonus
 		var grass_bonus = 0.0
 		if is_in_grass and _check_equipment_effect("crit_in_grass"):
 			grass_bonus = 0.3 # +30% Crit in grass!
-			
-		return clamp(base + dex_bonus + equip_dex_bonus + item_crit_bonus + adj_bonus + organization_bonus + grass_bonus, 0.0, 1.0)
+
+		var total = base + dex_bonus + equip_dex_bonus + item_crit_bonus + adj_bonus + organization_bonus + grass_bonus
+		print("Crit Rate Debug - base:", base, "dex_bonus:", dex_bonus, "equip_dex_bonus:", equip_dex_bonus, "item_crit_bonus:", item_crit_bonus, "adj_bonus:", adj_bonus, "organization_bonus:", organization_bonus, "grass_bonus:", grass_bonus, "total:", total)
+		return clamp(total, 0.0, 1.0)
 
 var penetration_rate: float:
 	get:
@@ -751,7 +757,7 @@ func heal(amount: int):
 # 経験値を獲得する
 func gain_exp(amount: int):
 	exp += amount
-	print("★ Player gained ", amount, " EXP! Total: ", exp, "/", exp_to_next_level)
+	print("* Player gained ", amount, " EXP! Total: ", exp, "/", exp_to_next_level)
 	
 	# ログにも表示
 	if has_node("/root/LogUI"):
@@ -837,7 +843,7 @@ func level_up():
 	if float_text_scene:
 		var lvl_up_text = float_text_scene.instantiate()
 		lvl_up_text.position = Vector2(16, -16)
-		lvl_up_text.set_text("★ LEVEL UP! ★", Color(1.0, 0.9, 0.0), true) # treated as crit for pop & wiggle
+		lvl_up_text.set_text("* LEVEL UP! *", Color(1.0, 0.9, 0.0), true) # treated as crit for pop & wiggle
 		add_child(lvl_up_text)
 
 	play_level_up_sound()
@@ -961,15 +967,15 @@ func on_turn_end():
 			hunger = max(hunger - 1, 0)
 			if hunger == HUNGER_WARNING_LEVEL:
 				if has_node("/root/LogUI"):
-					get_node("/root/LogUI").add_log("お腹がすいてきた…", Color(1.0, 0.9, 0.4))
+					get_node("/root/LogUI").add_log("お腹がすいてきた...", Color(1.0, 0.9, 0.4))
 			elif hunger == HUNGER_CRITICAL_LEVEL:
 				if has_node("/root/LogUI"):
-					get_node("/root/LogUI").add_log("とても空腹だ！何か食べないと…", Color(1.0, 0.6, 0.3))
+					get_node("/root/LogUI").add_log("とても空腹だ！何か食べないと...", Color(1.0, 0.6, 0.3))
 		elif hunger == 0:
 			# Starvation damage
 			take_damage(HUNGER_DAMAGE_PER_TURN)
 			if has_node("/root/LogUI"):
-				get_node("/root/LogUI").add_log("空腹で %d ダメージを受けた…" % HUNGER_DAMAGE_PER_TURN, Color(1.0, 0.4, 0.2))
+				get_node("/root/LogUI").add_log("空腹で %d ダメージを受けた..." % HUNGER_DAMAGE_PER_TURN, Color(1.0, 0.4, 0.2))
 	
 
 	# HPが最大でない場合のみ回復処理
@@ -994,6 +1000,12 @@ func on_turn_end():
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("水の中で傷が癒える... (+1)", Color(0.3, 0.8, 1.0))
 
+	# Crystal Floor MP Regeneration (Regenerate 1 MP every turn on crystal floor)
+	if is_on_crystal and mp < max_mp:
+		mp_heal(1)
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("結晶の魔力でMPが回復した (+1)", Color(0.4, 0.8, 1.0))
+
 	# MP Natural Regeneration
 	if mp < max_mp:
 		var total_int = intelligence
@@ -1007,12 +1019,13 @@ func on_turn_end():
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("MP回復 +1", Color(0.5, 0.5, 1.0))
 
-func update_terrain_info(is_grass: bool, is_water: bool):
+func update_terrain_info(is_grass: bool, is_water: bool, is_crystal: bool = false):
 	var sprite = get_node_or_null("Sprite2D")
 	if sprite:
 		sprite.modulate.a = 0.6 if is_grass else 1.0
 	is_on_water = is_water
 	is_in_grass = is_grass
+	is_on_crystal = is_crystal
 
 	# Cooldowns processed in on_turn_end now to support waiting.
 	
@@ -1292,6 +1305,26 @@ func _load_class_sprite():
 	
 	# Default offset
 	sprite_offset = Vector2(16, 16)
+	
+	# Class-specific colors for hero @
+	var hero_color = Color(1.0, 0.95, 0.70, 1.0)
+	match gs.player_class:
+		1: hero_color = Color(0.95, 0.85, 0.60, 1.0) # Warrior: Gold-bronze
+		2: hero_color = Color(0.60, 0.95, 0.75, 1.0) # Rogue: Emerald-mint
+		3: hero_color = Color(0.75, 0.75, 1.0, 1.0)  # Mage: Arcane blue
+		4: hero_color = Color(0.50, 0.90, 1.0, 1.0)  # Swimmer: Aqua
+		_: hero_color = Color(1.0, 0.95, 0.70, 1.0)
+		
+	sprite.texture = AsciiArtGenerator.create_ascii_sprite("@", hero_color, true)
+	sprite.modulate = Color.WHITE
+	sprite.position = sprite_offset
+	sprite.scale = Vector2.ONE
+	sprite.hframes = 1
+	sprite.vframes = 1
+	sprite.frame = 0
+	_use_sheet_anim = false
+	_start_idle_animation()
+	return
 
 	
 	var texture_path = ""
@@ -1350,6 +1383,27 @@ func _load_class_sprite():
 			# Use breathing animation for everyone since they are single sprites now
 			_use_sheet_anim = false
 			_start_idle_animation()
+
+func _create_ascii_sprite(ch: String, fg_color: Color) -> Texture2D:
+	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var bitmap = _get_ascii_bitmap(ch)
+	var scale = 4
+	var origin = Vector2i(6, 2)
+	for y in range(bitmap.size()):
+		for x in range(bitmap[y].length()):
+			if bitmap[y].substr(x, 1) == "#":
+				for dx in range(scale):
+					for dy in range(scale):
+						img.set_pixel(origin.x + x * scale + dx, origin.y + y * scale + dy, fg_color)
+	return ImageTexture.create_from_image(img)
+
+func _get_ascii_bitmap(ch: String) -> Array:
+	match ch:
+		"@":
+			return [" ### ", "#...#", "#.###", "#.#.#", "#.###", "#....", " ####"]
+		_:
+			return [" ### ", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"]
 
 var _use_sheet_anim = false
 

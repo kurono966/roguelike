@@ -84,6 +84,7 @@ func process_enemy_turns():
 	main_node._process_hazards()
 	main_node._process_burning_grass()
 	main_node._process_steam()
+	main_node._process_poison_gas()
 	main_node._process_frozen_tiles()
 	
 	var all_actors = []

@@ -1,4 +1,4 @@
-extends Control
+﻿extends Control
 
 var panel: Panel
 var left_rich_label: RichTextLabel
@@ -27,9 +27,8 @@ func _ready():
 	# Title
 	var title = Label.new()
 	panel.add_child(title)
-	title.text = "◆ キャラクター詳細ステータス ◆"
+	title.text = "= キャラクター詳細ステータス ="
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 28)
 	title.add_theme_color_override("font_color", Color(0.4, 0.8, 1.0))
 	title.add_theme_color_override("font_outline_color", Color.BLACK)
 	title.add_theme_constant_override("outline_size", 4)
@@ -52,11 +51,6 @@ func _ready():
 	left_rich_label.bbcode_enabled = true
 	left_rich_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	left_rich_label.scroll_active = true
-	left_rich_label.add_theme_font_size_override("normal_font_size", 18)
-	left_rich_label.add_theme_font_size_override("bold_font_size", 18)
-	left_rich_label.add_theme_font_size_override("bold_italics_font_size", 18)
-	left_rich_label.add_theme_font_size_override("italics_font_size", 18)
-	left_rich_label.add_theme_font_size_override("mono_font_size", 18)
 	
 	# Right Column (RichTextLabel)
 	right_rich_label = RichTextLabel.new()
@@ -64,11 +58,6 @@ func _ready():
 	right_rich_label.bbcode_enabled = true
 	right_rich_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	right_rich_label.scroll_active = true
-	right_rich_label.add_theme_font_size_override("normal_font_size", 18)
-	right_rich_label.add_theme_font_size_override("bold_font_size", 18)
-	right_rich_label.add_theme_font_size_override("bold_italics_font_size", 18)
-	right_rich_label.add_theme_font_size_override("italics_font_size", 18)
-	right_rich_label.add_theme_font_size_override("mono_font_size", 18)
 	
 	# Close Button
 	close_button = Button.new()
@@ -77,7 +66,6 @@ func _ready():
 	close_button.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
 	close_button.offset_bottom = -25
 	close_button.custom_minimum_size = Vector2(210, 50)
-	close_button.add_theme_font_size_override("font_size", 20)
 	
 	# Style close button
 	var btn_style_normal = StyleBoxFlat.new()

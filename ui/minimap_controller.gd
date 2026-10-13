@@ -1,4 +1,4 @@
-class_name MinimapController
+﻿class_name MinimapController
 extends Node
 
 const CellType = MapDefinitions.CellType
@@ -53,8 +53,7 @@ func _setup_minimap():
 	vbox.add_child(header_hbox)
 
 	var map_title = Label.new()
-	map_title.text = "✦ MAP"
-	map_title.add_theme_font_size_override("font_size", 12)
+	map_title.text = ">> MAP"
 	map_title.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25)) # Dull Gold
 	header_hbox.add_child(map_title)
 
@@ -65,7 +64,6 @@ func _setup_minimap():
 
 	_floor_label = Label.new()
 	_floor_label.text = "地上"
-	_floor_label.add_theme_font_size_override("font_size", 12)
 	_floor_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85)) # Warm off-white
 	header_hbox.add_child(_floor_label)
 

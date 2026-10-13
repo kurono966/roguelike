@@ -36,7 +36,7 @@ script = ExtResource("3_eqcmp")
 [node name="PointLight2D" type="PointLight2D" parent="."]
 position = Vector2(16, 16)
 color = Color(1, 0.8, 0.58, 1)
-energy = 0.72
+energy = 1.15
 texture_scale = 2.0
 shadow_enabled = true
 shadow_filter = 0

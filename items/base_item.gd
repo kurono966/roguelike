@@ -35,22 +35,31 @@ var name: String:
 		display_name = value
 
 func _init(p_id: String = "", p_name: String = "", p_texture: Texture2D = null, p_equipment_type: int = -1, p_width: int = 1, p_height: int = 1, p_description: String = "", p_shape = null):
-	id = p_id
-	display_name = p_name
-	texture = p_texture
-	equipment_type = p_equipment_type
-	description = p_description
+	# Only set values if they are provided (non-empty/non-default)
+	# This prevents _init from overwriting values loaded from .tres files during duplicate()
+	if p_id != "":
+		id = p_id
+	if p_name != "":
+		display_name = p_name
+	if p_texture != null:
+		texture = p_texture
+	if p_equipment_type != -1:
+		equipment_type = p_equipment_type
+	if p_description != "":
+		description = p_description
 
-	# Clear and rebuild shape
-	shape.clear()
-	
+	# Only initialize shape if explicitly provided
+	# This prevents shape from being cleared during duplicate(true)
 	if p_shape != null and p_shape is Array and not p_shape.is_empty():
+		shape.clear()
 		for cell in p_shape:
 			if cell is Vector2i:
 				shape.append(cell)
 			elif cell is Vector2:
 				shape.append(Vector2i(int(cell.x), int(cell.y)))
-	else:
+	elif p_width > 1 or p_height > 1:
+		# Only generate default shape if dimensions are specified
+		shape.clear()
 		for y in range(p_height):
 			for x in range(p_width):
 				shape.append(Vector2i(x, y))

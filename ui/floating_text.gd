@@ -1,7 +1,5 @@
 extends Node2D
 
-const CUSTOM_FONT = preload("res://assets/fonts/NotoSansJP-ExtraBold.ttf")
-
 var velocity: Vector2 = Vector2.ZERO
 var gravity: float = 220.0  # Gravitational pull in pixels/sec^2
 var elapsed: float = 0.0
@@ -14,8 +12,7 @@ func set_text(text: String, color: Color = Color.WHITE, is_crit: bool = false):
 	$Label.modulate = color
 	is_critical = is_crit
 	
-	# Apply bold premium font
-	$Label.add_theme_font_override("font", CUSTOM_FONT)
+	# Apply font size for critical vs normal hits
 	$Label.add_theme_font_size_override("font_size", 18 if is_critical else 14)
 	
 	if is_critical:

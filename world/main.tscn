@@ -1,23 +1,23 @@
-[gd_scene load_steps=3 format=3 uid="uid://cr32l1r5x5jh7"]
+[gd_scene format=3 uid="uid://cr32l1r5x5jh7"]
 
 [ext_resource type="Script" uid="uid://dv3xtwtb8mhvc" path="res://world/main.gd" id="1_n2y7g"]
 [ext_resource type="PackedScene" uid="uid://dpgoxl35bsoik" path="res://actors/player.tscn" id="2_abcde"]
 
-[node name="Main" type="Node2D"]
+[node name="Main" type="Node2D" unique_id=1381668795]
 script = ExtResource("1_n2y7g")
 
-[node name="TileMap" type="TileMap" parent="."]
+[node name="TileMap" type="TileMap" parent="." unique_id=557388236]
 light_mask = 1048575
 format = 2
 
-[node name="Player" parent="." instance=ExtResource("2_abcde")]
+[node name="Player" parent="." unique_id=1293758853 instance=ExtResource("2_abcde")]
 position = Vector2(160, 160)
 
-[node name="Camera2D" type="Camera2D" parent="."]
+[node name="Camera2D" type="Camera2D" parent="." unique_id=577299476]
 zoom = Vector2(0.5, 0.5)
 position_smoothing_enabled = true
 
-[node name="HitSoundPlayer" type="AudioStreamPlayer" parent="."]
+[node name="HitSoundPlayer" type="AudioStreamPlayer" parent="." unique_id=1251608911]
 
-[node name="CanvasModulate" type="CanvasModulate" parent="."]
-color = Color(0.06, 0.06, 0.10, 1)
+[node name="CanvasModulate" type="CanvasModulate" parent="." unique_id=2106373920]
+color = Color(0.22, 0.22, 0.28, 1)

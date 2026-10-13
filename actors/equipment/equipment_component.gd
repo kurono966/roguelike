@@ -115,3 +115,56 @@ func get_connector_bonus() -> Dictionary:
 						result[color] += 1
 						result.total += 1
 	return result
+
+# Get all connected equipment groups (items connected via connectors)
+func get_connected_groups() -> Array:
+	var groups = []
+	if not equipment_data:
+		return groups
+	
+	var visited = {}
+	
+	for item in equipment_data.items:
+		var item_key = "%s" % item.get_instance_id()
+		if visited.has(item_key):
+			continue
+		
+		# Start a new group
+		var group = []
+		var queue = [item]
+		visited[item_key] = true
+		
+		while queue.size() > 0:
+			var current = queue.pop_front()
+			group.append(current)
+			current.ensure_connectors()
+			
+			# Find all connected neighbors
+			for connector in current.connectors:
+				var cell: Vector2i = connector.get("cell", Vector2i.ZERO)
+				var direction: Vector2i = connector.get("direction", Vector2i.ZERO)
+				var world_cell = current.grid_position + cell
+				var neighbor = equipment_data.get_item_at(world_cell.x + direction.x, world_cell.y + direction.y)
+				
+				if neighbor == null or neighbor == current:
+					continue
+				
+				var opposite = -direction
+				var neighbor_local = world_cell + direction - neighbor.grid_position
+				neighbor.ensure_connectors()
+				
+				# Check if neighbor has matching connector
+				for other_connector in neighbor.connectors:
+					if other_connector.get("cell", Vector2i.ZERO) == neighbor_local \
+					and other_connector.get("direction", Vector2i.ZERO) == opposite \
+					and str(other_connector.get("color", "")) == str(connector.get("color", "")):
+						var neighbor_key = "%s" % neighbor.get_instance_id()
+						if not visited.has(neighbor_key):
+							visited[neighbor_key] = true
+							queue.append(neighbor)
+						break
+		
+		if group.size() > 1:
+			groups.append(group)
+	
+	return groups

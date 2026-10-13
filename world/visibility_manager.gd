@@ -31,18 +31,22 @@ func setup(main: Node2D):
 		memory_tile_map = main.memory_tile_map
 	# Arrays will be assigned later after map generation
 
-func calculate_fov():
+func calculate_fov(is_preview: bool = false):
 	if not is_instance_valid(player):
 		player = main_node.get_node_or_null("Player")
 	if not is_instance_valid(player):
 		return
-	var player_grid_pos = tile_map.local_to_map(player.position)
+	var player_grid_pos = tile_map.local_to_map(player.position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
 	current_fov_radius = STEAM_FOV_RADIUS if steam_tiles.has(player_grid_pos) else FOV_RADIUS
 	
 	# Reset visibility
 	for x in range(MAP_WIDTH):
 		for y in range(MAP_HEIGHT):
 			visible_tiles[x][y] = false
+
+	if not _is_in_bounds(player_grid_pos):
+		update_entity_visibility()
+		return
 			
 	# Player's own tile is always visible
 	visible_tiles[player_grid_pos.x][player_grid_pos.y] = true
@@ -76,6 +80,9 @@ func calculate_fov():
 
 	update_entity_visibility()
 
+func _is_in_bounds(pos: Vector2i) -> bool:
+	return pos.x >= 0 and pos.x < MAP_WIDTH and pos.y >= 0 and pos.y < MAP_HEIGHT
+
 func update_entity_visibility():
 	var entities = main_node.get_tree().get_nodes_in_group("entities")
 	for entity in entities:
@@ -103,7 +110,7 @@ func is_entity_visible_to_player(entity: Node2D) -> bool:
 		# 草むらのステルス判定: 隣接していない、かつ「千里眼」スキルがない場合は敵を非表示にする
 		if is_visible and map_data[grid_pos.x][grid_pos.y] == CellType.GRASS:
 			if entity.is_in_group("enemies"):
-				var player_grid_pos = tile_map.local_to_map(player.position)
+				var player_grid_pos = tile_map.local_to_map(player.position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
 				var dist_x = abs(grid_pos.x - player_grid_pos.x)
 				var dist_y = abs(grid_pos.y - player_grid_pos.y)
 				
@@ -197,7 +204,9 @@ func _get_transform(octant: int) -> Transform2D:
 
 func draw_map():
 	tile_map.clear_layer(LAYER_VISIBLE)
-	tile_map.clear_layer(LAYER_MEMORY)
+	# Only clear LAYER_MEMORY if it exists (tile_map might only have 1 layer)
+	if tile_map.get_layers_count() > LAYER_MEMORY:
+		tile_map.clear_layer(LAYER_MEMORY)
 	if is_instance_valid(memory_tile_map):
 		memory_tile_map.clear()
 	
@@ -245,17 +254,19 @@ func draw_map():
 						atlas_coords.x = 40
 					CellType.ASH:
 						atlas_coords.x = 41
+					CellType.VOLCANIC_ASH:
+						atlas_coords.x = 42
 					CellType.CRYSTAL_FLOOR:
 						var crystal_mask = 0
 						if y > 0 and map_data[x][y-1] == CellType.CRYSTAL_FLOOR: crystal_mask |= 1
 						if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.CRYSTAL_FLOOR: crystal_mask |= 2
 						if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.CRYSTAL_FLOOR: crystal_mask |= 4
 						if x > 0 and map_data[x-1][y] == CellType.CRYSTAL_FLOOR: crystal_mask |= 8
-						atlas_coords.x = 45 + crystal_mask
+						atlas_coords.x = 46 + crystal_mask
 					CellType.STAIRS_RED:
-						atlas_coords.x = 43
-					CellType.STAIRS_PURPLE:
 						atlas_coords.x = 44
+					CellType.STAIRS_PURPLE:
+						atlas_coords.x = 45
 					CellType.TREE:
 						atlas_coords.x = 80
 					CellType.TREE_FRUIT:
@@ -313,6 +324,7 @@ func draw_map():
 			else:
 				# Clear cells that are NOT explored
 				tile_map.set_cell(LAYER_VISIBLE, Vector2i(x, y), -1)
-				tile_map.set_cell(LAYER_MEMORY, Vector2i(x, y), -1)
 				if is_instance_valid(memory_tile_map):
 					memory_tile_map.set_cell(0, Vector2i(x, y), -1)
+				elif tile_map.get_layers_count() > LAYER_MEMORY:
+					tile_map.set_cell(LAYER_MEMORY, Vector2i(x, y), -1)

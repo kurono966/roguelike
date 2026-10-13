@@ -30,6 +30,11 @@ var trade_mode: bool = false  # If true, emit trade_request instead of handling 
 @onready var background_rect = $Background
 @onready var item_container = $ItemContainer
 
+# Connected group visual effects
+var connected_group_overlays: Array = []
+var pulse_timer: Timer
+var pulse_phase: float = 0.0
+
 # For drag and drop preview
 # For drag and drop preview
 var preview_container: Control
@@ -55,6 +60,14 @@ func _ready():
 		preview_container.visible = false
 		preview_container.mouse_filter = MOUSE_FILTER_IGNORE
 		add_child(preview_container)
+
+	# Initialize pulse timer for connected group effects
+	if not pulse_timer:
+		pulse_timer = Timer.new()
+		pulse_timer.wait_time = 0.1  # Update every 100ms for slower blinking
+		pulse_timer.autostart = false
+		pulse_timer.timeout.connect(_on_pulse_timer)
+		add_child(pulse_timer)
 
 	# Cursor for keyboard navigation - using ColorRect for better visibility
 	if not cursor_rect:
@@ -100,6 +113,7 @@ func refresh_view():
 	print("GridView: self children count: ", get_child_count())
 	if item_container:
 		print("GridView: item_container children count: ", item_container.get_child_count())
+	
 	# Clear existing items (but keep cursor)
 	if item_container:
 		var children_to_remove = []
@@ -246,45 +260,197 @@ func _add_connector_visuals(item_control: Control, item: BaseItem):
 		"yellow": Color(1.0, 0.85, 0.15),
 		"purple": Color(0.75, 0.3, 1.0)
 	}
+	var glow_colors = {
+		"red": Color(1.0, 0.4, 0.3),
+		"blue": Color(0.4, 0.7, 1.0),
+		"yellow": Color(1.0, 0.95, 0.4),
+		"purple": Color(0.9, 0.5, 1.0)
+	}
 	for connector in item.connectors:
 		var cell: Vector2i = connector.get("cell", Vector2i.ZERO)
 		var direction: Vector2i = connector.get("direction", Vector2i.UP)
 		var color = colors.get(str(connector.get("color", "")), Color.WHITE)
-		var outline = ColorRect.new()
-		outline.color = Color(0.03, 0.03, 0.03, 1.0)
-		outline.mouse_filter = MOUSE_FILTER_IGNORE
-		outline.z_index = 19
-		var marker = ColorRect.new()
-		marker.color = color
-		marker.mouse_filter = MOUSE_FILTER_IGNORE
-		marker.z_index = 20
-		if direction.x != 0:
-			outline.size = Vector2(6, 18)
-			outline.position = Vector2((cell.x + (1 if direction.x > 0 else 0)) * CELL_SIZE - 3, cell.y * CELL_SIZE + 7)
-			marker.size = Vector2(4, 16)
-			marker.position = Vector2((cell.x + (1 if direction.x > 0 else 0)) * CELL_SIZE - 2, cell.y * CELL_SIZE + 8)
-		else:
-			outline.size = Vector2(18, 6)
-			outline.position = Vector2(cell.x * CELL_SIZE + 7, (cell.y + (1 if direction.y > 0 else 0)) * CELL_SIZE - 3)
-			marker.size = Vector2(16, 4)
-			marker.position = Vector2(cell.x * CELL_SIZE + 8, (cell.y + (1 if direction.y > 0 else 0)) * CELL_SIZE - 2)
-		item_control.add_child(outline)
-		item_control.add_child(marker)
-		var inner_mark = ColorRect.new()
-		inner_mark.color = color
-		inner_mark.mouse_filter = MOUSE_FILTER_IGNORE
-		inner_mark.z_index = 21
-		inner_mark.size = Vector2(6, 6)
+		var glow_color = glow_colors.get(str(connector.get("color", "")), Color.WHITE)
 		var cell_center = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
-		inner_mark.position = cell_center + Vector2(direction) * 9.0 - inner_mark.size / 2.0
-		item_control.add_child(inner_mark)
+		
+		# Create connector base with rounded appearance
+		var connector_base = _create_connector_base(cell, direction, color)
+		item_control.add_child(connector_base)
+		
+		# Create inner glow effect
+		var inner_glow = _create_inner_glow(cell, direction, glow_color)
+		item_control.add_child(inner_glow)
+		
+		# Create center gem/crystal
+		var center_gem = _create_center_gem(cell, direction, color)
+		item_control.add_child(center_gem)
+		
+		# Create outer ring for active connectors
 		if _is_connector_active(item, connector):
-			var glow = ColorRect.new()
-			glow.color = Color.WHITE
-			glow.mouse_filter = MOUSE_FILTER_IGNORE
-			glow.size = Vector2(2, 10) if direction.x != 0 else Vector2(10, 2)
-			glow.position = (marker.size - glow.size) / 2.0
-			marker.add_child(glow)
+			var active_ring = _create_active_ring(cell, direction, glow_color)
+			item_control.add_child(active_ring)
+
+func _create_connector_base(cell: Vector2i, direction: Vector2i, color: Color) -> Polygon2D:
+	var base = Polygon2D.new()
+	base.color = color.darkened(0.3)
+	base.z_index = 15
+	
+	var cell_center = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
+	var triangle_tip = cell_center + Vector2(direction) * 12.0
+	
+	# Create triangle shape pointing in the connector direction
+	var triangle_points = []
+	if direction.x != 0:
+		# Horizontal triangle
+		var base_width = 8.0
+		var triangle_height = 10.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_x = tip_x - (direction.x * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),  # Tip
+			Vector2(base_x, tip_y - base_width / 2.0),  # Bottom left
+			Vector2(base_x, tip_y + base_width / 2.0)   # Bottom right
+		]
+	else:
+		# Vertical triangle
+		var base_width = 8.0
+		var triangle_height = 10.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_y = tip_y - (direction.y * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),  # Tip
+			Vector2(tip_x - base_width / 2.0, base_y),  # Bottom left
+			Vector2(tip_x + base_width / 2.0, base_y)   # Bottom right
+		]
+	
+	base.polygon = PackedVector2Array(triangle_points)
+	return base
+
+func _create_inner_glow(cell: Vector2i, direction: Vector2i, glow_color: Color) -> Polygon2D:
+	var glow = Polygon2D.new()
+	glow.color = glow_color
+	glow.z_index = 16
+	
+	var cell_center = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
+	var triangle_tip = cell_center + Vector2(direction) * 12.0
+	
+	# Create smaller inner triangle
+	var triangle_points = []
+	if direction.x != 0:
+		var base_width = 5.0
+		var triangle_height = 7.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_x = tip_x - (direction.x * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),
+			Vector2(base_x, tip_y - base_width / 2.0),
+			Vector2(base_x, tip_y + base_width / 2.0)
+		]
+	else:
+		var base_width = 5.0
+		var triangle_height = 7.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_y = tip_y - (direction.y * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),
+			Vector2(tip_x - base_width / 2.0, base_y),
+			Vector2(tip_x + base_width / 2.0, base_y)
+		]
+	
+	glow.polygon = PackedVector2Array(triangle_points)
+	return glow
+
+func _create_center_gem(cell: Vector2i, direction: Vector2i, color: Color) -> Polygon2D:
+	var gem = Polygon2D.new()
+	gem.color = color.lightened(0.2)
+	gem.z_index = 17
+	
+	var cell_center = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
+	var triangle_tip = cell_center + Vector2(direction) * 10.0
+	
+	# Create small center triangle
+	var triangle_points = []
+	if direction.x != 0:
+		var base_width = 4.0
+		var triangle_height = 5.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_x = tip_x - (direction.x * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),
+			Vector2(base_x, tip_y - base_width / 2.0),
+			Vector2(base_x, tip_y + base_width / 2.0)
+		]
+	else:
+		var base_width = 4.0
+		var triangle_height = 5.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_y = tip_y - (direction.y * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),
+			Vector2(tip_x - base_width / 2.0, base_y),
+			Vector2(tip_x + base_width / 2.0, base_y)
+		]
+	
+	gem.polygon = PackedVector2Array(triangle_points)
+	return gem
+
+func _create_active_ring(cell: Vector2i, direction: Vector2i, glow_color: Color) -> Polygon2D:
+	const PulsingRingScript = preload("res://ui/pulsing_connector_ring.gd")
+	
+	var ring = PulsingRingScript.new()
+	ring.z_index = 18
+	
+	var cell_center = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
+	var triangle_tip = cell_center + Vector2(direction) * 12.0
+	
+	# Create triangle outline for active connectors
+	var triangle_points = []
+	if direction.x != 0:
+		var base_width = 9.0
+		var triangle_height = 11.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_x = tip_x - (direction.x * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),
+			Vector2(base_x, tip_y - base_width / 2.0),
+			Vector2(base_x, tip_y + base_width / 2.0)
+		]
+	else:
+		var base_width = 9.0
+		var triangle_height = 11.0
+		var tip_x = triangle_tip.x
+		var tip_y = triangle_tip.y
+		var base_y = tip_y - (direction.y * triangle_height)
+		
+		triangle_points = [
+			Vector2(tip_x, tip_y),
+			Vector2(tip_x - base_width / 2.0, base_y),
+			Vector2(tip_x + base_width / 2.0, base_y)
+		]
+	
+	ring.polygon = PackedVector2Array(triangle_points)
+	
+	# Setup pulsing animation
+	ring.setup({
+		"base": glow_color.lightened(0.3),
+		"bright": glow_color.lightened(0.7)
+	}, randf() * PI * 2)
+	
+	return ring
 
 func _is_connector_active(item: BaseItem, connector: Dictionary) -> bool:
 	if not grid_data:
@@ -542,6 +708,8 @@ func on_item_pickup_request(item: BaseItem):
 func _on_grid_changed():
 	queue_redraw()
 	refresh_view()
+	if is_equipment_view:
+		_update_connected_group_effects()
 
 # Cursor Logic
 func set_cursor_active(active: bool):
@@ -585,3 +753,154 @@ func _update_cursor_rect():
 func get_cursor_item() -> BaseItem:
 	if not grid_data: return null
 	return grid_data.get_item_at(cursor_pos.x, cursor_pos.y)
+
+# Connected Group Visual Effects
+func _update_connected_group_effects():
+	# Clear existing overlays
+	for overlay in connected_group_overlays:
+		if overlay and is_instance_valid(overlay):
+			overlay.queue_free()
+	connected_group_overlays.clear()
+	
+	if not is_equipment_view or not grid_data:
+		if pulse_timer:
+			pulse_timer.stop()
+		return
+	
+	# Get player's equipment component to find connected groups
+	var player = get_tree().get_first_node_in_group("player")
+	if not player:
+		return
+	
+	var eq_comp = player.get_node_or_null("EquipmentComponent")
+	if not eq_comp:
+		return
+	
+	var groups = eq_comp.get_connected_groups()
+	if groups.is_empty():
+		if pulse_timer:
+			pulse_timer.stop()
+		return
+	
+	# Create overlay for each connected group
+	for group in groups:
+		var overlay = _create_group_overlay(group)
+		if overlay:
+			connected_group_overlays.append(overlay)
+			if item_container:
+				item_container.add_child(overlay)
+			else:
+				add_child(overlay)
+	
+	# Start pulse timer if not already running
+	if not pulse_timer.is_stopped():
+		pulse_timer.stop()
+	pulse_timer.start()
+
+func _create_group_overlay(group: Array) -> Control:
+	if group.is_empty():
+		return null
+	
+	# Create a container for all item outlines and fills
+	var container = Control.new()
+	container.mouse_filter = MOUSE_FILTER_IGNORE
+	container.z_index = 50  # Above items but below cursor
+	
+	# Create fill for all cells in the group
+	_add_group_fill(container, group)
+	
+	# Create outline for each item in the group
+	for item in group:
+		_add_item_outline(container, item, group)
+	
+	return container
+
+func _add_group_fill(container: Control, group: Array):
+	# Create a fill for all cells in the connected group
+	for item in group:
+		var item_pos = item.grid_position
+		for cell in item.shape:
+			var world_pos = item_pos + cell
+			var fill = ColorRect.new()
+			fill.mouse_filter = MOUSE_FILTER_IGNORE
+			fill.z_index = 49  # Below outlines but above items
+			fill.color = Color(1.0, 0.8, 0.2, 0.2)  # Golden color with low alpha
+			fill.position = Vector2(world_pos.x * CELL_SIZE, world_pos.y * CELL_SIZE)
+			fill.size = Vector2(CELL_SIZE, CELL_SIZE)
+			fill.set_meta("is_fill", true)
+			container.add_child(fill)
+
+func _add_item_outline(container: Control, item: BaseItem, group: Array):
+	var item_pos = item.grid_position
+	var group_cells = {}
+	
+	# Build a set of all cells occupied by items in the connected group
+	for group_item in group:
+		var group_item_pos = group_item.grid_position
+		for cell in group_item.shape:
+			var world_pos = group_item_pos + cell
+			group_cells[world_pos] = true
+	
+	# Find outline edges for each cell
+	var outline_edges = []  # Array of {cell_pos, edge_direction}
+	for cell in item.shape:
+		var world_pos = item_pos + cell
+		
+		# Check each direction for outer edge
+		var directions = [
+			{"dir": Vector2i.UP, "edge": "top"},
+			{"dir": Vector2i.DOWN, "edge": "bottom"},
+			{"dir": Vector2i.LEFT, "edge": "left"},
+			{"dir": Vector2i.RIGHT, "edge": "right"}
+		]
+		
+		for d in directions:
+			var neighbor_pos = world_pos + d.dir
+			# Only draw edge if neighbor is not occupied by any item in the connected group
+			if not group_cells.has(neighbor_pos):
+				outline_edges.append({"cell_pos": world_pos, "edge": d.edge})
+	
+	# Create individual edge lines for each outer edge
+	for edge_data in outline_edges:
+		var cell_pos = edge_data.cell_pos
+		var edge = edge_data.edge
+		
+		var line = ColorRect.new()
+		line.mouse_filter = MOUSE_FILTER_IGNORE
+		line.z_index = 50
+		line.color = Color(1.0, 0.8, 0.2, 0.8)  # Golden color
+		
+		# Position and size based on edge direction
+		match edge:
+			"top":
+				line.position = Vector2(cell_pos.x * CELL_SIZE, cell_pos.y * CELL_SIZE)
+				line.size = Vector2(CELL_SIZE, 2)
+			"bottom":
+				line.position = Vector2(cell_pos.x * CELL_SIZE, cell_pos.y * CELL_SIZE + CELL_SIZE - 2)
+				line.size = Vector2(CELL_SIZE, 2)
+			"left":
+				line.position = Vector2(cell_pos.x * CELL_SIZE, cell_pos.y * CELL_SIZE)
+				line.size = Vector2(2, CELL_SIZE)
+			"right":
+				line.position = Vector2(cell_pos.x * CELL_SIZE + CELL_SIZE - 2, cell_pos.y * CELL_SIZE)
+				line.size = Vector2(2, CELL_SIZE)
+		
+		# Store reference for animation
+		line.set_meta("is_outline", true)
+		
+		container.add_child(line)
+
+func _on_pulse_timer():
+	pulse_phase += 0.5  # Slower increment for slower blinking
+	var alpha = 0.3 + 0.5 * (sin(pulse_phase) + 1.0) / 2.0  # Oscillate between 0.3 and 0.8
+	var fill_alpha = 0.1 + 0.15 * (sin(pulse_phase) + 1.0) / 2.0  # Oscillate between 0.1 and 0.25 for fill
+	
+	for container in connected_group_overlays:
+		if not is_instance_valid(container):
+			continue
+		# Iterate through all children in the container
+		for child in container.get_children():
+			if child.has_meta("is_outline"):
+				child.color = Color(1.0, 0.8, 0.2, alpha)
+			elif child.has_meta("is_fill"):
+				child.color = Color(1.0, 0.8, 0.2, fill_alpha)

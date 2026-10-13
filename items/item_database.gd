@@ -3,6 +3,49 @@ extends RefCounted
 
 const ITEM_DATA_DIR = "res://items/data"
 
+# Hardcoded list of item resource files.
+# IMPORTANT: DirAccess.open() does NOT work in exported builds (PCK files don't support
+# directory listing), so we must enumerate .tres files explicitly here.
+const ITEM_RESOURCE_FILES = [
+	"berry.tres",
+	"cross_shield.tres",
+	"ether.tres",
+	"fire_sword.tres",
+	"ge_claw.tres",
+	"goblin_arm.tres",
+	"golden_gummy.tres",
+	"gummy.tres",
+	"high_ether.tres",
+	"high_potion.tres",
+	"hunter_ring.tres",
+	"l_armor.tres",
+	"leather_armor.tres",
+	"life_ring.tres",
+	"long_sword.tres",
+	"mage_robe.tres",
+	"magnum.tres",
+	"minotaur_horn.tres",
+	"mirrored_ge_claw.tres",
+	"pistol.tres",
+	"plate_armor.tres",
+	"potion_str.tres",
+	"potion.tres",
+	"ring.tres",
+	"round_shield.tres",
+	"rusty_sword.tres",
+	"scroll_mapping.tres",
+	"scroll_teleport.tres",
+	"silver_gummy.tres",
+	"slime_leg.tres",
+	"spark_core.tres",
+	"spider_leg.tres",
+	"swimsuit.tres",
+	"thief_cloak.tres",
+	"warp_grass.tres",
+	"wooden_bow.tres",
+	"zakomushi_shell.tres"
+]
+
 static func get_all_items() -> Array[BaseItem]:
 	var resource_items = _load_items_from_resources()
 	
@@ -25,24 +68,18 @@ static func get_all_items() -> Array[BaseItem]:
 
 static func _load_items_from_resources() -> Array[BaseItem]:
 	var items: Array[BaseItem] = []
-	var dir = DirAccess.open(ITEM_DATA_DIR)
-	if dir == null:
-		return items
 	
-	var files = []
-	dir.list_dir_begin()
-	var file_name = dir.get_next()
-	while file_name != "":
-		if not dir.current_is_dir() and file_name.get_extension() == "tres":
-			files.append(file_name)
-		file_name = dir.get_next()
-	dir.list_dir_end()
-	files.sort()
-	
-	for file in files:
+	# Use hardcoded list instead of DirAccess (DirAccess doesn't work in exported builds)
+	for file in ITEM_RESOURCE_FILES:
 		var resource = load(ITEM_DATA_DIR + "/" + file)
 		if resource is BaseItem:
-			items.append(resource.duplicate(true))
+			# Use duplicate(false) to avoid calling _init() which would clear shape
+			# .tres files already have @export variables initialized with correct values
+			items.append(resource.duplicate(false))
+		else:
+			print("[ItemDatabase] Failed to load resource: ", file)
+	
+	print("[ItemDatabase] Loaded ", items.size(), " items from resources")
 	return items
 
 static func _get_fallback_items() -> Array[BaseItem]:

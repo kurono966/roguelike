@@ -26,6 +26,9 @@ const MAP_WIDTH = MapDefinitions.MAP_WIDTH   # マップの幅（タイル数）
 const MAP_HEIGHT = MapDefinitions.MAP_HEIGHT  # マップの高さ（タイル数）
 
 const FOV_RADIUS = 8 # Field of View radius
+const VISION_LIGHT_COLOR = Color(1.0, 0.80, 0.58, 1.0)
+const VISION_LIGHT_ENERGY = 1.22
+const VISION_AMBIENT_COLOR = Color(0.22, 0.22, 0.28, 1.0)
 
 const MAX_ENEMIES_PER_ROOM = 2
 const SHOP_MAX_USES_PER_FLOOR = 2
@@ -69,11 +72,13 @@ var tileset_manager: TilesetManager
 var shadow_manager: ShadowManager
 var input_handler: InputHandler
 var target_manager: TargetManager
+var hazard_manager: HazardManager
 
 var _is_auto_moving = false
 var _auto_move_direction = Vector2.ZERO
 var _auto_move_initial_mask = 0
 var _last_player_grid_pos: Vector2i = Vector2i.ZERO
+var _pending_pit_warning_grid: Vector2i = Vector2i(-1, -1)
 
 # Resting state
 var _is_resting = false
@@ -100,7 +105,12 @@ var _burning_grass: Dictionary = {} # { Vector2i: {turns_remaining} } - Tracks b
 var _frozen_tiles: Dictionary = {} # { Vector2i: {turns_remaining} } - Frozen water tiles
 var _steam_tiles: Dictionary = {} # { Vector2i: {turns_remaining} } - Steam obscuring vision
 var _steam_exposure: Dictionary = {} # { instance_id: consecutive turns in steam }
+var _traps: Dictionary = {} # { Vector2i: {type, is_revealed} } - Traps on the floor
+var _trap_visuals: Dictionary = {} # { Vector2i: Sprite2D } - Visuals for revealed traps
+var _poison_gas_tiles: Dictionary = {} # { Vector2i: {turns_remaining, density} } - Poison gas obscuring vision and damaging
+var _poison_gas_exposure: Dictionary = {} # { instance_id: consecutive turns in poison gas }
 var _jammed_doors: Dictionary = {} # { Vector2i: true } - Doors with broken locks that cannot be picked
+var _elevation_map: Array = [] # 2D array of elevation values (0.0-1.0) for overworld maps
 
 var _turn_count: int = 0
 const WORLD_MAP_MOVE_TURN_COST: int = 10
@@ -111,6 +121,16 @@ const MAX_ACTIVE_ENEMIES: int = 105
 var _shop_uses_this_floor: int = 0
 
 var minimap_controller: MinimapController
+
+# New controllers for refactored systems
+var map_controller: MapController
+var player_controller: PlayerController
+var skill_executor: SkillExecutor
+var enemy_manager: EnemyManager
+var item_manager: ItemManager
+var npc_manager: NPCManager
+var world_map_manager: WorldMapManager
+var save_manager_extended: SaveManagerExtended
 
 func _ready():
 	RenderingServer.set_default_clear_color(Color(0.02, 0.02, 0.03, 1.0))
@@ -142,6 +162,10 @@ func _ready():
 	target_manager.setup(self)
 	add_child(target_manager)
 	
+	hazard_manager = HazardManager.new()
+	hazard_manager.setup(self)
+	add_child(hazard_manager)
+	
 	tileset_manager = TilesetManager.new()
 	tileset_manager.setup(self)
 	add_child(tileset_manager)
@@ -152,6 +176,27 @@ func _ready():
 	
 	minimap_controller = MinimapController.new()
 	add_child(minimap_controller)
+	
+	# Initialize new controllers
+	map_controller = MapController.new()
+	map_controller.setup(self)
+	add_child(map_controller)
+	
+	player_controller = PlayerController.new()
+	player_controller.setup(self)
+	add_child(player_controller)
+	
+	skill_executor = SkillExecutor.new()
+	skill_executor.setup(self)
+	add_child(skill_executor)
+	
+	enemy_manager = EnemyManager.new()
+	enemy_manager.setup(self)
+	add_child(enemy_manager)
+	
+	item_manager = ItemManager.new()
+	item_manager.setup(self)
+	add_child(item_manager)
 	
 	# Force unmute master bus just in case
 	var master_bus = AudioServer.get_bus_index("Master")
@@ -173,6 +218,12 @@ func _ready():
 		# Force tileset refresh
 		tile_map.tile_set = tile_map.tile_set
 		
+	# Setup WorldEnvironment for subtle 2D bloom/glow
+	var world_env = WorldEnvironment.new()
+	world_env.name = "WorldEnvironment"
+	world_env.environment = load("res://default_environment.tres")
+	add_child(world_env)
+	
 	# Setup memory_tile_map
 	memory_tile_map = TileMap.new()
 	memory_tile_map.name = "MemoryTileMap"
@@ -229,22 +280,10 @@ func _ready():
 			push_error("Player node was freed before initial placement.")
 			return
 		var first_room_center = _rooms[0].get_center()
-		var spawn_pos = first_room_center
+		var spawn_pos = _get_center_spawn_pos(first_room_center)
 		
 		# 中心が水なら周囲を探す
-		if _map_data[spawn_pos.x][spawn_pos.y] == CellType.WATER or _map_data[spawn_pos.x][spawn_pos.y] == CellType.LAVA:
-			var found = false
-			# 渦巻き状に探索
-			for r in range(1, 5):
-				for x in range(spawn_pos.x - r, spawn_pos.x + r + 1):
-					for y in range(spawn_pos.y - r, spawn_pos.y + r + 1):
-						if x >= 0 and x < MAP_WIDTH and y >= 0 and y < MAP_HEIGHT:
-							if _map_data[x][y] == CellType.FLOOR:
-								spawn_pos = Vector2i(x, y)
-								found = true
-								break
-					if found: break
-				if found: break
+		# Skipped water check for testing
 		
 		player.position = Vector2(spawn_pos) * TILE_SIZE
 		_last_player_grid_pos = spawn_pos
@@ -255,7 +294,7 @@ func _ready():
 		# カメラを設定
 		camera.position = player.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
 		camera.make_current()
-		camera.zoom = Vector2(1.0, 1.0)
+		camera.zoom = Vector2(0.6, 0.6)
 		camera.position_smoothing_speed = 5.0
 	
 	if current_floor == 0:
@@ -263,6 +302,7 @@ func _ready():
 	else:
 		_spawn_enemies()
 		_spawn_items()
+		_spawn_traps()
 	_spawn_torches()
 	_current_game_state = TurnPhase.PLAYER_TURN
 	
@@ -289,7 +329,7 @@ func get_random_floor_position() -> Vector2:
 		var x = randi_range(1, MAP_WIDTH - 2)
 		var y = randi_range(1, MAP_HEIGHT - 2)
 		var cell = _map_data[x][y]
-		if cell == CellType.FLOOR or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.CRYSTAL_FLOOR or cell == CellType.ICE:
+		if cell == CellType.FLOOR or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.VOLCANIC_ASH or cell == CellType.CRYSTAL_FLOOR or cell == CellType.ICE:
 			var grid_pos = Vector2i(x, y)
 			
 			# Check if occupied by player or other entities
@@ -299,6 +339,8 @@ func get_random_floor_position() -> Vector2:
 				if p_grid == grid_pos:
 					occupied = true
 			if not occupied:
+				if not get_tree():
+					continue
 				for entity in get_tree().get_nodes_in_group("entities"):
 					if is_instance_valid(entity) and not entity.is_queued_for_deletion():
 						var ent_grid = tile_map.local_to_map(entity.position)
@@ -308,6 +350,47 @@ func get_random_floor_position() -> Vector2:
 			if not occupied:
 				return Vector2(x, y) * TILE_SIZE
 	return Vector2.ZERO
+
+func _get_center_spawn_pos(fallback: Vector2i = Vector2i.ZERO) -> Vector2i:
+	var center = Vector2i(MAP_WIDTH / 2, MAP_HEIGHT / 2)
+	if _is_local_spawn_tile(center):
+		return center
+
+	var max_radius = maxi(MAP_WIDTH, MAP_HEIGHT)
+	for radius in range(1, max_radius):
+		for x in range(center.x - radius, center.x + radius + 1):
+			for y in range(center.y - radius, center.y + radius + 1):
+				if x != center.x - radius and x != center.x + radius and y != center.y - radius and y != center.y + radius:
+					continue
+				var pos = Vector2i(x, y)
+				if _is_local_spawn_tile(pos):
+					return pos
+
+	if _is_local_spawn_tile(fallback):
+		return fallback
+	return center
+
+func _is_local_spawn_tile(pos: Vector2i) -> bool:
+	if pos.x < 0 or pos.x >= MAP_WIDTH or pos.y < 0 or pos.y >= MAP_HEIGHT:
+		return false
+	if _map_data.is_empty() or pos.x >= _map_data.size() or pos.y >= _map_data[pos.x].size():
+		return false
+	var cell = _map_data[pos.x][pos.y]
+	return cell == CellType.FLOOR or \
+			cell == CellType.GRASS or \
+			cell == CellType.ASH or \
+			cell == CellType.VOLCANIC_ASH or \
+			cell == CellType.CRYSTAL_FLOOR or \
+			cell == CellType.ICE or \
+			cell == CellType.STAIRS or \
+			cell == CellType.STAIRS_UP or \
+			cell == CellType.STAIRS_BLUE or \
+			cell == CellType.STAIRS_GREEN or \
+			cell == CellType.STAIRS_RED or \
+			cell == CellType.STAIRS_PURPLE or \
+			cell == CellType.STAIRS_GOLD or \
+			cell == CellType.DOOR_OPEN or \
+			cell == CellType.DOOR_CLOSED
 
 
 
@@ -352,6 +435,8 @@ func _try_attack_adjacent_enemy() -> bool:
 		var check_pos = player_grid + dir
 		
 		# Check both enemies and npcs
+		if not get_tree():
+			continue
 		var targets = get_tree().get_nodes_in_group("enemies") + get_tree().get_nodes_in_group("npcs")
 		
 		for child in targets:
@@ -444,21 +529,27 @@ func _handle_mouse_click(screen_pos: Vector2):
 
 func _get_visible_enemies() -> Array:
 	var visible_enemies = []
+	if not get_tree():
+		return visible_enemies
 	var enemies = get_tree().get_nodes_in_group("enemies")
 	
 	for enemy in enemies:
-		if _can_player_recognize_entity(enemy):
-			visible_enemies.append(enemy)
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion():
+			if _can_player_recognize_entity(enemy):
+				visible_enemies.append(enemy)
 	
 	return visible_enemies
 
 func _get_visible_entities() -> Array:
 	var visible_entities = []
+	if not get_tree():
+		return visible_entities
 	var entities = get_tree().get_nodes_in_group("enemies") + get_tree().get_nodes_in_group("npcs")
 	
 	for entity in entities:
-		if _can_player_recognize_entity(entity):
-			visible_entities.append(entity)
+		if is_instance_valid(entity) and not entity.is_queued_for_deletion():
+			if _can_player_recognize_entity(entity):
+				visible_entities.append(entity)
 	
 	return visible_entities
 
@@ -525,6 +616,8 @@ func _try_spawn_periodic_enemy():
 		if world_cell == WorldCell.VILLAGE:
 			return
 		
+	if not get_tree():
+		return
 	var current_enemies = get_tree().get_nodes_in_group("enemies").size()
 	if current_enemies >= MAX_ACTIVE_ENEMIES:
 		return
@@ -548,6 +641,8 @@ func _try_spawn_periodic_enemy():
 			
 		# Check if position is occupied by another entity
 		var occupied = false
+		if not get_tree():
+			continue
 		for entity in get_tree().get_nodes_in_group("entities"):
 			if is_instance_valid(entity) and not entity.is_queued_for_deletion():
 				var ent_grid = tile_map.local_to_map(entity.position)
@@ -630,6 +725,7 @@ func _try_move_character(character, direction: Vector2):
 				var is_fast = _is_auto_moving or _is_path_following or _is_auto_exploring
 				player.move_to_grid(target_grid_pos, is_fast)
 				_last_player_grid_pos = target_grid_pos
+				_pending_pit_warning_grid = Vector2i(-1, -1)
 				_world_map_move_turn_cost_pending = true
 				_draw_world_map()
 				
@@ -665,17 +761,24 @@ func _try_move_character(character, direction: Vector2):
 			var new_local_pos = target_grid_pos
 			
 			if target_grid_pos.x < 0:
-				exit_dir = Vector2i.LEFT
+				exit_dir.x = -1
 				new_local_pos.x = MAP_WIDTH - 1
 			elif target_grid_pos.x >= MAP_WIDTH:
-				exit_dir = Vector2i.RIGHT
+				exit_dir.x = 1
 				new_local_pos.x = 0
-			elif target_grid_pos.y < 0:
-				exit_dir = Vector2i.UP
+			
+			if target_grid_pos.y < 0:
+				exit_dir.y = -1
 				new_local_pos.y = MAP_HEIGHT - 1
 			elif target_grid_pos.y >= MAP_HEIGHT:
-				exit_dir = Vector2i.DOWN
+				exit_dir.y = 1
 				new_local_pos.y = 0
+				
+			# Prevent diagonal corner chunk exits: corners have no connecting roads/exits and lead into walls
+			if exit_dir.x != 0 and exit_dir.y != 0:
+				if has_node("/root/LogUI"):
+					get_node("/root/LogUI").add_log("この角からは移動できない。", Color(0.8, 0.5, 0.5))
+				return false
 				
 			if exit_dir != Vector2i.ZERO:
 				var target_world_pos = _world_player_pos + exit_dir
@@ -683,12 +786,45 @@ func _try_move_character(character, direction: Vector2):
 				   target_world_pos.y >= 0 and target_world_pos.y < MAP_HEIGHT:
 					var cell = _world_map_data[target_world_pos.x][target_world_pos.y]
 					if cell != WorldCell.SEA and cell != WorldCell.MOUNTAIN:
-						# Save and transition
-						_save_current_floor_to_cache()
+						# 1. Gather all active allies BEFORE clearing entities so they follow the player
+						var moving_allies = []
+						for ally in get_tree().get_nodes_in_group("allies"):
+							if is_instance_valid(ally) and not ally.is_queued_for_deletion():
+								moving_allies.append({
+									"enemy_id": ally.enemy_id if "enemy_id" in ally else "zakomushi",
+									"enemy_name": ally.enemy_name if "enemy_name" in ally else "仲間",
+									"hp": ally.hp if "hp" in ally else 10,
+									"max_hp": ally.max_hp if "max_hp" in ally else 10,
+									"attack": ally.attack_power if "attack_power" in ally else 5,
+									"defense": ally.defense if "defense" in ally else 0,
+									"attack_range": ally.attack_range if "attack_range" in ally else 1.5,
+									"sprite_path": ally.sprite_path if "sprite_path" in ally else "",
+									"is_flying": ally.is_flying if "is_flying" in ally else false,
+									"is_ally": true,
+									"affection": ally.affection if "affection" in ally else 0,
+									"fear": ally.fear if "fear" in ally else 0,
+									"trade_items": ally.trade_items.duplicate(true) if "trade_items" in ally else [],
+									"inventory_items": ally.inventory_items.duplicate(true) if "inventory_items" in ally else [],
+									"level": ally.level if "level" in ally else 1,
+									"xp_value": ally.xp_value if "xp_value" in ally else 10
+								})
+								ally.remove_from_group("allies")
+								ally.remove_from_group("entities")
+								if ally.is_in_group("enemies"): ally.remove_from_group("enemies")
+								if ally.is_in_group("npcs"): ally.remove_from_group("npcs")
+								ally.queue_free()
+
+						# 2. Save current floor with OLD position
+						var old_cache_key = "local_overworld_%d_%d" % [_world_player_pos.x, _world_player_pos.y]
+						_save_current_floor_to_cache_with_key(old_cache_key)
+
+						# 3. Update world position
 						_world_player_pos = target_world_pos
 						var cache_key = "local_overworld_%d_%d" % [_world_player_pos.x, _world_player_pos.y]
 						
-						# Clear current screen entities
+						# 4. Clear current screen entities
+						if not get_tree():
+							return false
 						for enemy in get_tree().get_nodes_in_group("enemies"):
 							if is_instance_valid(enemy): enemy.queue_free()
 						for npc in get_tree().get_nodes_in_group("npcs"):
@@ -698,7 +834,16 @@ func _try_move_character(character, direction: Vector2):
 						for torch in get_tree().get_nodes_in_group("torches"):
 							if is_instance_valid(torch): torch.queue_free()
 							
+						# 5. Load or generate destination chunk
 						if not _load_floor_from_cache(cache_key, false, true):
+							_explored_tiles.clear()
+							_explored_tiles.resize(MAP_WIDTH)
+							for x in range(MAP_WIDTH):
+								_explored_tiles[x] = []
+								_explored_tiles[x].resize(MAP_HEIGHT)
+								for y in range(MAP_HEIGHT):
+									_explored_tiles[x][y] = false
+							
 							_generate_map(cell)
 							_setup_pathfinding()
 							
@@ -707,11 +852,70 @@ func _try_move_character(character, direction: Vector2):
 							else:
 								_spawn_enemies()
 								_spawn_items()
+								_spawn_traps()
 							_spawn_torches()
 						
-						# Put player at the opposite edge
+						# 6. Safety check & snap: Ensure new_local_pos is a walkable tile along the entry edge
+						var is_walkable_tile = func(pos: Vector2i) -> bool:
+							if pos.x < 0 or pos.x >= MAP_WIDTH or pos.y < 0 or pos.y >= MAP_HEIGHT:
+								return false
+							var c = _map_data[pos.x][pos.y]
+							return c == CellType.FLOOR or c == CellType.GRASS or c == CellType.ASH or \
+								   c == CellType.VOLCANIC_ASH or c == CellType.CRYSTAL_FLOOR or \
+								   c == CellType.DOOR_OPEN or c == CellType.STAIRS or c == CellType.STAIRS_GOLD or \
+								   (c == CellType.WATER and player.can_swim)
+						
+						if not is_walkable_tile.call(new_local_pos):
+							var found_walkable = false
+							var best_pos = new_local_pos
+							var min_d = 999
+							if exit_dir.x != 0:
+								# Entered from left/right edge, search along the vertical border
+								for test_y in range(MAP_HEIGHT):
+									var p = Vector2i(new_local_pos.x, test_y)
+									if is_walkable_tile.call(p):
+										var d = abs(test_y - new_local_pos.y)
+										if d < min_d:
+											min_d = d
+											best_pos = p
+											found_walkable = true
+							elif exit_dir.y != 0:
+								# Entered from top/bottom edge, search along the horizontal border
+								for test_x in range(MAP_WIDTH):
+									var p = Vector2i(test_x, new_local_pos.y)
+									if is_walkable_tile.call(p):
+										var d = abs(test_x - new_local_pos.x)
+										if d < min_d:
+											min_d = d
+											best_pos = p
+											found_walkable = true
+							if found_walkable:
+								new_local_pos = best_pos
+						
+						# 7. Position player and reset tween / sprite state strictly
 						player.position = Vector2(new_local_pos) * TILE_SIZE
 						_last_player_grid_pos = new_local_pos
+						_pending_pit_warning_grid = Vector2i(-1, -1)
+						if "is_moving" in player:
+							player.is_moving = false
+						var sprite = player.get_node_or_null("Sprite2D")
+						if sprite:
+							if "_move_tween" in player and player._move_tween and player._move_tween.is_valid():
+								player._move_tween.kill()
+							sprite.position = player.sprite_offset
+						var light = player.get_node_or_null("PointLight2D")
+						if light:
+							light.position = Vector2(16, 16)
+
+						if player.has_method("update_terrain_info"):
+							var is_grass = _map_data[new_local_pos.x][new_local_pos.y] == CellType.GRASS
+							var is_water = _map_data[new_local_pos.x][new_local_pos.y] == CellType.WATER
+							var is_crystal = _map_data[new_local_pos.x][new_local_pos.y] == CellType.CRYSTAL_FLOOR
+							player.update_terrain_info(is_grass, is_water, is_crystal)
+						
+						# 8. Re-spawn companions near the player at the new chunk!
+						for adata in moving_allies:
+							_spawn_ally_near_player(adata)
 						
 						if visibility_manager:
 							visibility_manager.map_data = _map_data
@@ -742,6 +946,8 @@ func _try_move_character(character, direction: Vector2):
 		return false
 
 	var cell_type = _map_data[target_grid_pos.x][target_grid_pos.y]
+	if character == player and cell_type != CellType.PIT:
+		_pending_pit_warning_grid = Vector2i(-1, -1)
 	if cell_type == CellType.TREE_FRUIT:
 		if character == player:
 			var item_db = load("res://items/item_database.gd")
@@ -774,6 +980,12 @@ func _try_move_character(character, direction: Vector2):
 		if character == player:
 			if _is_auto_exploring or _is_path_following or _is_auto_moving:
 				return false
+			if _pending_pit_warning_grid != target_grid_pos:
+				_pending_pit_warning_grid = target_grid_pos
+				if has_node("/root/LogUI"):
+					get_node("/root/LogUI").add_log("足元の先は空洞です。もう一度同じ方向へ移動すると落ちます。", Color(0.45, 0.62, 1.0))
+				return false
+			_pending_pit_warning_grid = Vector2i(-1, -1)
 		else:
 			var is_fly = character.is_flying if "is_flying" in character else false
 			if not is_fly:
@@ -875,8 +1087,18 @@ func _try_move_character(character, direction: Vector2):
 				continue
 				
 			if _is_hostile(character, child):
-				await _handle_attack(character, child)
-				return true
+					await _handle_attack(character, child)
+					# Ensure visibility and map redraw after combat resolution so entities aren't drawn at stale positions
+					# 攻撃後に敵の位置が即座に更新されないことがある問題への対処
+					if visibility_manager and is_instance_valid(child):
+						visibility_manager.update_single_entity_visibility(child)
+
+					if visibility_manager:
+						visibility_manager.update_entity_visibility()
+					# Also refresh FOV and map rendering
+					_calculate_fov()
+					_draw_map()
+					return true
 			elif character == player and (child.is_in_group("npcs") or child.is_in_group("allies")):
 				# Swap positions with friendly actors.
 				var npc = child
@@ -917,6 +1139,8 @@ func _try_move_character(character, direction: Vector2):
 		character.move(direction)
 	
 	var new_cell_type = _map_data[target_grid_pos.x][target_grid_pos.y]
+	if character == player and new_cell_type != CellType.PIT:
+		_pending_pit_warning_grid = Vector2i(-1, -1)
 	if character != player and "grass_ignition_chance" in character and character.grass_ignition_chance > 0.0:
 		_try_enemy_grass_ignition(character, target_grid_pos)
 		
@@ -926,11 +1150,18 @@ func _try_move_character(character, direction: Vector2):
 	if character == player and player.has_method("update_terrain_info"):
 		var is_grass = new_cell_type == CellType.GRASS
 		var is_water = new_cell_type == CellType.WATER
-		player.update_terrain_info(is_grass, is_water)
+		var is_crystal = new_cell_type == CellType.CRYSTAL_FLOOR
+		player.update_terrain_info(is_grass, is_water, is_crystal)
 	
 	# Cure burn if moving into water
 	if new_cell_type == CellType.WATER and character.has_method("remove_effect"):
 		character.remove_effect("burn")
+		
+	# Check for traps
+	if hazard_manager and _traps.has(target_grid_pos):
+		var is_fly = character.is_flying if "is_flying" in character else false
+		if not is_fly:
+			hazard_manager.trigger_trap(target_grid_pos, character)
 		
 	if character == player:
 		# Check for items at new position
@@ -1107,6 +1338,9 @@ func _update_tooltip():
 			var cell_type = _map_data[grid_pos.x][grid_pos.y]
 			if _is_stairs_cell(cell_type):
 				tooltip_text = _get_stairs_tooltip(cell_type)
+			else:
+				# Show terrain info for non-stairs tiles
+				tooltip_text = _get_terrain_tooltip(cell_type)
 	
 	if tooltip_text != "":
 		GameUI.show_tooltip(tooltip_text)
@@ -1442,6 +1676,9 @@ func _continue_auto_explore():
 	if not attacked_in_place:
 		_auto_explore_index += 1
 
+	# Auto-pickup items at feet
+	_auto_pickup_items_at_feet()
+
 	await _end_player_turn()
 
 	if player.hp < hp_before:
@@ -1453,6 +1690,18 @@ func _continue_auto_explore():
 
 	_auto_move_cooldown = AUTO_MOVE_DELAY
 	_is_processing_action = false
+
+func _auto_pickup_items_at_feet():
+	if not player: return
+	var p_pos = player.position
+	for wi in get_tree().get_nodes_in_group("items"):
+		if is_instance_valid(wi) and not wi.is_queued_for_deletion() and wi is Node2D:
+			if wi.position.distance_to(p_pos) < 16.0:
+				if "item_data" in wi and wi.item_data:
+					if player.pickup_item(wi.item_data):
+						wi.queue_free()
+					else:
+						_stop_auto_explore("インベントリがいっぱいでアイテムを拾えません。")
 
 func _is_auto_explore_walkable(grid_pos: Vector2i) -> bool:
 	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT:
@@ -1471,6 +1720,10 @@ func _is_auto_explore_walkable(grid_pos: Vector2i) -> bool:
 		if not _is_fire_immune(player):
 			return false
 
+	# Avoid revealed traps
+	if _traps.has(grid_pos) and _traps[grid_pos].get("is_revealed", false):
+		return false
+
 	return true
 
 func _find_auto_explore_target_path(start_grid: Vector2i) -> Array:
@@ -1488,9 +1741,9 @@ func _find_path_to_nearest_visible_item(start_grid: Vector2i) -> Array:
 			continue
 		if not (item is Node2D):
 			continue
-		if not item.visible:
-			continue
 		var item_grid = tile_map.local_to_map(item.position)
+		if visibility_manager and not visibility_manager.explored_tiles[item_grid.x][item_grid.y]:
+			continue
 		if not _is_auto_explore_walkable(item_grid):
 			continue
 		var path: Array = Array(_astar_grid.get_id_path(start_grid, item_grid))
@@ -1521,6 +1774,42 @@ func _get_stairs_tooltip(cell_type: int) -> String:
 		CellType.STAIRS_GOLD:
 			return "金色の階段\n始まりのダンジョンへ降ります。"
 	return "階段\n次の階層へ降ります。"
+
+func _get_terrain_tooltip(cell_type: int) -> String:
+	match cell_type:
+		CellType.WALL:
+			return "壁\n通過できません。"
+		CellType.FLOOR:
+			return "床\n通常の地面です。"
+		CellType.WATER:
+			return "水\n泳がないと通過できません。\n水棲の敵が出現します。"
+		CellType.GRASS:
+			return "草むら\n敵に見つかりにくくなります。\n一部の敵は草むらで強化されます。"
+		CellType.DOOR_CLOSED:
+			return "扉（閉）\n開けるには鍵が必要です。"
+		CellType.DOOR_OPEN:
+			return "扉（開）\n通過できます。"
+		CellType.DOOR_LOCKED:
+			return "扉（鍵付き）\n鍵がないと開けられません。"
+		CellType.ICE:
+			return "氷\n凍った地面です。\n滑って移動する可能性があります。"
+		CellType.LAVA:
+			return "溶岩\n触れるとダメージを受けます。\n火耐性が必要です。"
+		CellType.ASH:
+			return "街道\n舗装された道路です。\n通常の移動が可能です。"
+		CellType.VOLCANIC_ASH:
+			return "火山灰の道\n火山灰で覆われた道路です。\n通常の移動が可能です。"
+		CellType.CRYSTAL_FLOOR:
+			return "結晶床\n魔法の力が宿る地面です。\n魔法攻撃が強化される可能性があります。"
+		CellType.PIT:
+			return "穴\n落ちるとダメージを受けます。\n飛行能力がないと通過できません。"
+		CellType.TREE:
+			return "木\n通過できません。\n果実がなることがあります。"
+		CellType.TREE_FRUIT:
+			return "果実のなる木\n通過できません。\n果実を取ると回復できます。"
+		CellType.ROCK:
+			return "岩\n通過できません。\n破壊することはできません。"
+	return ""
 
 func _find_path_to_nearest_stairs(start_grid: Vector2i) -> Array:
 	if start_grid.x < 0 or start_grid.x >= MAP_WIDTH or start_grid.y < 0 or start_grid.y >= MAP_HEIGHT:
@@ -1563,7 +1852,7 @@ func _find_path_to_nearest_stairs(start_grid: Vector2i) -> Array:
 			# DOOR_OPEN is treated as floor. DOOR_CLOSED is now walkable (will be opened automatically).
 			# DOOR_LOCKED is not walkable (requires lock picking).
 			# ICE is walkable (frozen water).
-			var is_walkable = (cell == CellType.FLOOR or cell == CellType.STAIRS or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.CRYSTAL_FLOOR or cell == CellType.STAIRS_BLUE or cell == CellType.STAIRS_GREEN or cell == CellType.STAIRS_RED or cell == CellType.STAIRS_PURPLE or cell == CellType.STAIRS_GOLD or cell == CellType.DOOR_OPEN or cell == CellType.DOOR_CLOSED or cell == CellType.ICE or _frozen_tiles.has(nxt))
+			var is_walkable = (cell == CellType.FLOOR or cell == CellType.STAIRS or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.VOLCANIC_ASH or cell == CellType.CRYSTAL_FLOOR or cell == CellType.STAIRS_BLUE or cell == CellType.STAIRS_GREEN or cell == CellType.STAIRS_RED or cell == CellType.STAIRS_PURPLE or cell == CellType.STAIRS_GOLD or cell == CellType.DOOR_OPEN or cell == CellType.DOOR_CLOSED or cell == CellType.ICE or _frozen_tiles.has(nxt))
 			
 			if not is_walkable:
 				continue
@@ -1699,7 +1988,7 @@ func _start_rest():
 	if enemies_in_view.size() > 0:
 		var log_ui = get_tree().root.get_node_or_null("LogUI")
 		if log_ui and log_ui.has_method("add_log"):
-			log_ui.add_log("敵が近くにいるので休憩できない…", Color(1.0, 0.6, 0.3))
+			log_ui.add_log("敵が近くにいるので休憩できない...", Color(1.0, 0.6, 0.3))
 		return
 	
 	_is_resting = true
@@ -1708,7 +1997,7 @@ func _start_rest():
 	_rest_target_mp = player and player.mp < player.max_mp
 	var log_ui2 = get_tree().root.get_node_or_null("LogUI")
 	if log_ui2 and log_ui2.has_method("add_log"):
-		log_ui2.add_log("休憩を開始した…", Color(0.8, 0.9, 1.0))
+		log_ui2.add_log("休憩を開始した...", Color(0.8, 0.9, 1.0))
 	
 	_continue_rest()
 
@@ -1768,7 +2057,7 @@ func _continue_rest():
 	# Consume one turn as a wait action
 	var log_ui4 = get_tree().root.get_node_or_null("LogUI")
 	if log_ui4 and log_ui4.has_method("add_log"):
-		log_ui4.add_log("休憩中…", Color(0.6, 0.8, 1.0))
+		log_ui4.add_log("休憩中...", Color(0.6, 0.8, 1.0))
 	await _end_player_turn()
 	
 	if player and player.hp < hp_before:
@@ -1795,114 +2084,7 @@ func _handle_attack(attacker, defender):
 			_electrify_water(att_grid)
 
 func _spawn_enemies():
-	# Village Floor handling
-	if current_floor == 6:
-		_spawn_village_npcs()
-		return
-		
-	# 敵のバランス調整
-	var enemy_types = EnemyDatabase.get_enemy_definitions(current_floor, _current_branch)
-	
-	# Scale stats by floor - DISABLED per user request
-	var stat_multiplier = 1.0 # + (current_floor * 0.1)
-
-	for i in range(1, _rooms.size()):
-		var room = _rooms[i]
-		var max_enemies = MAX_ENEMIES_PER_ROOM
-		if _current_branch == 10:
-			max_enemies = 1
-			
-		var enemy_count = randi_range(1, max_enemies)
-		
-		for j in range(enemy_count):
-			var attempts = 10
-			while attempts > 0:
-				var x = randi_range(room.position.x, room.position.x + room.size.x - 1)
-				var y = randi_range(room.position.y, room.position.y + room.size.y - 1)
-				if _map_data[x][y] == CellType.FLOOR:
-					var enemy = EnemyScene.instantiate()
-					
-					# Randomize Type
-					var type = enemy_types.pick_random()
-					enemy.enemy_name = type.name
-					enemy.enemy_id = type.get("id", type.name) # Important for saving/loading!
-					
-					var hp_val = int(type.hp)
-					var atk_val = int(type.atk)
-					if _current_branch == 10:
-						hp_val = maxi(1, int(hp_val * 0.7))
-						atk_val = maxi(1, int(atk_val * 0.7))
-						
-					enemy.hp = hp_val
-					enemy.max_hp = hp_val
-					enemy.attack_power = atk_val
-					enemy.exp_reward = type.get("exp", 2)
-					if "weak" in type: enemy.weaknesses = type.weak
-					if "resist" in type: enemy.resistances = type.resist
-					if "fire_immune" in type: enemy.fire_immune = type.fire_immune
-					if "grass_ignition_chance" in type: enemy.grass_ignition_chance = type.grass_ignition_chance
-					if "color" in type:
-						enemy.base_color = type.color
-					if "can_swim" in enemy:
-						enemy.can_swim = type.swim
-					if "is_flying" in enemy:
-						enemy.is_flying = type.get("fly", false)
-					
-					if "knockback" in type:
-						enemy.has_knockback = type.knockback
-
-					if "loot" in type:
-						enemy.loot_table = type.loot
-
-					if "sprite" in type:
-						enemy.sprite_path = type.sprite
-					else:
-						enemy.sprite_path = "" # Force fallback sprite generation
-						
-					if "skill" in type:
-						enemy.skill_id = type.skill
-						enemy.attack_range = type.get("range", 1)
-						enemy.max_skill_cooldown = type.get("cooldown", 5)
-						enemy.skill_cooldown = randi_range(0, enemy.max_skill_cooldown)
-
-					if "on_hit" in type:
-						enemy.on_hit_effects = type.on_hit
-
-					if "penetration" in type:
-						enemy.penetration_rate = type.penetration
-
-					if "intelligence" in type:
-						enemy.intelligence = type.intelligence
-					if "ai" in type:
-						enemy.ai_type = type.ai
-					
-					enemy.position = Vector2(x, y) * TILE_SIZE
-					
-					# Assign groups based on is_npc property
-					if type.get("is_npc", false):
-						enemy.is_npc = true
-						enemy.add_to_group("npcs")
-					else:
-						enemy.add_to_group("enemies")
-						
-					enemy.add_to_group("entities")
-					add_child(enemy)
-					enemy.visible = false
-					break
-				attempts -= 1
-
-	# --- NPC Spawn: Always spawn 1 NPC per floor ---
-	var npc_types = EnemyDatabase.get_npc_definitions(current_floor)
-	if npc_types.size() > 0 and _rooms.size() >= 2:
-		var npc_type = npc_types.pick_random()
-		var npc_room = _rooms[randi_range(1, _rooms.size() - 1)]  # Avoid room 0 (player start)
-		
-		for _attempt in range(20):
-			var nx = randi_range(npc_room.position.x, npc_room.position.x + npc_room.size.x - 1)
-			var ny = randi_range(npc_room.position.y, npc_room.position.y + npc_room.size.y - 1)
-			if _map_data[nx][ny] == CellType.FLOOR:
-				_spawn_single_npc(npc_type, Vector2(nx, ny) * TILE_SIZE)
-				break
+	enemy_manager.spawn_enemies_for_floor(current_floor, _current_branch, _rooms)
 
 func _spawn_ally_near_player(data: Dictionary):
 	if not player or not is_instance_valid(player):
@@ -1926,11 +2108,12 @@ func _spawn_ally_near_player(data: Dictionary):
 			if test_pos.x >= 0 and test_pos.x < MAP_WIDTH and test_pos.y >= 0 and test_pos.y < MAP_HEIGHT:
 				var cell = _map_data[test_pos.x][test_pos.y]
 				var is_walkable = cell == CellType.FLOOR or \
-								  cell == CellType.GRASS or \
-								  cell == CellType.ASH or \
-								  cell == CellType.CRYSTAL_FLOOR or \
-								  cell == CellType.ICE or \
-								  cell == CellType.DOOR_OPEN or \
+							  cell == CellType.GRASS or \
+							  cell == CellType.ASH or \
+							  cell == CellType.VOLCANIC_ASH or \
+							  cell == CellType.CRYSTAL_FLOOR or \
+							  cell == CellType.ICE or \
+							  cell == CellType.DOOR_OPEN or \
 								  cell == CellType.STAIRS or \
 								  cell == CellType.STAIRS_BLUE or \
 								  cell == CellType.STAIRS_GREEN or \
@@ -2005,6 +2188,18 @@ func _spawn_ally_near_player(data: Dictionary):
 	
 	if "is_flying" in data:
 		ally.is_flying = data["is_flying"]
+	if "affection" in data and "affection" in ally:
+		ally.affection = data["affection"]
+	if "fear" in data and "fear" in ally:
+		ally.fear = data["fear"]
+	if "inventory_items" in data and "inventory_items" in ally:
+		ally.inventory_items = data["inventory_items"].duplicate(true)
+	if "trade_items" in data and "trade_items" in ally:
+		ally.trade_items = data["trade_items"].duplicate(true)
+	if "level" in data and "level" in ally:
+		ally.level = data["level"]
+	if "xp_value" in data and "xp_value" in ally:
+		ally.xp_value = data["xp_value"]
 		
 	ally.is_npc = true
 	ally.add_to_group("allies")
@@ -2027,7 +2222,7 @@ func _spawn_village_npcs():
 	
 	# 通行可能タイルの定義
 	var is_walkable = func(cell: int) -> bool:
-		return cell == CellType.FLOOR or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.CRYSTAL_FLOOR
+		return cell == CellType.FLOOR or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.VOLCANIC_ASH or cell == CellType.CRYSTAL_FLOOR
 
 	# 村全体の通行可能エリアからランダムに位置を選んでスポーン
 	for i in range(npc_count):
@@ -2102,7 +2297,6 @@ func _generate_map(local_type: int = -1):
 				_explored_tiles[x][y] = false
 		return
 
-	var generator = DungeonGenerator.new()
 	var is_starting = false
 	var is_dungeon = false
 	if current_floor == 0 and local_type == WorldCell.VILLAGE:
@@ -2111,10 +2305,9 @@ func _generate_map(local_type: int = -1):
 		elif _world_player_pos == _dungeon_village_pos:
 			is_dungeon = true
 			
-	var result = generator.generate_map(current_floor, _current_branch, local_type, self, is_starting, is_dungeon)
-	_map_data = result["map_data"]
-	_rooms = result["rooms"]
-	generator.free()
+	var result = map_controller.generate_map(current_floor, _current_branch, local_type, is_starting, is_dungeon)
+	_map_data = map_controller.map_data
+	_rooms = map_controller.rooms
 	
 	_visible_tiles.resize(MAP_WIDTH)
 	_explored_tiles.resize(MAP_WIDTH)
@@ -2128,11 +2321,10 @@ func _generate_map(local_type: int = -1):
 			_explored_tiles[x][y] = false
 
 func _setup_pathfinding():
-	_astar_grid.clear()
-	_astar_grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
-	_astar_grid.cell_size = Vector2(1, 1)
-	_astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-	_astar_grid.jumping_enabled = false
+	map_controller.setup_pathfinding()
+	_astar_grid = map_controller.astar_grid
+	_astar_grid_swim = map_controller.astar_grid_swim
+	_astar_grid_fly = map_controller.astar_grid_fly
 
 	if _is_on_world_map:
 		for x in range(MAP_WIDTH):
@@ -2225,13 +2417,15 @@ func _get_map_cell_atlas_coords(map_data: Array, x: int, y: int) -> Vector2i:
 			atlas_coords.x = 40
 		CellType.ASH:
 			atlas_coords.x = 41
+		CellType.VOLCANIC_ASH:
+			atlas_coords.x = 42
 		CellType.CRYSTAL_FLOOR:
 			var mask = 0
 			if y > 0 and map_data[x][y-1] == CellType.CRYSTAL_FLOOR: mask |= 1
 			if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.CRYSTAL_FLOOR: mask |= 2
 			if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.CRYSTAL_FLOOR: mask |= 4
 			if x > 0 and map_data[x-1][y] == CellType.CRYSTAL_FLOOR: mask |= 8
-			atlas_coords.x = 45 + mask
+			atlas_coords.x = 46 + mask
 		CellType.STAIRS_GOLD:
 			atlas_coords.x = 79
 		CellType.DOOR_CLOSED:
@@ -2279,6 +2473,7 @@ func _get_overworld_preview_map(chunk_pos: Vector2i) -> Dictionary:
 	var result = generator.generate_map(0, _current_branch, cell, self, is_starting, is_dungeon)
 	generator.free()
 	_world_player_pos = previous_world_pos
+	
 	_overworld_preview_maps[cache_key] = {
 		"map_data": result["map_data"].duplicate(true),
 		"rooms": result["rooms"].duplicate(true)
@@ -2335,7 +2530,7 @@ func _draw_overworld_neighbor_previews() -> void:
 		return
 	if not is_instance_valid(player):
 		return
-	var player_grid = tile_map.local_to_map(player.position)
+	var player_grid = tile_map.local_to_map(player.position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
 	for dx in range(-1, 2):
 		for dy in range(-1, 2):
 			if dx == 0 and dy == 0:
@@ -2481,6 +2676,29 @@ func _draw_map():
 						steam_overlay.position = Vector2(tile_coords) * TILE_SIZE
 						steam_overlay.add_to_group("fire_overlays")
 						add_child(steam_overlay)
+						
+					# Show poison gas as semi-transparent purple
+					if _poison_gas_tiles.has(pos):
+						var gas_data = _poison_gas_tiles[pos]
+						var gas_density = gas_data.get("density", 1)
+						var gas_alpha = 0.3 + gas_density * 0.15
+						var gas_overlay = ColorRect.new()
+						gas_overlay.color = Color(0.6, 0.2, 0.8, gas_alpha)
+						gas_overlay.size = Vector2(TILE_SIZE, TILE_SIZE)
+						gas_overlay.position = Vector2(tile_coords) * TILE_SIZE
+						gas_overlay.add_to_group("fire_overlays")
+						add_child(gas_overlay)
+						
+					# Draw revealed trap as ASCII ^ (bright, visible)
+					if _traps.has(pos) and _traps[pos].get("is_revealed", false):
+						var trap_label = Label.new()
+						trap_label.text = "^"
+						trap_label.add_theme_font_size_override("font_size", 20)
+						trap_label.add_theme_color_override("font_color", Color(0.9, 0.5, 1.0, 1.0))
+						trap_label.position = Vector2(tile_coords) * TILE_SIZE + Vector2(4, 2)
+						trap_label.z_index = 1
+						trap_label.add_to_group("fire_overlays")
+						add_child(trap_label)
 				else:
 					if is_instance_valid(memory_tile_map):
 						memory_tile_map.set_cell(0, tile_coords, 0, atlas_coords)
@@ -2497,6 +2715,18 @@ func _draw_map():
 						_draw_custom_stairs(tile_coords, Color(0.6, 0.18, 0.08), false)
 					elif cell_type == CellType.STAIRS_PURPLE:
 						_draw_custom_stairs(tile_coords, Color(0.35, 0.18, 0.55), false)
+						
+					# Draw revealed trap as ASCII ^ (dim, explored-but-not-visible)
+					var pos_mem = Vector2i(x, y)
+					if _traps.has(pos_mem) and _traps[pos_mem].get("is_revealed", false):
+						var trap_label_mem = Label.new()
+						trap_label_mem.text = "^"
+						trap_label_mem.add_theme_font_size_override("font_size", 20)
+						trap_label_mem.add_theme_color_override("font_color", Color(0.4, 0.2, 0.5, 0.7))
+						trap_label_mem.position = Vector2(tile_coords) * TILE_SIZE + Vector2(4, 2)
+						trap_label_mem.z_index = 1
+						trap_label_mem.add_to_group("fire_overlays")
+						add_child(trap_label_mem)
 
 	minimap_controller.update_minimap()
 
@@ -2545,7 +2775,7 @@ func _handle_dig(target_grid: Vector2i):
 	
 	if player.hunger <= 0:
 		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("空腹で壁を掘る力がない…", Color(0.85, 0.3, 0.3))
+			get_node("/root/LogUI").add_log("空腹で壁を掘る力がない...", Color(0.85, 0.3, 0.3))
 		return
 	
 	if target_grid.x <= 0 or target_grid.x >= MAP_WIDTH - 1 or target_grid.y <= 0 or target_grid.y >= MAP_HEIGHT - 1:
@@ -2730,6 +2960,75 @@ func _get_transform(octant: int) -> Transform2D:
 	return Transform2D() # Should not happen
 
 
+func _save_current_floor_to_cache_with_key(floor_key: String):
+	# Save with the provided key instead of generating one
+	var items_data = []
+	for item in get_tree().get_nodes_in_group("items"):
+		if is_instance_valid(item) and not item.is_queued_for_deletion():
+			var item_center = item.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
+			var grid_pos = Vector2i(int(item_center.x / TILE_SIZE), int(item_center.y / TILE_SIZE))
+			items_data.append({
+				"grid_pos": grid_pos,
+				"item_data": item.item_data
+			})
+			
+	var enemies_data = []
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and not enemy.is_queued_for_deletion():
+			if enemy.is_in_group("allies"):
+				continue
+			enemies_data.append({
+				"enemy_id": enemy.enemy_id,
+				"enemy_name": enemy.enemy_name,
+				"hp": enemy.hp,
+				"max_hp": enemy.max_hp,
+				"attack": enemy.attack_power if "attack_power" in enemy else 5,
+				"defense": enemy.defense,
+				"attack_range": enemy.attack_range if "attack_range" in enemy else 1.5,
+				"sprite_path": enemy.sprite_path if "sprite_path" in enemy else "",
+				"is_flying": enemy.is_flying if "is_flying" in enemy else false,
+				"grid_pos": Vector2i(enemy.position / TILE_SIZE),
+				"fear": enemy.fear if "fear" in enemy else 0,
+				"affection": enemy.affection if "affection" in enemy else 0,
+				"xp_value": enemy.xp_value if "xp_value" in enemy else 10
+			})
+			
+	var npcs_data = []
+	for npc in get_tree().get_nodes_in_group("npcs"):
+		if is_instance_valid(npc) and not npc.is_queued_for_deletion():
+			if npc.is_in_group("allies"):
+				continue
+			npcs_data.append({
+				"enemy_id": npc.enemy_id if "enemy_id" in npc else "zakomushi",
+				"enemy_name": npc.enemy_name,
+				"hp": npc.hp,
+				"max_hp": npc.max_hp,
+				"attack": npc.attack_power if "attack_power" in npc else 5,
+				"defense": npc.defense,
+				"attack_range": npc.attack_range if "attack_range" in npc else 1.5,
+				"sprite_path": npc.sprite_path if "sprite_path" in npc else "",
+				"is_flying": npc.is_flying if "is_flying" in npc else false,
+				"grid_pos": Vector2i(npc.position / TILE_SIZE),
+				"fear": npc.fear if "fear" in npc else 0,
+				"affection": npc.affection if "affection" in npc else 0,
+				"trade_items": npc.trade_items.duplicate(true) if "trade_items" in npc else [],
+				"inventory_items": npc.inventory_items.duplicate(true) if "inventory_items" in npc else [],
+				"inventory_initialized": npc._inventory_initialized if "_inventory_initialized" in npc else false
+			})
+			
+	_floor_caches[floor_key] = {
+		"map_data": _map_data.duplicate(true),
+		"rooms": _rooms.duplicate(true),
+		"explored_tiles": _explored_tiles.duplicate(true),
+		"burning_grass": _burning_grass.duplicate(),
+		"frozen_tiles": _frozen_tiles.duplicate(),
+		"steam_tiles": _steam_tiles.duplicate(),
+		"items": items_data,
+		"enemies": enemies_data,
+		"npcs": npcs_data,
+		"player_exit_grid": Vector2i.ZERO  # Not used for seamless chunk transitions
+	}
+
 func _save_current_floor_to_cache():
 	var floor_key = ""
 	if current_floor == 0:
@@ -2808,7 +3107,7 @@ func _save_current_floor_to_cache():
 		"player_exit_grid": Vector2i(player.position / TILE_SIZE) if is_instance_valid(player) else Vector2i.ZERO
 	}
 
-func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: bool = false) -> bool:
+func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: bool = false, prefer_center_spawn: bool = false) -> bool:
 	if not _floor_caches.has(floor_key):
 		return false
 		
@@ -2827,35 +3126,42 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 		for y in range(MAP_HEIGHT):
 			_visible_tiles[x][y] = false
 			
-	var allies = get_tree().get_nodes_in_group("allies")
 	var ally_data = []
-	for ally in allies:
-		if is_instance_valid(ally) and not ally.is_queued_for_deletion():
-			ally_data.append({
-				"enemy_id": ally.enemy_id if "enemy_id" in ally else "zakomushi",
-				"enemy_name": ally.enemy_name,
-				"hp": ally.hp,
-				"max_hp": ally.max_hp,
-				"attack": ally.attack_power if "attack_power" in ally else 5,
-				"defense": ally.defense,
-				"attack_range": ally.attack_range if "attack_range" in ally else 1.5,
-				"sprite_path": ally.sprite_path if "sprite_path" in ally else "",
-				"is_flying": ally.is_flying if "is_flying" in ally else false,
-				"is_ally": true
-			})
-			# Immediately remove from groups and queue free
-			ally.remove_from_group("allies")
-			ally.remove_from_group("entities")
-			if ally.is_in_group("enemies"):
-				ally.remove_from_group("enemies")
-			if ally.is_in_group("npcs"):
-				ally.remove_from_group("npcs")
-			ally.queue_free()
-			
-	# Append saved allies from the world map
-	for saved_ally in _saved_allies:
-		ally_data.append(saved_ally)
-	_saved_allies.clear()
+	if not is_seamless:
+		var allies = get_tree().get_nodes_in_group("allies")
+		for ally in allies:
+			if is_instance_valid(ally) and not ally.is_queued_for_deletion():
+				ally_data.append({
+					"enemy_id": ally.enemy_id if "enemy_id" in ally else "zakomushi",
+					"enemy_name": ally.enemy_name,
+					"hp": ally.hp,
+					"max_hp": ally.max_hp,
+					"attack": ally.attack_power if "attack_power" in ally else 5,
+					"defense": ally.defense,
+					"attack_range": ally.attack_range if "attack_range" in ally else 1.5,
+					"sprite_path": ally.sprite_path if "sprite_path" in ally else "",
+					"is_flying": ally.is_flying if "is_flying" in ally else false,
+					"is_ally": true,
+					"affection": ally.affection if "affection" in ally else 0,
+					"fear": ally.fear if "fear" in ally else 0,
+					"trade_items": ally.trade_items.duplicate(true) if "trade_items" in ally else [],
+					"inventory_items": ally.inventory_items.duplicate(true) if "inventory_items" in ally else [],
+					"level": ally.level if "level" in ally else 1,
+					"xp_value": ally.xp_value if "xp_value" in ally else 10
+				})
+				# Immediately remove from groups and queue free
+				ally.remove_from_group("allies")
+				ally.remove_from_group("entities")
+				if ally.is_in_group("enemies"):
+					ally.remove_from_group("enemies")
+				if ally.is_in_group("npcs"):
+					ally.remove_from_group("npcs")
+				ally.queue_free()
+				
+		# Append saved allies from the world map
+		for saved_ally in _saved_allies:
+			ally_data.append(saved_ally)
+		_saved_allies.clear()
 			
 	# Safely remove old entities from scene tree and groups immediately
 	for enemy in get_tree().get_nodes_in_group("enemies"):
@@ -2885,30 +3191,33 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 	
 	player = get_node_or_null("Player")
 	if is_instance_valid(player):
-		var spawn_pos = cache["player_exit_grid"]
-		
 		if not is_seamless:
-			# Reposition player on matching stairs when returning
-			# Downward (is_upward == false) -> Place on STAIRS_UP
-			# Upward (is_upward == true) -> Place on STAIRS
-			# Floor 0 (Overworld) -> Always place on cave entrance (STAIRS)
-			var target_stair_type = CellType.STAIRS if is_upward else CellType.STAIRS_UP
-			if current_floor == 0:
-				target_stair_type = CellType.STAIRS
-				
-			var found_stair = false
-			for x in range(MAP_WIDTH):
-				for y in range(MAP_HEIGHT):
-					if _map_data[x][y] == target_stair_type:
-						spawn_pos = Vector2i(x, y)
-						found_stair = true
-						break
-				if found_stair: break
+			var spawn_pos = cache["player_exit_grid"]
+			if prefer_center_spawn:
+				spawn_pos = _get_center_spawn_pos(spawn_pos)
+			else:
+				# Reposition player on matching stairs when returning
+				# Downward (is_upward == false) -> Place on STAIRS_UP
+				# Upward (is_upward == true) -> Place on STAIRS
+				# Floor 0 (Overworld) -> Always place on cave entrance (STAIRS)
+				var target_stair_type = CellType.STAIRS if is_upward else CellType.STAIRS_UP
+				if current_floor == 0:
+					target_stair_type = CellType.STAIRS
+					
+				var found_stair = false
+				for x in range(MAP_WIDTH):
+					for y in range(MAP_HEIGHT):
+						if _map_data[x][y] == target_stair_type:
+							spawn_pos = Vector2i(x, y)
+							found_stair = true
+							break
+					if found_stair: break
 				
 			player.position = Vector2(spawn_pos) * TILE_SIZE
 			_last_player_grid_pos = spawn_pos
 			camera.position = player.position
 			camera.reset_smoothing()
+		# For seamless chunk transitions, position will be set by the caller
 			
 		if player.has_method("update_terrain_info"):
 			var current_grid_pos = Vector2i(player.position / TILE_SIZE)
@@ -2920,7 +3229,7 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 	var item_scene = load("res://items/world_item.tscn")
 	for idata in cache["items"]:
 		var item_node = item_scene.instantiate()
-		item_node.position = Vector2(idata["grid_pos"]) * TILE_SIZE
+		item_node.position = Vector2(idata["grid_pos"]) * TILE_SIZE - Vector2(0, 4)
 		item_node.item_data = idata["item_data"]
 		item_node.add_to_group("items")
 		item_node.add_to_group("entities")
@@ -2975,10 +3284,12 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 		npc_node.add_to_group("entities")
 		add_child(npc_node)
 		
-	for adata in ally_data:
-		_spawn_ally_near_player(adata)
+	if not is_seamless:
+		for adata in ally_data:
+			_spawn_ally_near_player(adata)
 		
 	_spawn_torches()
+	_update_lighting_for_map_type()
 	
 	# Sync VisibilityManager references for the loaded floor
 	if visibility_manager:
@@ -2988,16 +3299,21 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 		visibility_manager.burning_grass = _burning_grass
 		visibility_manager.frozen_tiles = _frozen_tiles
 		visibility_manager.steam_tiles = _steam_tiles
-		visibility_manager.calculate_fov()
-		visibility_manager.draw_map()
+		if not is_seamless:
+			visibility_manager.calculate_fov()
+			visibility_manager.draw_map()
 	else:
-		_calculate_fov()
-		_draw_map()
+		if not is_seamless:
+			_calculate_fov()
+			_draw_map()
 	return true
 
 func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = false, is_pit: bool = false):
 	# Save current floor
 	_save_current_floor_to_cache()
+
+	if target_floor == 0:
+		target_branch = 0
 	
 	current_floor = target_floor
 	_current_branch = target_branch
@@ -3110,8 +3426,6 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 		visibility_manager.burning_grass = _burning_grass
 		visibility_manager.frozen_tiles = _frozen_tiles
 		visibility_manager.steam_tiles = _steam_tiles
-		visibility_manager.calculate_fov()
-		visibility_manager.draw_map()
 
 	if not _rooms.is_empty():
 		player = get_node_or_null("Player")
@@ -3119,7 +3433,7 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 			var spawn_pos = _rooms[0].get_center()
 			
 			if current_floor == 0:
-				spawn_pos = Vector2i(MAP_WIDTH / 2, MAP_HEIGHT / 2)
+				spawn_pos = _get_center_spawn_pos(spawn_pos)
 				
 			if current_floor >= 1:
 				var target_stair = CellType.STAIRS if is_upward else CellType.STAIRS_UP
@@ -3146,11 +3460,14 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 	else:
 		_spawn_enemies()
 		_spawn_items()
+		_spawn_traps()
 		
 	for data in ally_data:
 		_spawn_ally_near_player(data)
 
 	_spawn_torches()
+	# フロア遷移時にライティングを更新（地上/地下/ロード状態で同じ視界明度に揃える）
+	_update_lighting_for_map_type()
 	_calculate_fov()
 	_draw_map()
 
@@ -3232,10 +3549,10 @@ func _spawn_items():
 			var attempts = 10
 			while attempts > 0:
 				var x = randi_range(room.position.x, room.position.x + room.size.x - 1)
-				var y = randi_range(room.position.y, room.position.y + room.size.y - 1)
+				var y = randi_range(room.position.y, room.position.y + room.size.y - 1)				
 				if _map_data[x][y] == CellType.FLOOR or _map_data[x][y] == CellType.GRASS:
 					var item = WorldItemScene.instantiate()
-					item.position = Vector2(x, y) * TILE_SIZE
+					item.position = Vector2(x, y) * TILE_SIZE - Vector2(0, 4)
 					
 					var item_data
 					if _current_branch == 10:
@@ -3252,6 +3569,34 @@ func _spawn_items():
 					break
 				attempts -= 1
 	print("Total items spawned: ", items_spawned)
+
+func _spawn_traps():
+	if current_floor == 0 or _rooms.size() <= 1:
+		return
+		
+	var traps_spawned = 0
+	var trap_chance = 20 + (current_floor * 2)
+	trap_chance = clamp(trap_chance, 10, 50)
+	
+	if _current_branch == 1:
+		trap_chance += 10
+		trap_chance = min(trap_chance, 60)
+		
+	for i in range(1, _rooms.size()):
+		var room = _rooms[i]
+		if randi_range(0, 100) < trap_chance:
+			var attempts = 10
+			while attempts > 0:
+				var x = randi_range(room.position.x, room.position.x + room.size.x - 1)
+				var y = randi_range(room.position.y, room.position.y + room.size.y - 1)				
+				if _map_data[x][y] == CellType.FLOOR or _map_data[x][y] == CellType.GRASS:
+					var pos = Vector2i(x, y)
+					if not _traps.has(pos):
+						hazard_manager.spawn_trap(pos, "poison_gas")
+						traps_spawned += 1
+						break
+				attempts -= 1
+	print("Total traps spawned: ", traps_spawned)
 
 # Targeting variables
 var _targeting_item = null
@@ -3714,13 +4059,17 @@ func _execute_throw(target_pos: Vector2):
 	else:
 		# Drop item on ground
 		var world_item = WorldItemScene.instantiate()
-		world_item.position = Vector2(hit_pos) * TILE_SIZE
+		world_item.position = Vector2(hit_pos) * TILE_SIZE - Vector2(0, 4)
 		world_item.set_item(_targeting_item)
 		world_item.add_to_group("items")
 		world_item.add_to_group("entities")
 		add_child(world_item)
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s が地面に落ちた。" % _targeting_item.name, Color.GRAY)
+			
+		# Trigger trap if item is thrown onto it
+		if hazard_manager and _traps.has(hit_pos):
+			hazard_manager.trigger_trap(hit_pos, world_item)
 
 	# 4. Remove from inventory
 	if player.equipment_component.bag_data.remove_item(_targeting_item):
@@ -3822,13 +4171,13 @@ func _execute_talk_at(target_grid: Vector2i):
 		var greeting = ""
 		if is_weakened:
 			match npc_id:
-				"wanderer_swordsman", "放浪の剣士": greeting = "「ううっ、不覚にも魔物にやられてしまった… 傷が深くて動けん…」"
-				"stray_mage", "はぐれ魔道士": greeting = "「あたた… 魔力も体力も底をついてしまった… 誰か助けてくれ…」"
-				"villager", "村人": greeting = "「痛い、痛いよぉ… 誰か、ポーションかヒールで助けてください…」"
-				"merchant", "商人": greeting = "「うう、商品も体もボロボロだ… 誰か助けてくれたら、お礼はするよ…」"
-				"elder", "村の長老": greeting = "「ごほっ、ごほっ… 年寄りにはこの寒さは堪える… 誰か助けておくれ…」"
-				"guard", "村の守備隊": greeting = "「くっ… 守備隊の誇りにかけて倒れるわけにはいかんが… もう限界だ…」"
-				_: greeting = "「うう… 傷が痛む… 助けてくれ…」"
+				"wanderer_swordsman", "放浪の剣士": greeting = "「ううっ、不覚にも魔物にやられてしまった... 傷が深くて動けん...」"
+				"stray_mage", "はぐれ魔道士": greeting = "「あたた... 魔力も体力も底をついてしまった... 誰か助けてくれ...」"
+				"villager", "村人": greeting = "「痛い、痛いよぉ... 誰か、ポーションかヒールで助けてください...」"
+				"merchant", "商人": greeting = "「うう、商品も体もボロボロだ... 誰か助けてくれたら、お礼はするよ...」"
+				"elder", "村の長老": greeting = "「ごほっ、ごほっ... 年寄りにはこの寒さは堪える... 誰か助けておくれ...」"
+				"guard", "村の守備隊": greeting = "「くっ... 守備隊の誇りにかけて倒れるわけにはいかんが... もう限界だ...」"
+				_: greeting = "「うう... 傷が痛む... 助けてくれ...」"
 		else:
 			match npc_id:
 				"wanderer_swordsman", "放浪 of 剣士", "放浪の剣士": greeting = "「私は世界を旅する剣士だ。腕の立つ仲間を探しているのかい？」"
@@ -4041,7 +4390,7 @@ func _help_npc(npc):
 		_spawn_skill_particles(npc.position + Vector2(16, 16), "heal", 0.6)
 	else:
 		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("%s: 「うう… ポーションかヒール魔法があれば…」" % entity_name, Color(0.8, 0.8, 0.8))
+			get_node("/root/LogUI").add_log("%s: 「うう... ポーションかヒール魔法があれば...」" % entity_name, Color(0.8, 0.8, 0.8))
 			get_node("/root/LogUI").add_log("回復させる手段（ポーションまたはヒール魔法とMP5）がありません！", Color.RED)
 			
 	await _end_player_turn()
@@ -4297,6 +4646,21 @@ func _spawn_skill_particles(pos: Vector2, particle_type: String, duration: float
 			particles.angle_max = 180.0
 			particles.angular_velocity_min = -400.0
 			particles.angular_velocity_max = 400.0
+		"crystal_reflect":
+			particles.color = Color(0.4, 0.95, 1.0, 1.0)
+			particles.texture = _create_star_texture(8)
+			particles.amount = 35
+			particles.spread = 180.0
+			particles.gravity = Vector2.ZERO
+			particles.initial_velocity_min = 60.0
+			particles.initial_velocity_max = 140.0
+			particles.scale_amount_min = 1.0
+			particles.scale_amount_max = 3.0
+			particles.explosiveness = 0.95
+			particles.angle_min = -180.0
+			particles.angle_max = 180.0
+			particles.angular_velocity_min = -300.0
+			particles.angular_velocity_max = 300.0
 		"ice":
 			particles.color = Color(0.7, 1.0, 1.0, 1) # Ice cyan
 			particles.texture = _create_diamond_texture(8)
@@ -4557,62 +4921,16 @@ func reveal_map():
 # --- Hazard & Special Skill System ---
 
 func create_hazard(type: String, world_pos: Vector2):
-	var grid_pos = tile_map.local_to_map(world_pos)
-	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT: return
-	
-	_hazards[grid_pos] = {
-		"type": type,
-		"duration": 20, # Default duration
-		"damage": 2 # Acid damage
-	}
-	_spawn_hazard_visual(grid_pos, type)
+	hazard_manager.create_hazard(type, world_pos)
 
 func _spawn_hazard_visual(grid_pos: Vector2i, type: String):
-	var sprite = Sprite2D.new()
-	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
-	img.fill(Color(0.2, 0.8, 0.2, 0.5) if type == "acid_puddle" else Color.RED)
-	sprite.texture = ImageTexture.create_from_image(img)
-	sprite.position = Vector2(grid_pos) * TILE_SIZE + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
-	sprite.z_index = 0 # On floor
-	sprite.add_to_group("hazard_visuals")
-	sprite.set_meta("grid_pos", grid_pos)
-	add_child(sprite)
+	hazard_manager.spawn_hazard_visual(grid_pos, type)
 
 func _process_hazards():
-	var to_remove = []
-	for grid_pos in _hazards.keys():
-		var data = _hazards[grid_pos]
-		data.duration -= 1
-		
-		# Apply effect
-		for entity in get_tree().get_nodes_in_group("entities"):
-			if not is_instance_valid(entity): continue
-			var e_grid = tile_map.local_to_map(entity.position)
-			if e_grid == grid_pos:
-				if data.type == "acid_puddle":
-					if entity.has_method("take_damage"):
-						entity.take_damage(data.damage)
-						if has_node("/root/LogUI"):
-							var name = entity.name
-							if "enemy_name" in entity: name = entity.enemy_name
-							get_node("/root/LogUI").add_log("%s は酸で溶けている！ (%dダメ)" % [name, data.damage], Color.GREEN_YELLOW)
-					
-					# Also apply burn?
-					if entity.has_method("apply_effect") and randf() < 0.3:
-						entity.apply_effect("burn", {"duration": 3, "damage": 1})
-		
-		if data.duration <= 0:
-			to_remove.append(grid_pos)
-			
-	for pos in to_remove:
-		_hazards.erase(pos)
-		_remove_hazard_visual(pos)
+	hazard_manager.process_hazards()
 
 func _remove_hazard_visual(grid_pos: Vector2i):
-	for node in get_tree().get_nodes_in_group("hazard_visuals"):
-		# Check validity before accessing meta - though nodes in group should be valid
-		if is_instance_valid(node) and node.has_meta("grid_pos") and node.get_meta("grid_pos") == grid_pos:
-			node.queue_free()
+	hazard_manager.remove_hazard_visual(grid_pos)
 
 func _execute_charge_skill(target_pos: Vector2):
 	var _targeting_skill = target_manager.targeting_skill
@@ -4934,8 +5252,7 @@ func _load_game():
 	var enemies = world_data.get("enemies", [])
 	for i in range(enemies.size()):
 		_deserialize_enemy(enemies[i])
-		if i % 10 == 0:
-			await get_tree().process_frame
+		await get_tree().process_frame
 
 	print("[Load] Spawning NPCs... (Elapsed: %d ms)" % (Time.get_ticks_msec() - start_time))
 	# Load NPCs
@@ -4944,16 +5261,14 @@ func _load_game():
 		var npc_data = npcs[i]
 		npc_data["is_npc"] = true
 		_deserialize_enemy(npc_data)
-		if i % 10 == 0:
-			await get_tree().process_frame
+		await get_tree().process_frame
 	
 	print("[Load] Spawning items on ground... (Elapsed: %d ms)" % (Time.get_ticks_msec() - start_time))
 	# Load world items
 	var items = world_data.get("items", [])
 	for i in range(items.size()):
 		_deserialize_world_item(items[i])
-		if i % 15 == 0:
-			await get_tree().process_frame
+		await get_tree().process_frame
 
 	print("[Load] Spawning torches... (Elapsed: %d ms)" % (Time.get_ticks_msec() - start_time))
 	# Load torches
@@ -5014,15 +5329,31 @@ func _load_game():
 		visibility_manager.steam_tiles = _steam_tiles
 		visibility_manager.calculate_fov()
 		visibility_manager.draw_map()
-	
+
 	# Update visuals
 	_update_lighting_for_map_type()
+
+	# ロード直後の安全対策: ローカルマップだけ視界の明るさを揃える
+	if not _is_on_world_map and is_instance_valid(player):
+		var p_light = player.get_node_or_null("PointLight2D")
+		if p_light:
+			p_light.visible = true
+			if "enabled" in p_light:
+				p_light.enabled = true
+			_apply_floor_lighting(p_light, get_node_or_null("CanvasModulate"))
+			await get_tree().process_frame
+			# フレーム後に再度適用（レンダリング初期化のタイミング問題対策）
+			p_light.visible = true
+			if "enabled" in p_light:
+				p_light.enabled = true
+			_apply_floor_lighting(p_light, get_node_or_null("CanvasModulate"))
+
 	if _is_on_world_map:
 		_draw_world_map()
 	else:
 		_calculate_fov()
 		_draw_map()
-	
+
 	# Update UI
 	if PlayerUi:
 		if _is_on_world_map:
@@ -5127,10 +5458,6 @@ func _deserialize_player(p, data: Dictionary):
 				p.equipment_component.equipment_data.add_item(item)
 		
 		# Load bag items
-		for item_dict in bag_data.get("items", []):
-			var item = _deserialize_item(item_dict)
-			if item:
-				p.equipment_component.bag_data.add_item(item)
 		for item_dict in bag_data.get("items", []):
 			var item = _deserialize_item(item_dict)
 			if item:
@@ -5353,7 +5680,7 @@ func spawn_world_item(item: BaseItem, world_pos: Vector2):
 	var target_grid = find_nearest_empty_cell(grid_pos)
 	
 	var world_item = WorldItemScene.instantiate()
-	world_item.position = Vector2(target_grid) * TILE_SIZE
+	world_item.position = Vector2(target_grid) * TILE_SIZE - Vector2(0, 4)
 	world_item.set_item(item)
 	world_item.add_to_group("items")
 	world_item.add_to_group("entities")
@@ -5366,432 +5693,50 @@ func place_item_at_player(item: BaseItem):
 	print("Placed item at player position: ", item.name)
 
 func _electrify_water(start_pos: Vector2i, damage_val: int = -1):
-	"""Spread electricity through all connected water tiles using flood fill"""
-	var electrified_tiles = []
-	var to_check = [start_pos]
-	var checked = {}
-	
-	# Flood fill to find all connected water tiles
-	while to_check.size() > 0:
-		var pos = to_check.pop_front()
-		var key = Vector2i(pos.x, pos.y)
-		
-		# Skip if already checked
-		if checked.has(key):
-			continue
-		checked[key] = true
-		
-		# Check bounds
-		if pos.x < 0 or pos.x >= MAP_WIDTH or pos.y < 0 or pos.y >= MAP_HEIGHT:
-			continue
-		
-		# Check if water
-		if _map_data[pos.x][pos.y] != CellType.WATER:
-			continue
-		
-		# Add to electrified list
-		electrified_tiles.append(pos)
-		
-		# Add adjacent tiles to check
-		to_check.append(Vector2i(pos.x + 1, pos.y))
-		to_check.append(Vector2i(pos.x - 1, pos.y))
-		to_check.append(Vector2i(pos.x, pos.y + 1))
-		to_check.append(Vector2i(pos.x, pos.y - 1))
-	
-	if electrified_tiles.size() == 0:
-		return
-	
-	# Visual effect: Flash all electrified tiles
-	for tile_pos in electrified_tiles:
-		var flash = ColorRect.new()
-		flash.color = Color(1.0, 1.0, 0.0, 0.6)  # Yellow
-		flash.size = Vector2(TILE_SIZE, TILE_SIZE)
-		flash.position = Vector2(tile_pos) * TILE_SIZE
-		add_child(flash)
-		
-		var flash_tween = create_tween()
-		flash_tween.tween_property(flash, "modulate:a", 0.0, 0.5)
-		flash_tween.tween_callback(flash.queue_free)
-	
-	# 1. Collect all entities currently on electrified water
-	var entities_on_water = []
-	for entity in get_tree().get_nodes_in_group("entities"):
-		if is_instance_valid(entity):
-			var entity_grid = tile_map.local_to_map(entity.position)
-			if electrified_tiles.has(entity_grid):
-				entities_on_water.append(entity)
-	
-	# 2. Damage each valid entity once
-	var base_damage = damage_val
-	if base_damage == -1:
-		if target_manager and target_manager.targeting_skill:
-			base_damage = target_manager.targeting_skill.get("damage", 6)
-		else:
-			base_damage = 6
-			
-	for entity in entities_on_water:
-		if is_instance_valid(entity) and entity.has_method("take_damage"):
-			entity.take_damage(base_damage, null, ["electric"])
-			
-			var entity_name = entity.name
-			if "enemy_name" in entity:
-				entity_name = entity.enemy_name
-			elif entity == player:
-				entity_name = "自分"
-			
-			if has_node("/root/LogUI"):
-				get_node("/root/LogUI").add_log("⚡ %s に感電ダメージ %d！" % [entity_name, base_damage], Color.YELLOW)
-	
-	# Log the chain reaction
-	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("⚡ 電気が水を伝って %d マスに広がった！" % electrified_tiles.size(), Color(1.0, 1.0, 0.5))
+	hazard_manager.electrify_water(start_pos, damage_val)
 
 func _ignite_grass(pos: Vector2i):
-	"""Ignite a grass tile, starting a fire that can spread"""
-	if _burning_grass.has(pos):
-		return  # Already burning
-	
-	_burning_grass[pos] = {
-		"turns_remaining": 5,  # Grass burns for 5 turns
-		"spread_chance": 50    # 50% chance to spread each turn
-	}
-	
-	# Visual effect for initial ignition
-	_update_burning_grass_visual(pos)
-	
-	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("🔥 草むらが燃え始めた！", Color.ORANGE_RED)
+	hazard_manager.ignite_grass(pos)
 
 func _process_burning_grass():
-	"""Process burning grass each turn: spread fire and damage entities"""
-	if _burning_grass.is_empty():
-		return
-	
-	var to_remove = []
-	var new_fires = []
-	
-	# 1. Collect all entities on burning tiles first to avoid issues with freed nodes in nested loops
-	var entities_on_fire = {} # entity: total_damage
-	for pos in _burning_grass.keys():
-		for entity in get_tree().get_nodes_in_group("entities"):
-			if is_instance_valid(entity):
-				var entity_grid = tile_map.local_to_map(entity.position)
-				if entity_grid == pos:
-					entities_on_fire[entity] = 2 # Fire damage
-	
-	# 2. Apply damage to each entity once
-	for entity in entities_on_fire.keys():
-		if is_instance_valid(entity) and entity.has_method("take_damage"):
-			var fire_dmg = entities_on_fire[entity]
-			if _is_fire_immune(entity):
-				continue
-			entity.take_damage(fire_dmg, null, ["fire"])
-			
-			var entity_name = entity.name
-			if "enemy_name" in entity:
-				entity_name = entity.enemy_name
-			elif entity == player:
-				entity_name = "自分"
-			
-			if has_node("/root/LogUI"):
-				get_node("/root/LogUI").add_log("🔥 %s が炎上ダメージを受けた！ (%d)" % [entity_name, fire_dmg], Color.ORANGE_RED)
-	
-	# 3. Spread fire and manage turns
-	for pos in _burning_grass.keys():
-		var fire_data = _burning_grass[pos]
-		fire_data.turns_remaining -= 1
-		
-		if fire_data.turns_remaining > 0:
-			var spread_chance = fire_data.spread_chance
-			var adjacent_tiles = [
-				Vector2i(pos.x + 1, pos.y),
-				Vector2i(pos.x - 1, pos.y),
-				Vector2i(pos.x, pos.y + 1),
-				Vector2i(pos.x, pos.y - 1)
-			]
-			
-			for adj_pos in adjacent_tiles:
-				# Check bounds
-				if adj_pos.x < 0 or adj_pos.x >= MAP_WIDTH or adj_pos.y < 0 or adj_pos.y >= MAP_HEIGHT:
-					continue
-				
-				# Check if adjacent tile is grass and not already burning
-				if _map_data[adj_pos.x][adj_pos.y] == CellType.GRASS and not _burning_grass.has(adj_pos):
-					if randi() % 100 < spread_chance:
-						new_fires.append(adj_pos)
-		
-		# Remove if burned out
-		if fire_data.turns_remaining <= 0:
-			to_remove.append(pos)
-			# Convert to floor
-			_map_data[pos.x][pos.y] = CellType.FLOOR
-	
-	# Remove burned out fires
-	for pos in to_remove:
-		_burning_grass.erase(pos)
-	
-	# Add new fires
-	for pos in new_fires:
-		_ignite_grass(pos)
-	
-	# Update visuals
-	_draw_map()
+	hazard_manager.process_burning_grass()
 
 func _is_fire_immune(entity) -> bool:
-	return is_instance_valid(entity) and "fire_immune" in entity and entity.fire_immune
+	return hazard_manager.is_fire_immune(entity)
 
 func _try_enemy_grass_ignition(enemy, grid_pos: Vector2i):
-	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT:
-		return
-	if _map_data[grid_pos.x][grid_pos.y] != CellType.GRASS or _burning_grass.has(grid_pos):
-		return
-	if randf() <= enemy.grass_ignition_chance:
-		_ignite_grass(grid_pos)
+	hazard_manager.try_enemy_grass_ignition(enemy, grid_pos)
 
 func _flame_scatter_has_grass(enemy, radius: int = 2) -> bool:
-	var origin = tile_map.local_to_map(enemy.position)
-	for x in range(origin.x - radius, origin.x + radius + 1):
-		for y in range(origin.y - radius, origin.y + radius + 1):
-			var pos = Vector2i(x, y)
-			if pos.x < 0 or pos.x >= MAP_WIDTH or pos.y < 0 or pos.y >= MAP_HEIGHT:
-				continue
-			if _map_data[pos.x][pos.y] == CellType.GRASS and not _burning_grass.has(pos):
-				return true
-	return false
+	return hazard_manager.flame_scatter_has_grass(enemy, radius)
 
 func _get_grass_preferred_direction(enemy, desired_dir: Vector2) -> Vector2:
-	var origin = tile_map.local_to_map(enemy.position)
-	var candidates = []
-	for dx in range(-1, 2):
-		for dy in range(-1, 2):
-			if dx == 0 and dy == 0:
-				continue
-			var dir = Vector2(dx, dy)
-			var pos = origin + Vector2i(dir)
-			if pos.x < 0 or pos.x >= MAP_WIDTH or pos.y < 0 or pos.y >= MAP_HEIGHT:
-				continue
-			if _map_data[pos.x][pos.y] != CellType.GRASS:
-				continue
-			if desired_dir != Vector2.ZERO and dir.dot(desired_dir.normalized()) < -0.1:
-				continue
-			candidates.append(dir)
-	if candidates.is_empty():
-		return Vector2.ZERO
-	candidates.shuffle()
-	return candidates[0]
+	return hazard_manager.get_grass_preferred_direction(enemy, desired_dir)
 
 func _execute_enemy_fireball(enemy, target_grid_pos: Vector2i):
-	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("%s は小さな火球を放った！" % enemy.enemy_name, Color.ORANGE_RED)
-	await _handle_ranged_attack(enemy, target_grid_pos, max(1, enemy.attack_power), "fire")
+	await hazard_manager.execute_enemy_fireball(enemy, target_grid_pos)
 
 func _execute_flame_scatter(enemy):
-	var origin = tile_map.local_to_map(enemy.position)
-	var ignited = 0
-	var melted = 0
-	var radius = 2
-	for x in range(origin.x - radius, origin.x + radius + 1):
-		for y in range(origin.y - radius, origin.y + radius + 1):
-			var pos = Vector2i(x, y)
-			if pos.x < 0 or pos.x >= MAP_WIDTH or pos.y < 0 or pos.y >= MAP_HEIGHT:
-				continue
-			if Vector2(origin).distance_to(Vector2(pos)) > radius:
-				continue
-			if _map_data[pos.x][pos.y] == CellType.GRASS and not _burning_grass.has(pos):
-				_ignite_grass(pos)
-				if _burning_grass.has(pos):
-					_burning_grass[pos].spread_chance = 25
-				ignited += 1
-			# Melt ice
-			if _map_data[pos.x][pos.y] == CellType.ICE and _frozen_tiles.has(pos):
-				_map_data[pos.x][pos.y] = CellType.WATER
-				_frozen_tiles.erase(pos)
-				melted += 1
-	if ignited > 0 or melted > 0:
-		_create_steam(origin)
-		if has_node("/root/LogUI"):
-			if ignited > 0:
-				get_node("/root/LogUI").add_log("%s は炎の種をまき散らした！" % enemy.enemy_name, Color.ORANGE_RED)
-			if melted > 0:
-				get_node("/root/LogUI").add_log("🔥 氷が溶けた！", Color.ORANGE)
-		_setup_pathfinding()
-		_calculate_fov()
-		_draw_map()
+	hazard_manager.execute_flame_scatter(enemy)
 
 func _update_burning_grass_visual(pos: Vector2i):
-	"""Update tile color to show it's burning - called during _draw_map"""
-	# This will be handled in _draw_map by checking _burning_grass
-	pass
+	hazard_manager.update_burning_grass_visual(pos)
 
 func _create_steam(pos: Vector2i):
-	"""Fire hitting water creates steam that obscures vision - gas-like random spread"""
-	# Place steam at origin first (always)
-	if pos.x >= 0 and pos.x < MAP_WIDTH and pos.y >= 0 and pos.y < MAP_HEIGHT:
-		_steam_tiles[pos] = {
-			"turns_remaining": 8,
-			"density": 3  # density: 3=thick, 2=medium, 1=thin
-		}
-	
-	# BFS-style random spread from origin
-	var frontier = [pos]
-	var visited = {pos: true}
-	
-	for _wave in range(3):  # 3 waves of expansion
-		var next_frontier = []
-		for cur in frontier:
-			# Shuffle directions for randomness
-			var dirs = [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]
-			dirs.shuffle()
-			for d in dirs:
-				var npos = cur + d
-				if npos.x < 0 or npos.x >= MAP_WIDTH or npos.y < 0 or npos.y >= MAP_HEIGHT:
-					continue
-				if visited.has(npos):
-					continue
-				# Cannot pass through walls
-				if _map_data[npos.x][npos.y] == CellType.WALL:
-					continue
-				visited[npos] = true
-				# Spread probability decreases with distance
-				var spread_chance = 0.85 - _wave * 0.15
-				if randf() < spread_chance:
-					var density = max(1, 3 - _wave)
-					var turns = 6 + randi() % 3 - _wave
-					if not _steam_tiles.has(npos) or _steam_tiles[npos].turns_remaining < turns:
-						_steam_tiles[npos] = {
-							"turns_remaining": max(2, turns),
-							"density": density
-						}
-					next_frontier.append(npos)
-		frontier = next_frontier
-	
-	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("💨 蒸気が立ち込めた！", Color.LIGHT_GRAY)
+	hazard_manager.create_steam(pos)
 
 func _freeze_water(pos: Vector2i, freeze_adjacent: bool = true):
-	"""Ice hitting water freezes it, creating slippery floor"""
-	if _map_data[pos.x][pos.y] != CellType.WATER:
-		return
-	
-	# Freeze this tile and adjacent water tiles
-	var tiles_to_freeze = [pos]
-	if freeze_adjacent:
-		var adjacent = [
-			Vector2i(pos.x + 1, pos.y),
-			Vector2i(pos.x - 1, pos.y),
-			Vector2i(pos.x, pos.y + 1),
-			Vector2i(pos.x, pos.y - 1)
-		]
-		
-		for adj_pos in adjacent:
-			if adj_pos.x < 0 or adj_pos.x >= MAP_WIDTH or adj_pos.y < 0 or adj_pos.y >= MAP_HEIGHT:
-				continue
-			if _map_data[adj_pos.x][adj_pos.y] == CellType.WATER:
-				tiles_to_freeze.append(adj_pos)
-	
-	for freeze_pos in tiles_to_freeze:
-		# Change cell type from WATER to ICE
-		_map_data[freeze_pos.x][freeze_pos.y] = CellType.ICE
-		_frozen_tiles[freeze_pos] = {
-			"turns_remaining": 4  # Ice lasts 4 turns
-		}
-	
-	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("❄️ 水が凍結した！ (%d タイル)" % tiles_to_freeze.size(), Color.CYAN)
+	hazard_manager.freeze_water(pos, freeze_adjacent)
 
 func _process_steam():
-	"""Process steam tiles each turn - gas-like random spreading"""
-	if _steam_tiles.is_empty():
-		_steam_exposure.clear()
-		return
-	
-	var to_remove = []
-	var new_steam: Dictionary = {}
-	
-	for pos in _steam_tiles.keys():
-		var data = _steam_tiles[pos]
-		data.turns_remaining -= 1
-		
-		# Density decreases as steam ages
-		if data.turns_remaining == 4:
-			data.density = max(1, data.get("density", 2) - 1)
-		elif data.turns_remaining == 2:
-			data.density = 1
-		
-		if data.turns_remaining <= 0:
-			to_remove.append(pos)
-			continue
-		
-		# Gas-like random diffusion: try to spread to adjacent floor tiles
-		var density = data.get("density", 1)
-		var spread_prob = 0.3 + density * 0.1  # thick steam spreads more
-		
-		var dirs = [Vector2i(1,0), Vector2i(-1,0), Vector2i(0,1), Vector2i(0,-1)]
-		dirs.shuffle()
-		for d in dirs:
-			var npos = pos + d
-			if npos.x < 0 or npos.x >= MAP_WIDTH or npos.y < 0 or npos.y >= MAP_HEIGHT:
-				continue
-			# Steam cannot pass through walls
-			if _map_data[npos.x][npos.y] == CellType.WALL:
-				continue
-			# Skip if already has strong steam
-			if _steam_tiles.has(npos) and _steam_tiles[npos].turns_remaining >= data.turns_remaining:
-				continue
-			if new_steam.has(npos) and new_steam[npos].turns_remaining >= data.turns_remaining - 1:
-				continue
-			if randf() < spread_prob:
-				# New steam tile is weaker (1 less turn, lower density)
-				new_steam[npos] = {
-					"turns_remaining": max(1, data.turns_remaining - 1),
-					"density": max(1, density - 1)
-				}
-	
-	for pos in to_remove:
-		_steam_tiles.erase(pos)
-	
-	# Merge newly spread steam
-	for pos in new_steam.keys():
-		if not _steam_tiles.has(pos):
-			_steam_tiles[pos] = new_steam[pos]
-		else:
-			# Refresh if new steam is stronger
-			if new_steam[pos].turns_remaining > _steam_tiles[pos].turns_remaining:
-				_steam_tiles[pos] = new_steam[pos]
-	
-	var current_exposure = {}
-	for entity in get_tree().get_nodes_in_group("entities"):
-		if not is_instance_valid(entity):
-			continue
-		var entity_grid = tile_map.local_to_map(entity.position)
-		if not _steam_tiles.has(entity_grid):
-			continue
-		
-		var entity_id = entity.get_instance_id()
-		var turns_in_steam = int(_steam_exposure.get(entity_id, 0)) + 1
-		current_exposure[entity_id] = turns_in_steam
-		
-		if turns_in_steam >= 2 and entity.has_method("take_damage"):
-			entity.take_damage(1, null, ["steam"])
-			if has_node("/root/LogUI"):
-				var entity_name = entity.name
-				if "enemy_name" in entity:
-					entity_name = entity.enemy_name
-				elif entity == player:
-					entity_name = "Player"
-				get_node("/root/LogUI").add_log("%s is choking in the steam!" % entity_name, Color.LIGHT_GRAY)
-	_steam_exposure = current_exposure
-	
-	# Recalculate FOV if steam changed
-	_calculate_fov()
-	_draw_map()
+	hazard_manager.process_steam()
+
+func _process_poison_gas():
+	hazard_manager.process_poison_gas()
 
 
 func _process_frozen_tiles():
-	"""Process frozen tiles - ice no longer melts automatically, only from fire/heat effects"""
-	# Ice no longer melts automatically each turn
-	# It only melts when affected by fire or other heat-based effects
-	pass
+	hazard_manager.process_frozen_tiles()
 
 # ------------------------------------------------------------------------------
 # New Skills Implementation
@@ -5944,7 +5889,7 @@ func _execute_freeze_skill(enemy, target_grid_pos: Vector2i):
 	
 	if tiles_to_freeze.size() > 0:
 		if log_ui:
-			log_ui.add_log("❄️ 水が凍結した！ (%d タイル)" % tiles_to_freeze.size(), Color.CYAN)
+			log_ui.add_log("[氷] 水が凍結した！ (%d タイル)" % tiles_to_freeze.size(), Color.CYAN)
 		
 		# Visual effect - ice particles
 		var particles = CPUParticles2D.new()
@@ -6007,7 +5952,7 @@ func _execute_freeze_skill_player(target_grid: Vector2i):
 	
 	if tiles_to_freeze.size() > 0:
 		if log_ui:
-			log_ui.add_log("❄️ 水が凍結した！ (%d タイル)" % tiles_to_freeze.size(), Color.CYAN)
+			log_ui.add_log("[氷] 水が凍結した！ (%d タイル)" % tiles_to_freeze.size(), Color.CYAN)
 		
 		# Visual effect - ice particles
 		var target_center = Vector2(target_grid) * TILE_SIZE + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
@@ -6138,7 +6083,7 @@ func _apply_chain_lightning(source, current_target, damage: int, chain_left: int
 		current_target.take_damage(damage, source, ["electric"])
 		
 		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("⚡ %s に電撃が走る！ (%d)" % [t_name, damage], Color.YELLOW)
+			get_node("/root/LogUI").add_log("[雷] %s に電撃が走る！ (%d)" % [t_name, damage], Color.YELLOW)
 			
 		if is_instance_valid(current_target) and current_target.has_method("apply_effect") and randf() < 0.3:
 			current_target.apply_effect("paralysis", {"duration": 2})
@@ -6178,7 +6123,7 @@ func _apply_chain_lightning(source, current_target, damage: int, chain_left: int
 	for n in neighbors:
 		await _apply_chain_lightning(current_target, n, damage, chain_left - 1, hit_list)
 
-func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: String):
+func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: String, is_reflected_depth: int = 0):
 	# 弾道の視覚化
 	var start_pos = attacker.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
 	var end_pos = Vector2(target_grid) * TILE_SIZE + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
@@ -6253,6 +6198,33 @@ func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: S
 		if tile_map.local_to_map(ent.position) == target_grid:
 			target = ent
 			break
+			
+	# --- Crystal Floor Magic Reflection Check ---
+	var is_magic_projectile = (type in ["fire", "ice", "paralyze", "lightning", "magic"])
+	var target_on_crystal = false
+	if _is_grid_in_bounds(target_grid) and _map_data[target_grid.x][target_grid.y] == CellType.CRYSTAL_FLOOR:
+		target_on_crystal = true
+		
+	if is_magic_projectile and target_on_crystal and is_reflected_depth == 0 and is_instance_valid(attacker):
+		var target_name = target.name if is_instance_valid(target) else "対象"
+		if is_instance_valid(target) and "enemy_name" in target: target_name = target.enemy_name
+		elif target == player: target_name = "プレイヤー"
+		
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("[晶] 結晶床が輝き、%s への魔法攻撃を反射した！" % target_name, Color(0.4, 0.9, 1.0))
+			
+		# Visual reflection burst
+		_spawn_skill_particles(end_pos, "crystal_reflect", 0.6)
+		
+		# Calculate reflection path back to attacker (limited by original range or distance)
+		var attacker_grid = tile_map.local_to_map(attacker.position)
+		projectile.queue_free()
+		trail_line.call_deferred("queue_free")
+		
+		# Execute reflected attack back towards attacker once
+		await _handle_ranged_attack(target if is_instance_valid(target) else attacker, attacker_grid, damage, type, 1)
+		return
+			
 	if target:
 		if target.has_method("take_damage"):
 			var elements = ["fire"] if type == "fire" else ["normal"]
@@ -6324,62 +6296,31 @@ func _check_drowning() -> bool:
 	
 	return false
 
+func _create_ascii_stairs_texture(color: Color) -> Texture2D:
+	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var bitmap = _get_stairs_bitmap()
+	var scale = 4
+	var origin = Vector2i(6, 2)
+	for y in range(bitmap.size()):
+		for x in range(bitmap[y].length()):
+			if bitmap[y].substr(x, 1) == "#":
+				for dx in range(scale):
+					for dy in range(scale):
+						img.set_pixel(origin.x + x * scale + dx, origin.y + y * scale + dy, color)
+	return ImageTexture.create_from_image(img)
+
+func _get_stairs_bitmap() -> Array:
+	return [".....", "....#", "...##", "..###", ".####", ".....", "....."]
+
 func _draw_custom_stairs(grid_pos: Vector2i, color: Color, with_particles: bool):
 	var sprite = Sprite2D.new()
-	var custom_tex_path = ""
 	
-	# Determine texture path based on color (heuristic)
-	var base_name = ""
-	if color.g > 0.8: base_name = "stairs_green"
-	elif color.b > 0.8 and color.r < 0.5: base_name = "stairs_blue"
-	
-	if base_name != "":
-		# Check for png then jpg
-		if ResourceLoader.exists("res://assets/" + base_name + ".png"):
-			custom_tex_path = "res://assets/" + base_name + ".png"
-		elif ResourceLoader.exists("res://assets/" + base_name + ".jpg"):
-			custom_tex_path = "res://assets/" + base_name + ".jpg"
-		# Check physical file if not imported (res:// mapping works for FileAccess in editor usually)
-		elif FileAccess.file_exists("res://assets/" + base_name + ".png"):
-			custom_tex_path = "res://assets/" + base_name + ".png"
-		elif FileAccess.file_exists("res://assets/" + base_name + ".jpg"):
-			custom_tex_path = "res://assets/" + base_name + ".jpg"
-	
-	var tex = null
-	if custom_tex_path != "":
-		# Attempt specific resource load
-		if ResourceLoader.exists(custom_tex_path):
-			tex = load(custom_tex_path)
-		
-		# Fallback: Direct image load (bypasses import cache issues)
-		if not tex:
-			var global_path = ProjectSettings.globalize_path(custom_tex_path)
-			if FileAccess.file_exists(global_path):
-				var img = Image.load_from_file(global_path)
-				if img:
-					tex = ImageTexture.create_from_image(img)
-	
-	if tex:
-		sprite.texture = tex
-		sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST # Keep pixel art crisp
-		
-		# Scale to fit TILE_SIZE (32x32)
-		var w = tex.get_width()
-		var h = tex.get_height()
-		if w > 0 and h > 0:
-			var s = Vector2(float(TILE_SIZE) / w, float(TILE_SIZE) / h)
-			sprite.scale = s
-		
-		sprite.modulate = Color(1, 1, 1) 
-	else:
-		# Fallback to Atlas
-		var source = tile_map.tile_set.get_source(0)
-		if source and source is TileSetAtlasSource:
-			sprite.texture = source.texture
-			sprite.region_enabled = true
-			sprite.region_rect = Rect2(17 * TILE_SIZE, 0, TILE_SIZE, TILE_SIZE)
-			sprite.modulate = color
-		
+	# Create ASCII-style stairs texture
+	var tex = _create_ascii_stairs_texture(color)
+	sprite.texture = tex
+	sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	sprite.modulate = Color(1, 1, 1)
 	sprite.position = Vector2(grid_pos) * TILE_SIZE + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
 	
 	if not with_particles:
@@ -6435,6 +6376,14 @@ func _calculate_skill_damage(skill: Dictionary, target_entity) -> int:
 	if skill.has("dex_scaling") and player:
 		var dex_val = player.get_total_dexterity() if player.has_method("get_total_dexterity") else player.dexterity
 		dmg += int(dex_val * skill.get("dex_scaling", 1.0))
+
+	# Crystal Floor Magic Power Boost (+50% magic skill damage when standing on Crystal Floor)
+	if skill.get("is_magic", false) and player:
+		var p_grid = tile_map.local_to_map(player.position)
+		if _is_grid_in_bounds(p_grid) and _map_data[p_grid.x][p_grid.y] == CellType.CRYSTAL_FLOOR:
+			dmg = int(dmg * 1.5)
+			if has_node("/root/LogUI"):
+				get_node("/root/LogUI").add_log("[*] 結晶床の魔力共鳴で威力が上昇した！ (+50%)", Color(0.4, 0.9, 1.0))
 
 	# Grass Snipe double damage when standing in Grass
 	if skill.get("id", "") == "grass_snipe" and player:
@@ -6523,7 +6472,7 @@ func _execute_wall_skill(target_grid: Vector2i, _targeting_skill: Dictionary):
 						
 					var is_walkable = false
 					var cell = _map_data[nxt.x][nxt.y]
-					if cell == CellType.FLOOR or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.CRYSTAL_FLOOR or cell == CellType.STAIRS or cell == CellType.STAIRS_BLUE or cell == CellType.STAIRS_GREEN or cell == CellType.STAIRS_RED or cell == CellType.STAIRS_PURPLE or cell == CellType.STAIRS_GOLD or cell == CellType.DOOR_OPEN or cell == CellType.ICE or _frozen_tiles.has(nxt):
+					if cell == CellType.FLOOR or cell == CellType.GRASS or cell == CellType.ASH or cell == CellType.VOLCANIC_ASH or cell == CellType.CRYSTAL_FLOOR or cell == CellType.STAIRS or cell == CellType.STAIRS_BLUE or cell == CellType.STAIRS_GREEN or cell == CellType.STAIRS_RED or cell == CellType.STAIRS_PURPLE or cell == CellType.STAIRS_GOLD or cell == CellType.DOOR_OPEN or cell == CellType.ICE or _frozen_tiles.has(nxt):
 						is_walkable = true
 						
 					if is_walkable:
@@ -6683,7 +6632,7 @@ func _execute_point_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 					_map_data[check_pos.x][check_pos.y] = CellType.WATER
 					_frozen_tiles.erase(check_pos)
 					if has_node("/root/LogUI"):
-						get_node("/root/LogUI").add_log("🔥 氷が溶けた！", Color.ORANGE)
+						get_node("/root/LogUI").add_log("[炎] 氷が溶けた！", Color.ORANGE)
 			
 			# Check Entities
 			for entity in get_tree().get_nodes_in_group("entities"):
@@ -6692,6 +6641,18 @@ func _execute_point_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 				if e_grid == check_pos:
 					if is_instance_valid(entity) and entity.has_method("take_damage"):
 						var elems = _get_skill_elements(_targeting_skill)
+						
+						# Crystal Floor Magic Ward / Reflection:
+						# If an entity is standing on crystal floor, point-targeted magic damage is reflected/deflected (entity takes 0 damage, emits reflection burst)
+						if _is_grid_in_bounds(check_pos) and _map_data[check_pos.x][check_pos.y] == CellType.CRYSTAL_FLOOR and _targeting_skill.get("is_magic", false):
+							var e_name = entity.name
+							if "enemy_name" in entity: e_name = entity.enemy_name
+							elif entity == player: e_name = "プレイヤー"
+							_spawn_skill_particles(entity.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0), "crystal_reflect", 0.5)
+							if has_node("/root/LogUI"):
+								get_node("/root/LogUI").add_log("[晶] 結晶床の結界が %s への魔法を跳ね返した！" % e_name, Color(0.4, 0.9, 1.0))
+							continue
+							
 						entity.take_damage(dmg, player, elems)
 						hit_count += 1
 						if entity == player:
@@ -7236,7 +7197,7 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 			_map_data[hit_pos.x][hit_pos.y] = CellType.WATER
 			_frozen_tiles.erase(hit_pos)
 			if has_node("/root/LogUI"):
-				get_node("/root/LogUI").add_log("🔥 氷が溶けた！", Color.ORANGE)
+				get_node("/root/LogUI").add_log("[炎] 氷が溶けた！", Color.ORANGE)
 			_setup_pathfinding()
 			_calculate_fov()
 			_draw_map()
@@ -7395,8 +7356,54 @@ func _init_world_map():
 	if not other_villages.is_empty():
 		_dungeon_village_pos = other_villages.pick_random()
 	else:
-		_dungeon_village_pos = Vector2i.ZERO
-	
+		# If no other villages, place dungeon village randomly but far from start
+		var placed = false
+		for _i in range(100):
+			var x = randi_range(5, MAP_WIDTH - 6)
+			var y = randi_range(5, MAP_HEIGHT - 6)
+			var pos = Vector2i(x, y)
+			if pos.distance_to(start_pos) > 15:
+				_dungeon_village_pos = pos
+				_world_map_data[x][y] = WorldCell.VILLAGE
+				placed = true
+				break
+		if not placed:
+			_dungeon_village_pos = Vector2i(MAP_WIDTH - 5, MAP_HEIGHT - 5)
+
+	# Place the dungeon entrance on the world map
+	var dungeon_placed = false
+	var attempts = 200
+	while not dungeon_placed and attempts > 0:
+		var x = randi_range(1, MAP_WIDTH - 2)
+		var y = randi_range(1, MAP_HEIGHT - 2)
+		var pos = Vector2i(x, y)
+		var cell = _world_map_data[x][y]
+
+		# Place on grass or forest, but not too close to important villages
+		# 街道の上にもダンジョンを生成できるように修正
+		if (cell == WorldCell.GRASS or cell == WorldCell.FOREST or cell == WorldCell.ROAD) and pos.distance_to(_starting_village_pos) > 10 and \
+		(_dungeon_village_pos == Vector2i.ZERO or pos.distance_to(_dungeon_village_pos) > 10):
+			_world_map_data[x][y] = WorldCell.DUNGEON
+			dungeon_placed = true
+			print("Dungeon placed at: ", pos)
+
+		attempts -= 1
+
+	if not dungeon_placed:
+		print("Warning: Failed to place dungeon on the world map. Placing fallback.")
+		for x in range(MAP_WIDTH -1, 0, -1):
+			var found = false
+			for y in range(MAP_HEIGHT -1, 0, -1):
+				var pos = Vector2i(x,y)
+				var cell = _world_map_data[x][y]
+				if (cell == WorldCell.GRASS or cell == WorldCell.FOREST):
+					_world_map_data[x][y] = WorldCell.DUNGEON
+					found = true
+					print("Fallback Dungeon placed at: ", pos)
+					break
+			if found:
+				break
+
 	# Generate local overworld for the starting village
 	var result = generator.generate_map(0, 0, WorldCell.VILLAGE, self, true, false)
 	_map_data = result["map_data"]
@@ -7507,7 +7514,7 @@ func _zoom_in_to_local_map():
 		_ascii_map_layer.visible = false
 	
 	var cache_key = "local_overworld_%d_%d" % [_world_player_pos.x, _world_player_pos.y]
-	if not _load_floor_from_cache(cache_key, false):
+	if not _load_floor_from_cache(cache_key, false, false, true):
 		# Clear old entities before generating
 		for enemy in get_tree().get_nodes_in_group("enemies"):
 			if is_instance_valid(enemy): enemy.queue_free()
@@ -7521,11 +7528,10 @@ func _zoom_in_to_local_map():
 		_generate_map(cell_type)
 		_setup_pathfinding()
 		
-		# Set player position at center of first room/village center
-		var spawn_pos = Vector2i(MAP_WIDTH/2, MAP_HEIGHT/2)
+		var fallback_spawn = Vector2i(MAP_WIDTH / 2, MAP_HEIGHT / 2)
 		if not _rooms.is_empty():
-			spawn_pos = _rooms[0].get_center()
-			
+			fallback_spawn = _rooms[0].get_center()
+		var spawn_pos = _get_center_spawn_pos(fallback_spawn)
 		player.position = Vector2(spawn_pos) * TILE_SIZE
 		_last_player_grid_pos = spawn_pos
 		
@@ -7534,6 +7540,7 @@ func _zoom_in_to_local_map():
 		else:
 			_spawn_enemies()
 			_spawn_items()
+			_spawn_traps()
 		_spawn_torches()
 		
 		# Spawn saved allies near the player
@@ -7667,7 +7674,7 @@ func _ensure_ascii_map_overlay():
 	vbox.add_child(header)
 	
 	var title = Label.new()
-	title.text = "✦ WORLD MAP ✦"
+	title.text = ">> WORLD MAP >>"
 	title.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25))
 	title.add_theme_font_size_override("font_size", 14)
 	header.add_child(title)
@@ -7735,81 +7742,43 @@ func _update_ascii_map_text():
 
 func _update_lighting_for_map_type():
 	var canvas_modulate = get_node_or_null("CanvasModulate")
-	var is_outdoor = _is_on_world_map or current_floor == 0
+	var uses_shadow_occluders = not _is_on_world_map and current_floor > 0
 
 	if shadow_manager:
-		shadow_manager.visible = not is_outdoor
-		if not is_outdoor and not _map_data.is_empty():
+		shadow_manager.visible = uses_shadow_occluders
+		if uses_shadow_occluders and not _map_data.is_empty():
 			shadow_manager.rebuild(_map_data)
+
+	if _is_on_world_map:
+		if canvas_modulate:
+			canvas_modulate.visible = false
+			canvas_modulate.color = Color(1.0, 1.0, 1.0, 1.0)
+		if is_instance_valid(player):
+			var world_map_light = player.get_node_or_null("PointLight2D")
+			if world_map_light:
+				world_map_light.visible = false
+				if "enabled" in world_map_light:
+					world_map_light.enabled = false
+		return
 	
 	if canvas_modulate:
-		canvas_modulate.visible = not is_outdoor
-		if is_outdoor:
-			canvas_modulate.color = Color(1.0, 1.0, 1.0, 1.0)
+		canvas_modulate.visible = true
+		canvas_modulate.color = VISION_AMBIENT_COLOR
 	
 	if is_instance_valid(player):
 		var p_light = player.get_node_or_null("PointLight2D")
 		if p_light:
-			p_light.visible = not is_outdoor
-			if not is_outdoor:
-				# フロアタイプに応じてライトの色と強度を調整
-				_apply_floor_lighting(p_light, canvas_modulate)
+			p_light.visible = true
+			if "enabled" in p_light:
+				p_light.enabled = true
+			_apply_floor_lighting(p_light, canvas_modulate)
 
 func _apply_floor_lighting(p_light: PointLight2D, canvas_modulate):
-	# デフォルト: 通常ダンジョン（松明の暖色オレンジ）
-	var light_color = Color(1.0, 0.80, 0.58, 1.0)
-	var light_energy = 0.72
-	var ambient_color = Color(0.06, 0.06, 0.10, 1.0)
-	
-	# 溶岩フロア判定 (branch 3 などで lava があるフロア)
-	var has_lava = false
-	var has_crystal = false
-	var has_water_dominant = false
-	
-	# マップデータからフロアタイプを確認
-	var lava_count = 0
-	var crystal_count = 0
-	var water_count = 0
-	var floor_count = 0
-	for x in range(min(MAP_WIDTH, 30)):
-		for y in range(min(MAP_HEIGHT, 20)):
-			match _map_data[x][y]:
-				CellType.LAVA: lava_count += 1
-				CellType.CRYSTAL_FLOOR: crystal_count += 1
-				CellType.WATER: water_count += 1
-				CellType.FLOOR: floor_count += 1
-	
-	if lava_count > 5:
-		has_lava = true
-	elif crystal_count > 5:
-		has_crystal = true
-	elif water_count > floor_count / 3:
-		has_water_dominant = true
-	
-	if has_lava:
-		# 溶岩フロア: 赤みがかった不気味なライト
-		light_color = Color(1.0, 0.45, 0.15, 1.0)
-		light_energy = 0.66
-		ambient_color = Color(0.10, 0.03, 0.02, 1.0)
-	elif has_crystal:
-		# クリスタルフロア: 紫みがかった神秘的なライト
-		light_color = Color(0.85, 0.70, 1.0, 1.0)
-		light_energy = 0.70
-		ambient_color = Color(0.04, 0.03, 0.10, 1.0)
-	elif has_water_dominant:
-		# 水場フロア: 青白い冷たいライト
-		light_color = Color(0.75, 0.88, 1.0, 1.0)
-		light_energy = 0.68
-		ambient_color = Color(0.04, 0.05, 0.10, 1.0)
-	
-	# ライトカラー・エネルギーをアニメーションで適用
-	var tween = create_tween()
-	tween.tween_property(p_light, "color", light_color, 0.8)
-	tween.parallel().tween_property(p_light, "energy", light_energy, 0.8)
+	p_light.color = VISION_LIGHT_COLOR
+	p_light.energy = VISION_LIGHT_ENERGY
 	
 	if canvas_modulate:
-		var cm_tween = create_tween()
-		cm_tween.tween_property(canvas_modulate, "color", ambient_color, 1.0)
+		canvas_modulate.color = VISION_AMBIENT_COLOR
 
 func _update_shadow_cell(cell: Vector2i):
 	if not shadow_manager or _is_on_world_map:

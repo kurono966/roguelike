@@ -1,11 +1,13 @@
-[gd_scene load_steps=2 format=3 uid="uid://grid_inv_view_123"]
+[gd_scene load_steps=3 format=3 uid="uid://grid_inv_view_123"]
 
 [ext_resource type="Script" path="res://ui/grid_inventory_view.gd" id="1_gridview"]
+[ext_resource type="Theme" path="res://ui/themes/main_theme.tres" id="2_theme"]
 
 [node name="GridInventoryView" type="Control"]
 layout_mode = 3
 anchors_preset = 0
 script = ExtResource("1_gridview")
+theme = ExtResource("2_theme")
 
 [node name="Background" type="ColorRect" parent="."]
 layout_mode = 1

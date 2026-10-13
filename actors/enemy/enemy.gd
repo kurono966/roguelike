@@ -175,13 +175,65 @@ func _update_status_visuals():
 
 # 敵のスプライトを読み込み
 func _load_enemy_sprite():
+	var sprite = $Sprite2D
+	var id = enemy_id.to_lower()
+	
+	# Override base_color with unique color per enemy type for distinguishability
+	if not is_npc:
+		var unique_colors = {
+			"zakomushi": Color(0.0, 1.0, 0.0),
+			"bat": Color(0.5, 0.0, 0.5),
+			"hitodama": Color(0.0, 1.0, 1.0),
+			"goblin": Color(0.5, 0.5, 0.0),
+			"orc": Color(0.0, 0.4, 0.0),
+			"poison_mushroom": Color(0.8, 0.4, 0.9),
+			"giant_mantis": Color(0.6, 1.0, 0.0),
+			"skeleton": Color(0.8, 0.8, 0.8),
+			"skeleton_archer": Color(0.7, 0.75, 0.8),
+			"slime_giant": Color(0.0, 0.7, 0.7),
+			"spider": Color(0.1, 0.1, 0.1),
+			"prankster_imp": Color(1.0, 1.0, 0.0),
+			"minotaur": Color(0.6, 0.3, 0.1),
+			"animated_armor": Color(0.4, 0.45, 0.5),
+			"dragon": Color(0.5, 0.0, 0.0),
+			"red_orc": Color(1.0, 0.3, 0.0),
+			"shadow": Color(0.3, 0.3, 0.8),
+			"armored_skeleton": Color(0.35, 0.35, 0.35),
+			"kuragen_giant": Color(0.0, 0.5, 1.0),
+			"grim_reaper": Color(0.15, 0.15, 0.15),
+			"crystal_golem": Color(0.5, 0.8, 0.9),
+			"merman": Color(0.0, 0.5, 0.5),
+			"water_snake": Color(0.4, 0.8, 0.7),
+			"kuragen": Color(0.2, 0.6, 1.0),
+			"squid_deep": Color(0.0, 0.0, 0.5),
+			"ice_spirit": Color(0.6, 0.8, 0.95),
+			"spark_slime": Color(0.9, 0.9, 0.2),
+			"forest_zakomushi": Color(0.2, 0.7, 0.2),
+			"flame_scatterer": Color(1.0, 0.35, 0.05),
+			"trent": Color(0.3, 0.2, 0.05),
+			"baby_jellyfish": Color(0.6, 0.8, 1.0),
+			"leaf_slime": Color(0.2, 0.8, 0.2),
+			"ember_lizard": Color(0.9, 0.3, 0.05),
+			"crystal_shard": Color(0.7, 0.7, 0.95),
+		}
+		if unique_colors.has(id):
+			base_color = unique_colors[id]
+	
+	var ascii_char = _get_ascii_char()
+	var has_glow = id in ["hitodama", "crystal_golem", "ice_spirit", "spark_slime", "flame_scatterer", "ember_lizard", "crystal_shard", "dragon", "grim_reaper"]
+	sprite.texture = AsciiArtGenerator.create_ascii_sprite(ascii_char, base_color.lightened(0.25), has_glow)
+	sprite.modulate = Color.WHITE
+	sprite.position = Vector2(16, 16)
+	sprite.scale = Vector2.ONE
+	_use_fallback_draw = false
+	_start_idle_animation()
+	return
+
 	# Force fallback if sprite_path is explicitly empty (for procedural enemies)
 	if sprite_path == "":
 		_generate_fallback_sprite()
 		return
 
-	var sprite = $Sprite2D
-	
 	# Try to load the specified sprite path
 	if ResourceLoader.exists(sprite_path):
 		var texture = load(sprite_path)
@@ -264,6 +316,110 @@ func _draw():
 			draw_rect(fill_rect, hp_color)
 			# Add a slight highlight to the HP bar for a polished look
 			draw_rect(Rect2(bar_x, bar_y, fill_width, 1), Color(1,1,1,0.3))
+
+func _get_ascii_char() -> String:
+	if is_npc:
+		return "@"
+	
+	var id = enemy_id.to_lower()
+	# Unique character mapping for each enemy type
+	var char_map = {
+		"zakomushi": "z",
+		"bat": "b",
+		"hitodama": "h",
+		"goblin": "g",
+		"orc": "O",
+		"poison_mushroom": "p",
+		"giant_mantis": "M",
+		"skeleton": "Z",
+		"skeleton_archer": "A",
+		"slime_giant": "S",
+		"spider": "x",
+		"prankster_imp": "I",
+		"minotaur": "T",
+		"animated_armor": "R",
+		"dragon": "D",
+		"red_orc": "r",
+		"shadow": "w",
+		"armored_skeleton": "K",
+		"kuragen_giant": "J",
+		"grim_reaper": "W",
+		"crystal_golem": "G",
+		"merman": "m",
+		"water_snake": "n",
+		"kuragen": "q",
+		"squid_deep": "Q",
+		"ice_spirit": "E",
+		"spark_slime": "P",
+		"forest_zakomushi": "F",
+		"flame_scatterer": "L",
+		"trent": "t",
+		"baby_jellyfish": "B",
+		"leaf_slime": "l",
+		"ember_lizard": "e",
+		"crystal_shard": "C",
+	}
+	
+	if char_map.has(id):
+		return char_map[id]
+	return enemy_name.substr(0, 1).to_upper()
+
+func _create_ascii_sprite(ch: String, fg_color: Color) -> Texture2D:
+	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	img.fill(Color(0, 0, 0, 0))
+	var bitmap = _get_ascii_bitmap(ch)
+	var scale = 4
+	var origin = Vector2i(6, 2)
+	for y in range(bitmap.size()):
+		for x in range(bitmap[y].length()):
+			if bitmap[y].substr(x, 1) == "#":
+				for dx in range(scale):
+					for dy in range(scale):
+						img.set_pixel(origin.x + x * scale + dx, origin.y + y * scale + dy, fg_color)
+	return ImageTexture.create_from_image(img)
+
+func _get_ascii_bitmap(ch: String) -> Array:
+	match ch:
+		"@": return [" ### ", "#...#", "#.###", "#.#.#", "#.###", "#....", " ####"]
+		"b": return ["#....", "#....", "####.", "#...#", "#...#", "#...#", "####."]
+		"D": return ["####.", "#...#", "#...#", "#...#", "#...#", "#...#", "####."]
+		"f": return [".####", "#....", "#....", "###..", "#....", "#....", "#...."]
+		"G": return [".###.", "#...#", "#....", "#.###", "#...#", "#...#", ".###."]
+		"j": return ["..###", "...#.", "...#.", "...#.", "...#.", "#..#.", ".##.."]
+		"l": return ["##...", ".#...", ".#...", ".#...", ".#...", ".#...", "###.."]
+		"M": return ["#...#", "##.##", "#.#.#", "#...#", "#...#", "#...#", "#...#"]
+		"m": return [".....", "##.#.", "#.#.#", "#.#.#", "#.#.#", "#.#.#", "#.#.#"]
+		"o": return [".....", ".###.", "#...#", "#...#", "#...#", "#...#", ".###."]
+		"s": return [".####", "#....", "#....", ".###.", "....#", "....#", "####."]
+		"T": return ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."]
+		"w": return [".....", "#...#", "#...#", "#.#.#", "#.#.#", "##.##", "#...#"]
+		"x": return ["#...#", ".#.#.", "..#..", ".#.#.", "#...#", ".....", "....."]
+		"Z": return ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"]
+		"z": return ["#####", "....#", "...#.", "..#..", ".#...", "#....", "#####"]
+		"h": return ["#....", "#....", "####.", "#...#", "#...#", "#...#", "#...#"]
+		"g": return ["....#", ".###.", "#...#", "#...#", ".###.", "...#.", "###.."]
+		"O": return [".###.", "#...#", "#...#", "#...#", "#...#", "#...#", ".###."]
+		"p": return ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."]
+		"S": return [".####", "#....", "#....", ".###.", "....#", "....#", "####."]
+		"I": return ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "#####"]
+		"A": return [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"]
+		"R": return ["####.", "#...#", "#...#", "####.", "#.#..", "#..#.", "#...#"]
+		"r": return ["....#", "....#", "####.", "#...#", "#....", "#....", "#...."]
+		"K": return ["#...#", "#..#.", "#.#..", "##...", "#.#..", "#..#.", "#...#"]
+		"J": return ["..###", "...#.", "...#.", "...#.", "#..#.", "#..#.", ".##.."]
+		"W": return ["#...#", "#...#", "#...#", "#.#.#", "#.#.#", "##.##", "#...#"]
+		"n": return ["....#", "....#", "####.", "#...#", "#...#", "#...#", "#...#"]
+		"q": return ["...#.", "...#.", ".###.", "#...#", ".###.", "...#.", "...#."]
+		"Q": return [".###.", "#...#", "#...#", "#...#", "#.#.#", "#..#.", ".##.."]
+		"E": return ["#####", "#....", "#....", "####.", "#....", "#....", "#####"]
+		"P": return ["####.", "#...#", "#...#", "####.", "#....", "#....", "#...."]
+		"F": return ["#####", "#....", "#....", "####.", "#....", "#....", "#...."]
+		"L": return ["#....", "#....", "#....", "#....", "#....", "#....", "#####"]
+		"t": return ["..#..", "..#..", "#####", "..#..", "..#..", "..#..", "..#.."]
+		"B": return ["####.", "#...#", "#...#", "####.", "#...#", "#...#", "####."]
+		"e": return ["....#", ".###.", "#...#", "#####", "#....", "#....", ".###."]
+		"C": return [".###.", "#...#", "#....", "#....", "#....", "#...#", ".###."]
+		_: return [".###.", "#...#", "#...#", "#####", "#...#", "#...#", "#...#"]
 
 func move(direction: Vector2):
 	var target_position = position + direction * TILE_SIZE
@@ -414,14 +570,16 @@ func die():
 	
 	# プレイヤーに経験値を与える（プレイヤーが直接倒した場合のみ）
 	var killer_is_player = false
-	var players = get_tree().get_nodes_in_group("player")
-	if players.size() > 0:
-		var player = players[0]
-		# Grant EXP only if killed by the player, not by an NPC ally
-		if last_attacker == player or (last_attacker == null and not is_in_group("npcs")):
-			killer_is_player = true
-		if killer_is_player and player.has_method("gain_exp"):
-			player.gain_exp(exp_reward)
+	var tree = get_tree()
+	if tree:
+		var players = tree.get_nodes_in_group("player")
+		if players.size() > 0:
+			var player = players[0]
+			# Grant EXP only if killed by the player, not by an NPC ally
+			if last_attacker == player or (last_attacker == null and not is_in_group("npcs")):
+				killer_is_player = true
+			if killer_is_player and player.has_method("gain_exp"):
+				player.gain_exp(exp_reward)
 	
 	# --- Loot Drop Logic ---
 	if not loot_table.is_empty():

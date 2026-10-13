@@ -51,7 +51,7 @@ func _create_visuals():
 	cursor_sprite.z_index = 100 # On top
 	add_child(cursor_sprite)
 	
-	# Dynamic target pointer (▼)
+	# Dynamic target pointer (v)
 	pointer_polygon = Polygon2D.new()
 	# Relative coordinates: tip is at (0, 0), top-left at (-6, -10), top-right at (6, -10)
 	pointer_polygon.polygon = PackedVector2Array([

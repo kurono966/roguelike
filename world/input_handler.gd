@@ -72,6 +72,16 @@ func _is_numpad_wait_key(key_event: InputEventKey) -> bool:
 		return false
 	return key_event.physical_keycode == KEY_KP_5 or key_event.keycode == KEY_KP_5 or key_event.keycode == KEY_5 or key_event.keycode == KEY_CLEAR
 
+func _get_downstairs_branch() -> int:
+	if main_node.current_floor == 0:
+		return 0
+	return main_node._current_branch
+
+func _get_upstairs_branch() -> int:
+	if main_node.current_floor <= 1:
+		return 0
+	return main_node._current_branch
+
 func _unhandled_input(event: InputEvent) -> void:
 	if not main_node or not is_instance_valid(player):
 		return
@@ -160,6 +170,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			GameUI.toggle_status()
 			get_viewport().set_input_as_handled()
 			return
+	
+	if event is InputEventKey and event.pressed and event.keycode == KEY_O:
+		GameUI.toggle_settings()
+		get_viewport().set_input_as_handled()
+		return
 	
 	if event is InputEventKey and event.pressed and event.keycode == KEY_T:
 		GameUI.open_throw_selection()
@@ -430,13 +445,11 @@ func _unhandled_input(event: InputEvent) -> void:
 			if clicked_tile == player_tile:
 				var cell = main_node._map_data[player_tile.x][player_tile.y]
 				if cell == main_node.CellType.STAIRS:
-					var next_branch = 10 if main_node._current_branch == 10 else 0
-					main_node._change_floor(main_node.current_floor + 1, next_branch, false)
+					main_node._change_floor(main_node.current_floor + 1, _get_downstairs_branch(), false)
 					get_viewport().set_input_as_handled()
 					return
 				elif cell == main_node.CellType.STAIRS_UP:
-					var next_branch = 10 if main_node._current_branch == 10 else 0
-					main_node._change_floor(main_node.current_floor - 1, next_branch, true)
+					main_node._change_floor(main_node.current_floor - 1, _get_upstairs_branch(), true)
 					get_viewport().set_input_as_handled()
 					return
 				elif cell == main_node.CellType.STAIRS_BLUE:
@@ -569,12 +582,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			var player_grid_pos = Vector2i(player.position / main_node.TILE_SIZE)
 			var cell = main_node._map_data[player_grid_pos.x][player_grid_pos.y]
 			if cell == main_node.CellType.STAIRS:
-				var next_branch = 10 if main_node._current_branch == 10 else 0
-				main_node._change_floor(main_node.current_floor + 1, next_branch, false)
+				main_node._change_floor(main_node.current_floor + 1, _get_downstairs_branch(), false)
 				return
 			elif cell == main_node.CellType.STAIRS_UP:
-				var next_branch = 10 if main_node._current_branch == 10 else 0
-				main_node._change_floor(main_node.current_floor - 1, next_branch, true)
+				main_node._change_floor(main_node.current_floor - 1, _get_upstairs_branch(), true)
 				return
 			elif cell == main_node.CellType.STAIRS_BLUE:
 				main_node._change_floor(main_node.current_floor + 1, 2, false)

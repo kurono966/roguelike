@@ -21,6 +21,9 @@ func get_panel_style() -> StyleBoxFlat:
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
 	
+	# テーマのロード
+	var main_theme = load("res://ui/themes/main_theme.tres")
+	
 	# 背景パネルの作成
 	log_panel = Panel.new()
 	log_panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
@@ -30,6 +33,7 @@ func _ready():
 	log_panel.offset_right = 520  # Width of 500px
 	
 	log_panel.add_theme_stylebox_override("panel", get_panel_style())
+	log_panel.theme = main_theme
 	add_child(log_panel)
 	
 	# RichTextLabelの作成
@@ -41,7 +45,7 @@ func _ready():
 	log_rich_label.offset_right = -10
 	log_rich_label.offset_bottom = -5
 	
-	log_rich_label.add_theme_font_size_override("normal_font_size", 13)
+	log_rich_label.theme = main_theme
 	log_rich_label.add_theme_constant_override("outline_size", 0) # No outlines for clean aesthetic
 	log_rich_label.scroll_active = true
 	log_rich_label.scroll_following = true
@@ -130,7 +134,7 @@ func _update_display():
 		var line: String = entry.get("text", "")
 		var count: int = entry.get("count", 1)
 		if count > 1:
-			line += " × %d" % count
+			line += " x %d" % count
 		full_text += line + "\n"
 	
 	log_rich_label.text = full_text

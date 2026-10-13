@@ -1,4 +1,4 @@
-extends CanvasLayer
+﻿extends CanvasLayer
 
 const UnifiedInventoryUIScene = preload("res://ui/unified_inventory_ui.tscn")
 const SkillMenuScene = preload("res://ui/skill_menu.tscn")
@@ -11,10 +11,13 @@ var trade_ui
 var dialog_menu
 var help_ui
 var status_ui
+var entity_list_ui
+var settings_ui
 var is_visible = false # Inventory visibility
 var is_skill_visible = false
 var is_trade_visible = false
 var is_status_visible = false
+var is_settings_visible = false
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -45,6 +48,13 @@ func _ready() -> void:
 	status_ui = preload("res://ui/status_ui.gd").new()
 	add_child(status_ui)
 	status_ui.visibility_changed.connect(_on_status_visibility_changed)
+	
+	entity_list_ui = preload("res://ui/entity_list_ui.tscn").instantiate()
+	add_child(entity_list_ui)
+	
+	settings_ui = preload("res://ui/settings_ui.gd").new()
+	add_child(settings_ui)
+	settings_ui.ui_visibility_changed.connect(_on_settings_visibility_changed)
 	
 	print("GameUI loaded successfully")
 	
@@ -78,12 +88,10 @@ func _setup_tooltip():
 	
 	tooltip_title_label = Label.new()
 	tooltip_title_label.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25)) # Dull Gold
-	tooltip_title_label.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(tooltip_title_label)
 	
 	tooltip_body_label = Label.new()
 	tooltip_body_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85)) # Warm off-white
-	tooltip_body_label.add_theme_font_size_override("font_size", 11)
 	tooltip_body_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	tooltip_body_label.custom_minimum_size = Vector2(220, 0)
 	vbox.add_child(tooltip_body_label)
@@ -122,7 +130,7 @@ func show_tooltip(text: String):
 		body = lines[1].strip_edges()
 		
 	if title != "":
-		tooltip_title_label.text = "✦ " + title
+		tooltip_title_label.text = ">> " + title
 		tooltip_title_label.visible = true
 	else:
 		tooltip_title_label.visible = false
@@ -151,6 +159,9 @@ func _on_trade_visibility_changed():
 
 func _on_status_visibility_changed():
 	is_status_visible = status_ui.visible
+
+func _on_settings_visibility_changed():
+	is_settings_visible = settings_ui.visible
 
 func toggle_ui():
 	# Close status if open
@@ -241,6 +252,21 @@ func toggle_status():
 		status_ui.close()
 	else:
 		status_ui.open()
+
+func toggle_settings():
+	if is_visible:
+		unified_ui.visible = false
+	if is_skill_visible:
+		skill_menu_ui.visible = false
+	if is_status_visible:
+		status_ui.close()
+	if help_ui.visible:
+		help_ui.close()
+		
+	if is_settings_visible:
+		settings_ui.close()
+	else:
+		settings_ui.open()
 
 func show_dialog_menu(title: String, options: Array):
 	dialog_menu.show_dialog(title, options)

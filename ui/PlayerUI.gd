@@ -1,4 +1,4 @@
-extends CanvasLayer
+﻿extends CanvasLayer
 
 const UIAnimations = preload("res://ui/ui_animations.gd")
 
@@ -81,9 +81,8 @@ func _ready():
 	
 	# Header
 	var header = Label.new()
-	header.text = "✦ STATUS ✦"
+	header.text = ">> STATUS >>"
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	header.add_theme_font_size_override("font_size", 14)
 	header.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25)) # Dull Gold
 	vbox.add_child(header)
 	
@@ -99,7 +98,6 @@ func _ready():
 	var hp_lbl = Label.new()
 	hp_lbl.text = "HP"
 	hp_lbl.custom_minimum_size = Vector2(30, 0)
-	hp_lbl.add_theme_font_size_override("font_size", 12)
 	hp_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	hp_hbox.add_child(hp_lbl)
 	
@@ -107,7 +105,6 @@ func _ready():
 	hp_hbox.add_child(hp_bar)
 	
 	hp_label = Label.new()
-	hp_label.add_theme_font_size_override("font_size", 11)
 	hp_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85)) # Warm off-white
 	hp_hbox.add_child(hp_label)
 	vbox.add_child(hp_hbox)
@@ -118,7 +115,6 @@ func _ready():
 	var mp_lbl = Label.new()
 	mp_lbl.text = "MP"
 	mp_lbl.custom_minimum_size = Vector2(30, 0)
-	mp_lbl.add_theme_font_size_override("font_size", 12)
 	mp_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	mp_hbox.add_child(mp_lbl)
 	
@@ -126,7 +122,6 @@ func _ready():
 	mp_hbox.add_child(mp_bar)
 	
 	mp_label = Label.new()
-	mp_label.add_theme_font_size_override("font_size", 11)
 	mp_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85))
 	mp_hbox.add_child(mp_label)
 	vbox.add_child(mp_hbox)
@@ -137,7 +132,6 @@ func _ready():
 	var exp_lbl = Label.new()
 	exp_lbl.text = "EXP"
 	exp_lbl.custom_minimum_size = Vector2(30, 0)
-	exp_lbl.add_theme_font_size_override("font_size", 12)
 	exp_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	exp_hbox.add_child(exp_lbl)
 	
@@ -145,7 +139,6 @@ func _ready():
 	exp_hbox.add_child(exp_bar)
 	
 	exp_label = Label.new()
-	exp_label.add_theme_font_size_override("font_size", 11)
 	exp_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85))
 	exp_hbox.add_child(exp_label)
 	vbox.add_child(exp_hbox)
@@ -167,12 +160,10 @@ func _ready():
 	var lv_hbox = HBoxContainer.new()
 	var lv_lbl = Label.new()
 	lv_lbl.text = "Lv: "
-	lv_lbl.add_theme_font_size_override("font_size", 12)
 	lv_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	lv_hbox.add_child(lv_lbl)
 	level_val_label = Label.new()
 	level_val_label.text = "1"
-	level_val_label.add_theme_font_size_override("font_size", 12)
 	level_val_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85))
 	lv_hbox.add_child(level_val_label)
 	grid.add_child(lv_hbox)
@@ -181,12 +172,10 @@ func _ready():
 	var turn_hbox = HBoxContainer.new()
 	var turn_lbl = Label.new()
 	turn_lbl.text = "Turn: "
-	turn_lbl.add_theme_font_size_override("font_size", 12)
 	turn_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	turn_hbox.add_child(turn_lbl)
 	turn_val_label = Label.new()
 	turn_val_label.text = "0"
-	turn_val_label.add_theme_font_size_override("font_size", 12)
 	turn_val_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85))
 	turn_hbox.add_child(turn_val_label)
 	grid.add_child(turn_hbox)
@@ -195,12 +184,10 @@ func _ready():
 	var gold_hbox = HBoxContainer.new()
 	var gold_lbl = Label.new()
 	gold_lbl.text = "Gold: "
-	gold_lbl.add_theme_font_size_override("font_size", 12)
 	gold_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	gold_hbox.add_child(gold_lbl)
 	gold_val_label = Label.new()
 	gold_val_label.text = "0"
-	gold_val_label.add_theme_font_size_override("font_size", 12)
 	gold_val_label.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25)) # Dull Gold
 	gold_hbox.add_child(gold_val_label)
 	grid.add_child(gold_hbox)
@@ -209,12 +196,10 @@ func _ready():
 	var hunger_hbox = HBoxContainer.new()
 	var hunger_lbl = Label.new()
 	hunger_lbl.text = "Hunger: "
-	hunger_lbl.add_theme_font_size_override("font_size", 12)
 	hunger_lbl.add_theme_color_override("font_color", Color(0.65, 0.65, 0.65))
 	hunger_hbox.add_child(hunger_lbl)
 	hunger_val_label = Label.new()
 	hunger_val_label.text = "100/100"
-	hunger_val_label.add_theme_font_size_override("font_size", 12)
 	hunger_val_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85))
 	hunger_hbox.add_child(hunger_val_label)
 	grid.add_child(hunger_hbox)
@@ -376,7 +361,6 @@ func create_ammo_label_if_needed():
 	ammo_label = Label.new()
 	ammo_label.name = "AmmoLabel"
 	ammo_label.text = "予備: --"
-	ammo_label.add_theme_font_size_override("font_size", 12)
 	ammo_label.add_theme_color_override("font_color", Color(0.65, 0.65, 0.7))
 	_info_container.add_child(ammo_label)
 	_info_container.move_child(ammo_label, 0)
@@ -391,7 +375,6 @@ func create_weapon_label():
 	
 	weapon_label = Label.new()
 	weapon_label.name = "WeaponLabel"
-	weapon_label.add_theme_font_size_override("font_size", 13)
 	weapon_label.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25)) # Dull Gold
 	weapon_label.text = ""
 	_info_container.add_child(weapon_label)
@@ -467,7 +450,6 @@ func _create_skill_slot(key_num: int) -> Panel:
 	# Key indicator
 	var key_label = Label.new()
 	key_label.text = str(key_num)
-	key_label.add_theme_font_size_override("font_size", 10)
 	key_label.add_theme_color_override("font_color", Color(0.5, 0.5, 0.5))
 	key_label.position = Vector2(3, 2)
 	key_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -483,7 +465,6 @@ func _create_skill_slot(key_num: int) -> Panel:
 	name_label.offset_bottom = -2
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	name_label.add_theme_font_size_override("font_size", 11)
 	name_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85))
 	name_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -503,7 +484,6 @@ func _create_skill_slot(key_num: int) -> Panel:
 	cd_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	cd_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	cd_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	cd_label.add_theme_font_size_override("font_size", 16)
 	cd_label.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25))
 	cd_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cd_overlay.add_child(cd_label)
@@ -635,7 +615,6 @@ func _create_drag_ghost(skill_id: String):
 	ghost_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	ghost_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ghost_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	ghost_label.add_theme_font_size_override("font_size", 11)
 	ghost_label.add_theme_color_override("font_color", Color.WHITE)
 	ghost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	if skill_data and skill_data.has("name"):

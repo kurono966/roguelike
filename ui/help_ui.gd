@@ -32,7 +32,6 @@ func _ready():
 	var title = Label.new()
 	title.text = "ヘルプ / 操作方法"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 24)
 	title.set_anchors_preset(Control.PRESET_TOP_WIDE)
 	title.offset_top = 15
 	panel.add_child(title)
@@ -72,6 +71,7 @@ func _ready():
 [b]決定/行動:[/b] Enter, F, 左クリック
 [b]キャンセル:[/b] Esc, 右クリック, Space
 
+[b]設定 (音量調整):[/b] O (Escで閉じる)
 [b]ログ表示切替:[/b] L
 [b]ヘルプ:[/b] ? / H
 

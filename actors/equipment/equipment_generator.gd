@@ -141,3 +141,11 @@ static func _rebuild_name_and_description(item: BaseItem, base_name: String):
 		generated_name += "・" + item.suffix_name
 	item.name = generated_name
 	item.description += "\n品質: %s" % RARITY_NAMES[item.rarity]
+	
+	# Add effect bonuses to description for debugging
+	if item.effects.has("crit_bonus"):
+		item.description += "\n会心率: +%.1f%%" % (float(item.effects["crit_bonus"]) * 100.0)
+	if item.effects.has("hit_bonus"):
+		item.description += "\n命中率: +%.1f%%" % (float(item.effects["hit_bonus"]) * 100.0)
+	if item.effects.has("penetration_bonus"):
+		item.description += "\n貫通率: +%.1f%%" % (float(item.effects["penetration_bonus"]) * 100.0)

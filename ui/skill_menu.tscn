@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://ui/skill_menu.gd" id="1_script"]
+[ext_resource type="Theme" path="res://ui/themes/main_theme.tres" id="2_theme"]
 
 [node name="SkillMenu" type="Control"]
 layout_mode = 3
@@ -24,6 +25,7 @@ offset_right = 375.0
 offset_bottom = 225.0
 grow_horizontal = 2
 grow_vertical = 2
+theme = ExtResource("2_theme")
 
 [node name="Label" type="Label" parent="Panel"]
 layout_mode = 1

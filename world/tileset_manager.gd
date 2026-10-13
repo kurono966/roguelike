@@ -15,9 +15,172 @@ const WALL_DARK = Color(0.16, 0.16, 0.17, 1.0)
 const WALL_BASE = Color(0.34, 0.34, 0.36, 1.0)
 const WALL_HIGHLIGHT = Color(0.53, 0.52, 0.50, 1.0)
 
+# Water animation state
+var _combined_image: Image = null
+var _atlas_source: TileSetAtlasSource = null
+var _water_anim_time: float = 0.0
+var _water_update_timer: float = 0.0
+const WATER_UPDATE_INTERVAL: float = 0.25 # Update every 250ms
+
 func setup(main: Node2D):
 	main_node = main
 	tile_map = main.tile_map
+
+func _process(delta):
+	if _combined_image == null or _atlas_source == null:
+		return
+	_water_update_timer += delta
+	if _water_update_timer >= WATER_UPDATE_INTERVAL:
+		_water_update_timer = 0.0
+		_water_anim_time += WATER_UPDATE_INTERVAL
+		_animate_water()
+
+func _animate_water():
+	var time_sec = _water_anim_time
+	
+	# ASCII tilde ~ glyph bitmap (7 rows x 5 cols)
+	var wave_bitmap = [
+		".....",
+		".#.#.",
+		"#.#.#",
+		".....",
+		".#.#.",
+		"#.#.#",
+		"....."
+	]
+	
+	# Calculate animation offset (horizontal wave movement)
+	var x_offset = int(time_sec * 8.0) % 64  # ~8 pixels/sec scroll
+	
+	# Water colors
+	var bg_water = Color(0.02, 0.04, 0.08, 1.0)  # Dark blue background
+	var base_water = Color(0.35, 0.62, 0.95, 1.0)  # ASCII ~ foreground color
+	
+	# Glyph drawing parameters (matching _draw_ascii_char)
+	var scale = 4
+	var origin = Vector2i(6, 2)
+	
+	# Regenerate each of the 16 water tiles with ASCII-style animated waves
+	for mask in range(16):
+		for x in range(TILE_SIZE):
+			for y in range(TILE_SIZE):
+				var center = Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
+				var radius = TILE_SIZE/2.0
+				var pos = Vector2(x + 0.5, y + 0.5)
+				var dist = pos.distance_to(center)
+				var in_shape = false
+				
+				if dist <= radius: in_shape = true
+				
+				if (mask & 1) and y < center.y and abs(x - center.x) < radius: in_shape = true
+				if (mask & 2) and x >= center.x and abs(y - center.y) < radius: in_shape = true
+				if (mask & 4) and y >= center.y and abs(x - center.x) < radius: in_shape = true
+				if (mask & 8) and x < center.x and abs(y - center.y) < radius: in_shape = true
+				
+				if in_shape:
+					# Determine if this pixel is part of the ~ glyph
+					# Map pixel to glyph bitmap coordinates with horizontal scroll
+					var gx = (x - origin.x) / scale
+					var gy = (y - origin.y) / scale
+					
+					# Apply horizontal scroll animation to glyph x
+					var scroll_offset = int(floor(time_sec * 4.0)) % 5
+					gx = (gx - scroll_offset + 5) % 5
+					
+					var is_char_pixel = false
+					if gy >= 0 and gy < wave_bitmap.size():
+						var row = wave_bitmap[gy]
+						if gx >= 0 and gx < row.length():
+							is_char_pixel = row.substr(gx, 1) == "#"
+					
+					var c: Color
+					if is_char_pixel:
+						# ASCII wave character with shimmer effect
+						# Time-based brightness variation for shimmer
+						var shimmer = sin(float(x) * 0.3 + float(y) * 0.2 + time_sec * 3.0) * 0.08
+						# Per-pixel noise for subtle texture variation
+						var noise_seed = mask * 100 + int(time_sec * 2.0)
+						var noise_val = _hash_noise(x, y, noise_seed)
+						var noise_shade = (noise_val - 0.5) * 0.06
+						
+						var shade = shimmer + noise_shade
+						c = base_water.lightened(max(shade, 0.0)).darkened(max(-shade, 0.0))
+					else:
+						# Background water with subtle shimmer
+						var bg_shimmer = sin(float(x) * 0.5 + float(y) * 0.3 + time_sec * 2.0) * 0.03
+						c = bg_water.lightened(max(bg_shimmer, 0.0)).darkened(max(-bg_shimmer, 0.0))
+					
+					# Calculate pixel position in the combined image
+					var px = (18 + mask) * TILE_SIZE + x
+					var py = y
+					_combined_image.set_pixel(px, py, c)
+	
+	# Animate crystal tiles (indices 43 and 46..61) with magical sparkling & pulse
+	_animate_crystals(time_sec)
+	
+	# Update the texture with the modified combined image
+	_atlas_source.texture = ImageTexture.create_from_image(_combined_image)
+
+func _animate_crystals(time_sec: float):
+	var crystal_glyph = [
+		"#...#",
+		".#.#.",
+		"..#..",
+		"#####",
+		"..#..",
+		".#.#.",
+		"#...#"
+	]
+	var scale = 4
+	var origin = Vector2i(6, 2)
+	
+	# Pulse brightness between cyan, pure white, and azure
+	var pulse = (sin(time_sec * 5.0) + 1.0) * 0.5 # 0.0 ~ 1.0 fast pulse
+	var base_bg = Color(0.03, 0.05, 0.12, 1.0)
+	var glow_intensity = 0.04 + pulse * 0.14
+	
+	# Primary crystal foreground color shifting from cyan-blue to shining bright diamond white
+	var crystal_fg = Color(0.45, 0.85, 1.0, 1.0).lerp(Color(1.0, 1.0, 1.2, 1.0), pulse * 0.85)
+	
+	# Tile indices to update: 43 (single tile) and 46..61 (autotiles)
+	var target_indices = [43]
+	for m in range(16):
+		target_indices.append(46 + m)
+		
+	for idx in target_indices:
+		for x in range(TILE_SIZE):
+			for y in range(TILE_SIZE):
+				var px = idx * TILE_SIZE + x
+				var py = y
+				
+				# Subtle sparkling background
+				var bg_sparkle = sin(float(x * 3 + y * 5) + time_sec * 6.0) * 0.04
+				var bg_c = base_bg.lightened(max(0.0, bg_sparkle + pulse * 0.06))
+				
+				# Soft radial glow around crystal center
+				var dist_center = Vector2(x - TILE_SIZE/2.0, y - TILE_SIZE/2.0).length()
+				if dist_center < TILE_SIZE/2.0:
+					var g_alpha = glow_intensity * (1.0 - dist_center / (TILE_SIZE/2.0))
+					bg_c = bg_c.lerp(Color(0.4, 0.8, 1.0, 1.0), g_alpha)
+					
+				# Glyph pixel check
+				var gx = (x - origin.x) / scale
+				var gy = (y - origin.y) / scale
+				var is_glyph = false
+				if gy >= 0 and gy < crystal_glyph.size() and gx >= 0 and gx < crystal_glyph[gy].length():
+					is_glyph = crystal_glyph[gy].substr(gx, 1) == "#"
+					
+				if is_glyph:
+					var dy = y % scale
+					var final_c = crystal_fg
+					if dy == 0:
+						final_c = final_c.lightened(0.3) # 3D top shine
+					elif dy == scale - 1:
+						final_c = final_c.darkened(0.2)
+					_combined_image.set_pixel(px, py, final_c)
+				else:
+					_combined_image.set_pixel(px, py, bg_c)
+
 
 func create_tileset():
 	var tileset = TileSet.new()
@@ -87,7 +250,7 @@ func create_tileset():
 		occluder.polygon = poly
 		wall_occluders.append(occluder)
 	
-	# Generate 16 bitmask variations for water
+	# Generate 16 bitmask variations for water (initial static version)
 	var water_variations = []
 	for mask in range(16):
 		var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
@@ -266,6 +429,42 @@ func create_tileset():
 			var final_c = base_c.lightened(max(shade, 0.0)).darkened(max(-shade, 0.0))
 			ash_image.set_pixel(x, y, final_c)
 
+	var volcanic_ash_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	# Volcanic ash - darker, reddish-gray cobblestone
+	volcanic_ash_image.fill(Color(0.15, 0.12, 0.10, 1.0)) # Darker reddish-gray grout base
+	
+	var volcanic_ash_rng = RandomNumberGenerator.new()
+	volcanic_ash_rng.seed = 505
+	
+	# Create a cobblestone grid pattern of bricks (horizontal bricks of size 16x8, offset every row)
+	for y in range(TILE_SIZE):
+		var row = y / 8
+		var offset = 8 if (row % 2 == 1) else 0
+		for x in range(TILE_SIZE):
+			var col = (x + offset) % TILE_SIZE
+			var local_x = col % 16
+			var local_y = y % 8
+			
+			# Keep grout lines
+			if local_x == 0 or local_y == 0 or local_x == 15 or local_y == 7:
+				continue
+				
+			# Stone base color - darker, more reddish
+			var base_c = Color(0.45, 0.32, 0.25, 1.0) # Darker reddish-brown cobblestone
+			var tint = volcanic_ash_rng.randf_range(-0.05, 0.05)
+			var grain = _hash_noise(x, y, 505) * 0.10 - 0.05
+			var highlight = 0.0
+			
+			# 3D Highlight & Shadow
+			if local_x <= 2 or local_y <= 2:
+				highlight = 0.12 # Top-left highlight
+			elif local_x >= 13 or local_y >= 5:
+				highlight = -0.12 # Bottom-right shadow
+				
+			var shade = tint + grain + highlight
+			var final_c = base_c.lightened(max(shade, 0.0)).darkened(max(-shade, 0.0))
+			volcanic_ash_image.set_pixel(x, y, final_c)
+
 	var crystal_floor_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	crystal_floor_image.blit_rect(floor_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i.ZERO)
 	_draw_crystal_floor_overlay(crystal_floor_image)
@@ -312,11 +511,12 @@ func create_tileset():
 	combined_image.blit_rect(ice_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(39 * TILE_SIZE, 0))
 	combined_image.blit_rect(lava_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(40 * TILE_SIZE, 0))
 	combined_image.blit_rect(ash_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(41 * TILE_SIZE, 0))
-	combined_image.blit_rect(crystal_floor_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(42 * TILE_SIZE, 0))
-	combined_image.blit_rect(stairs_red_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(43 * TILE_SIZE, 0))
-	combined_image.blit_rect(stairs_purple_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(44 * TILE_SIZE, 0))
+	combined_image.blit_rect(volcanic_ash_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(42 * TILE_SIZE, 0))
+	combined_image.blit_rect(crystal_floor_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(43 * TILE_SIZE, 0))
+	combined_image.blit_rect(stairs_red_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(44 * TILE_SIZE, 0))
+	combined_image.blit_rect(stairs_purple_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(45 * TILE_SIZE, 0))
 	for i in range(16):
-		combined_image.blit_rect(crystal_variations[i], Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i((45 + i) * TILE_SIZE, 0))
+		combined_image.blit_rect(crystal_variations[i], Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i((46 + i) * TILE_SIZE, 0))
 	
 	# Generate 16 bitmask variations for pit (abyss with rounded corners)
 	var pit_variations = []
@@ -411,6 +611,11 @@ func create_tileset():
 	
 	# Create and Blit ASCII World tiles (indices 83..89)
 	_create_world_ascii_tiles(combined_image)
+	_apply_ascii_dungeon_tiles(combined_image)
+	
+	# Store references for water animation
+	_combined_image = combined_image
+	_atlas_source = source
 	
 	source.texture = ImageTexture.create_from_image(combined_image)
 	
@@ -483,6 +688,9 @@ func _make_floor_tile(seed_value: int) -> Image:
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed_value
 	
+	# Simulate a directional light from top-left
+	var light_dir = Vector2(-0.5, -0.7).normalized()
+	
 	for x in range(TILE_SIZE):
 		for y in range(TILE_SIZE):
 			var tile_x = int(x / 8)
@@ -491,7 +699,12 @@ func _make_floor_tile(seed_value: int) -> Image:
 			var local_y = y % 8
 			var checker = float((tile_x + tile_y) % 2) * 0.035
 			var grain = _hash_noise(x, y, seed_value) * 0.11 - 0.055
-			var shade = checker + grain
+			
+			# Directional light contribution based on position within tile
+			var light_dot = Vector2(local_x - 3.5, local_y - 3.5).normalized().dot(light_dir)
+			var directional_light = clamp(light_dot * 0.06, -0.03, 0.06)
+			
+			var shade = checker + grain + directional_light
 			var c = FLOOR_BASE.lightened(max(shade, 0.0)).darkened(max(-shade, 0.0))
 			
 			if local_x == 0 or local_y == 0:
@@ -503,10 +716,21 @@ func _make_floor_tile(seed_value: int) -> Image:
 			
 			img.set_pixel(x, y, c)
 	
+	# Add subtle specular highlights (random bright spots)
 	for i in range(26):
 		var px = rng.randi_range(2, TILE_SIZE - 3)
 		var py = rng.randi_range(2, TILE_SIZE - 3)
 		img.set_pixel(px, py, img.get_pixel(px, py).lightened(rng.randf_range(0.12, 0.24)))
+	
+	# Add subtle vignette effect (darker at edges)
+	for x in range(TILE_SIZE):
+		for y in range(TILE_SIZE):
+			var edge_dist = min(min(x, TILE_SIZE - 1 - x), min(y, TILE_SIZE - 1 - y))
+			if edge_dist < 2:
+				var vignette = (2.0 - float(edge_dist)) * 0.03
+				var c = img.get_pixel(x, y)
+				img.set_pixel(x, y, c.darkened(vignette))
+	
 	return img
 
 func _make_wall_tile(mask: int, floor_image: Image) -> Image:
@@ -514,6 +738,9 @@ func _make_wall_tile(mask: int, floor_image: Image) -> Image:
 	img.blit_rect(floor_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i.ZERO)
 	var center = Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)
 	var radius = TILE_SIZE / 2.0
+	
+	# Directional light from top-left for dramatic 3D effect
+	var light_dir = Vector2(-0.4, -0.8).normalized()
 	
 	for x in range(TILE_SIZE):
 		for y in range(TILE_SIZE):
@@ -536,7 +763,21 @@ func _make_wall_tile(mask: int, floor_image: Image) -> Image:
 			if local_x == 1 or local_y == 1:
 				edge_shadow = 0.15
 			
-			var c = WALL_BASE.lightened(max(grain + block_tint + vertical_light, 0.0)).darkened(max(-(grain + block_tint) + edge_shadow, 0.0))
+			# Dramatic directional light on wall surface
+			var local_pos = Vector2(local_x - 4.5, local_y - 3.5).normalized()
+			var light_dot = local_pos.dot(light_dir)
+			var directional_light = clamp(light_dot * 0.12, -0.06, 0.12)
+			
+			# Brick edge highlight (top-left edges catch light)
+			var brick_edge_light = 0.0
+			if local_x <= 2 and local_y <= 2:
+				brick_edge_light = 0.10
+			elif local_x <= 2:
+				brick_edge_light = 0.05
+			elif local_y <= 2:
+				brick_edge_light = 0.05
+			
+			var c = WALL_BASE.lightened(max(grain + block_tint + vertical_light + directional_light + brick_edge_light, 0.0)).darkened(max(-(grain + block_tint + directional_light) + edge_shadow, 0.0))
 			if x < 2 or y < 2:
 				c = c.lightened(0.15)
 			if x >= TILE_SIZE - 2 or y >= TILE_SIZE - 2:
@@ -832,11 +1073,176 @@ func _draw_bitmap_glyph(img: Image, bitmap: Array, fg_color: Color):
 	for y in range(16):
 		var row = bitmap[y]
 		for x in range(16):
-			if row[x] == "#":
+			if row.substr(x, 1) == "#":
 				img.set_pixel(x * 2, y * 2, fg_color)
 				img.set_pixel(x * 2 + 1, y * 2, fg_color)
 				img.set_pixel(x * 2, y * 2 + 1, fg_color)
 				img.set_pixel(x * 2 + 1, y * 2 + 1, fg_color)
+
+func _apply_ascii_dungeon_tiles(combined_image: Image):
+	var specs = {
+		"wall": {"char": "#", "fg": Color(0.75, 0.75, 0.72, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
+		"floor": {"char": ".", "fg": Color(0.48, 0.48, 0.44, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
+		"stairs_down": {"char": ">", "fg": Color(0.95, 0.78, 0.28, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
+		"stairs_up": {"char": "<", "fg": Color(0.88, 0.88, 0.96, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
+		"water": {"char": "~", "fg": Color(0.35, 0.62, 0.95, 1.0), "bg": Color(0.02, 0.04, 0.08, 1.0)},
+		"grass": {"char": "\"", "fg": Color(0.35, 0.80, 0.38, 1.0), "bg": Color(0.02, 0.05, 0.025, 1.0)},
+		"door_closed": {"char": "+", "fg": Color(0.75, 0.48, 0.18, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
+		"door_open": {"char": "/", "fg": Color(0.66, 0.46, 0.25, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
+		"door_locked": {"char": "+", "fg": Color(0.55, 0.62, 1.0, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
+		"ice": {"char": "_", "fg": Color(0.72, 0.92, 1.0, 1.0), "bg": Color(0.02, 0.05, 0.07, 1.0)},
+		"lava": {"char": "~", "fg": Color(1.0, 0.28, 0.08, 1.0), "bg": Color(0.10, 0.02, 0.01, 1.0)},
+		"ash": {"char": ",", "fg": Color(0.08, 0.08, 0.10, 0.7), "bg": Color(0.60, 0.60, 0.62, 1.0)},
+		"crystal": {"char": "*", "fg": Color(0.72, 0.95, 1.0, 1.0), "bg": Color(0.02, 0.03, 0.05, 1.0)},
+		"pit": {"char": " ", "fg": Color(0.42, 0.50, 0.88, 1.0), "bg": Color(0.12, 0.18, 0.45, 1.0)},
+		"tree": {"char": "T", "fg": Color(0.28, 0.78, 0.28, 1.0), "bg": Color(0.02, 0.04, 0.02, 1.0)},
+		"tree_fruit": {"char": "Y", "fg": Color(0.65, 0.95, 0.35, 1.0), "bg": Color(0.02, 0.04, 0.02, 1.0)},
+		"rock": {"char": "^", "fg": Color(0.70, 0.68, 0.66, 1.0), "bg": Color(0.025, 0.025, 0.03, 1.0)}
+	}
+	for i in range(16):
+		_blit_ascii_tile(combined_image, i, specs["wall"])
+	_blit_ascii_tile(combined_image, 16, specs["floor"])
+	_blit_ascii_tile(combined_image, 17, specs["stairs_down"])
+	for i in range(16):
+		_blit_ascii_tile(combined_image, 18 + i, specs["water"])
+	_blit_ascii_tile(combined_image, 34, specs["grass"])
+	_blit_ascii_tile(combined_image, 35, specs["stairs_down"])
+	_blit_ascii_tile(combined_image, 36, specs["door_closed"])
+	_blit_ascii_tile(combined_image, 37, specs["door_open"])
+	_blit_ascii_tile(combined_image, 38, specs["door_locked"])
+	_blit_ascii_tile(combined_image, 39, specs["ice"])
+	_blit_ascii_tile(combined_image, 40, specs["lava"])
+	_blit_ascii_tile(combined_image, 43, specs["crystal"])
+	_blit_ascii_tile(combined_image, 44, specs["stairs_down"])
+	_blit_ascii_tile(combined_image, 45, specs["stairs_down"])
+	for i in range(16):
+		_blit_ascii_tile(combined_image, 46 + i, specs["crystal"])
+	for i in range(16):
+		_blit_ascii_tile(combined_image, 62 + i, specs["pit"])
+	_blit_ascii_tile(combined_image, 77, specs["stairs_up"])
+	_blit_ascii_tile(combined_image, 78, specs["door_closed"])
+	_blit_ascii_tile(combined_image, 79, specs["stairs_down"])
+	_blit_ascii_tile(combined_image, 80, specs["tree"])
+	_blit_ascii_tile(combined_image, 81, specs["tree_fruit"])
+	_blit_ascii_tile(combined_image, 82, specs["rock"])
+
+func _blit_ascii_tile(combined_image: Image, index: int, spec: Dictionary):
+	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	img.fill(spec["bg"])
+	
+	# Determine if this tile should have glow effect
+	var add_glow = false
+	var ch = str(spec.get("char", ""))
+	if ch == ">" or ch == "<" or ch == "*" or ch == "~":
+		add_glow = true
+	if index >= 36 and index <= 38: # door tiles
+		add_glow = false # doors don't glow
+	if index == 40: # lava
+		add_glow = true
+	
+	# For special tiles (stairs, crystal), create subtle ambient light effect on background
+	if add_glow:
+		var glow_color = Color(spec["fg"].r, spec["fg"].g, spec["fg"].b, 0.04)
+		for x in range(TILE_SIZE):
+			for y in range(TILE_SIZE):
+				var dist_to_center = Vector2(x - TILE_SIZE/2, y - TILE_SIZE/2).length()
+				if dist_to_center < TILE_SIZE/2:
+					var intensity = 1.0 - dist_to_center / (TILE_SIZE/2)
+					var ambient = Color(glow_color.r * intensity, glow_color.g * intensity, glow_color.b * intensity, intensity * 0.04)
+					_alpha_blend_pixel(img, x, y, ambient)
+	
+	_draw_ascii_char(img, ch, spec["fg"], add_glow, true)
+	combined_image.blit_rect(img, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(index * TILE_SIZE, 0))
+
+func _draw_ascii_char(img: Image, ch: String, fg_color: Color, add_glow: bool = false, use_gradient: bool = true):
+	var glyphs = {
+		"#": ["#.#.#", "#####", ".#.#.", "#####", "#.#.#", "#####", ".#.#."],
+		".": [".....", ".....", ".....", ".....", ".....", "..#..", "....."],
+		">": ["#....", ".#...", "..#..", "...#.", "..#..", ".#...", "#...."],
+		"<": ["....#", "...#.", "..#..", ".#...", "..#..", "...#.", "....#"],
+		"~": [".....", ".#.#.", "#.#.#", ".....", ".#.#.", "#.#.#", "....."],
+		"\"": [".#.#.", ".#.#.", ".....", ".....", ".....", ".....", "....."],
+		"+": ["..#..", "..#..", "..#..", "#####", "..#..", "..#..", "..#.."],
+		"/": ["....#", "...#.", "...#.", "..#..", ".#...", ".#...", "#...."],
+		"_": [".....", ".....", ".....", ".....", ".....", ".....", "#####"],
+		",": [".....", ".....", ".....", ".....", ".....", "..#..", ".#..."],
+		"*": ["#...#", ".#.#.", "..#..", "#####", "..#..", ".#.#.", "#...#"],
+		"T": ["#####", "..#..", "..#..", "..#..", "..#..", "..#..", "..#.."],
+		"Y": ["#...#", ".#.#.", "..#..", "..#..", "..#..", "..#..", "..#.."],
+		"^": ["..#..", ".#.#.", "#...#", ".....", ".....", ".....", "....."],
+		" ": [".....", ".....", ".....", ".....", ".....", ".....", "....."]
+	}
+	var bitmap = glyphs.get(ch, glyphs["."])
+	var scale = 4
+	var origin = Vector2i(6, 2)
+	
+	# 1. Soft Drop shadow (offset +2, +2)
+	var shadow_color = Color(0, 0, 0, 0.45)
+	for y in range(bitmap.size()):
+		for x in range(bitmap[y].length()):
+			if bitmap[y].substr(x, 1) == "#":
+				for dx in range(scale):
+					for dy in range(scale):
+						var sx = origin.x + x * scale + dx + 2
+						var sy = origin.y + y * scale + dy + 2
+						if sx >= 0 and sx < TILE_SIZE and sy >= 0 and sy < TILE_SIZE:
+							_alpha_blend_pixel(img, sx, sy, shadow_color)
+	
+	# 2. Main character rendering with 3D bevel & gradient
+	for y in range(bitmap.size()):
+		for x in range(bitmap[y].length()):
+			if bitmap[y].substr(x, 1) == "#":
+				for dx in range(scale):
+					for dy in range(scale):
+						var px = origin.x + x * scale + dx
+						var py = origin.y + y * scale + dy
+						if px < 0 or px >= TILE_SIZE or py < 0 or py >= TILE_SIZE: continue
+						
+						# Top-down gradient
+						var grad_factor = 1.0
+						if use_gradient:
+							grad_factor = 1.0 - (float(py - origin.y) / float(bitmap.size() * scale)) * 0.3
+						
+						var final_c = fg_color.lightened(grad_factor * 0.15).darkened((1.0 - grad_factor) * 0.1)
+						
+						# 3D edge bevel highlights
+						if dy == 0 or (dx == 0 and dy <= 1):
+							final_c = final_c.lightened(0.25)
+						elif dy == scale - 1:
+							final_c = final_c.darkened(0.18)
+							
+						img.set_pixel(px, py, final_c)
+	
+	# 3. Optional ambient glow effect
+	if add_glow:
+		var glow_color = Color(fg_color.r, fg_color.g, fg_color.b, 0.12)
+		for y in range(bitmap.size()):
+			for x in range(bitmap[y].length()):
+				if bitmap[y].substr(x, 1) == "#":
+					var cpx = origin.x + x * scale + scale / 2
+					var cpy = origin.y + y * scale + scale / 2
+					for gx in range(-3, 4):
+						for gy in range(-3, 4):
+							var dist = Vector2(gx, gy).length()
+							if dist > 0 and dist <= 3.2:
+								var alpha = 0.08 * (1.0 - dist / 3.5)
+								var glow_c = Color(glow_color.r, glow_color.g, glow_color.b, alpha)
+								var px = cpx + gx
+								var py = cpy + gy
+								if px >= 0 and px < TILE_SIZE and py >= 0 and py < TILE_SIZE:
+									_alpha_blend_pixel(img, px, py, glow_c)
+
+func _alpha_blend_pixel(img: Image, x: int, y: int, fg: Color):
+	if x < 0 or x >= TILE_SIZE or y < 0 or y >= TILE_SIZE:
+		return
+	var bg = img.get_pixel(x, y)
+	var blended = Color(
+		fg.r * fg.a + bg.r * (1.0 - fg.a),
+		fg.g * fg.a + bg.g * (1.0 - fg.a),
+		fg.b * fg.a + bg.b * (1.0 - fg.a),
+		1.0
+	)
+	img.set_pixel(x, y, blended)
 
 func _create_world_ascii_tiles(combined_image: Image):
 	var ascii_sea = [

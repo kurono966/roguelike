@@ -41,25 +41,7 @@ func handle_attack(attacker, defender):
 		elif attacker.has_method("get_attack_power"):
 			damage = attacker.get_attack_power()
 			
-	# Every character uses the same base accuracy unless individually modified.
-	if is_instance_valid(attacker):
-		var hit_chance = attacker.hit_rate if "hit_rate" in attacker else 0.85
-		hit_chance = clamp(hit_chance, 0.0, 1.0)
-		if randf() > hit_chance:
-			print("Attack Missed! (Hit Rate: ", hit_chance, ")")
-			_log("%s の攻撃は外れた！" % attacker_name, Color(0.7, 0.7, 0.7))
-			return
-
-	# Critical Check (if attacker is player)
-	var is_crit = false
-	if attacker == main_node.player:
-		var c_rate = attacker.crit_rate if "crit_rate" in attacker else 0.05
-		if randf() < c_rate:
-			is_crit = true
-			damage *= 2
-			print("Critical Hit! (Rate: ", c_rate, ")")
-	
-	# Attack Animation (Bump)
+	# Attack Animation (Bump) - always play, even on miss
 	var tween = main_node.create_tween()
 	var sprite = attacker.get_node_or_null("Sprite2D")
 	
@@ -79,6 +61,35 @@ func handle_attack(attacker, defender):
 		tween.tween_interval(0.1)
 		
 	await tween.finished
+
+	# Hit Check
+	if is_instance_valid(attacker):
+		var hit_chance = attacker.hit_rate if "hit_rate" in attacker else 0.85
+		hit_chance = clamp(hit_chance, 0.0, 1.0)
+		if randf() > hit_chance:
+			print("Attack Missed! (Hit Rate: ", hit_chance, ")")
+			_log("%s の攻撃は外れた！" % attacker_name, Color(0.7, 0.7, 0.7))
+			
+			# Play miss sound
+			if main_node.has_node("HitSoundPlayer"):
+				var miss_player = main_node.get_node("HitSoundPlayer")
+				var original_stream = miss_player.stream
+				if ResourceLoader.exists("res://assets/sounds/cancel.mp3"):
+					miss_player.stream = load("res://assets/sounds/cancel.mp3")
+				miss_player.pitch_scale = randf_range(1.2, 1.4)
+				miss_player.play()
+				miss_player.stream = original_stream
+			
+			return
+
+	# Critical Check (if attacker is player)
+	var is_crit = false
+	if attacker == main_node.player:
+		var c_rate = attacker.crit_rate if "crit_rate" in attacker else 0.05
+		if randf() < c_rate:
+			is_crit = true
+			damage *= 2
+			print("Critical Hit! (Rate: ", c_rate, ")")
 	
 	# Defense Calculation
 	var def = 0
@@ -201,6 +212,15 @@ func handle_attack(attacker, defender):
 	var is_player_atk = (attacker == main_node.player) if is_instance_valid(attacker) else false
 	var color = Color(1.0, 0.5, 0.5) if is_crit else (Color.WHITE if is_player_atk else Color.PALE_VIOLET_RED)
 	_log(message, color)
+
+	# Ensure the main scene redraws and visibility updates after combat
+	if main_node:
+		if main_node.has_method("_calculate_fov"):
+			main_node._calculate_fov()
+		if main_node.has_method("_draw_map"):
+			main_node._draw_map()
+		if main_node.visibility_manager:
+			main_node.visibility_manager.update_entity_visibility()
 
 func _log(msg: String, color: Color = Color.WHITE):
 	if main_node.has_node("/root/LogUI"):

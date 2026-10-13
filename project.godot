@@ -32,12 +32,16 @@ GameUI="*res://ui/game_ui.tscn"
 
 [gui]
 
-theme/custom_font="uid://rbwgxs50mps7"
-theme/default_font="res://assets/fonts/DotGothic16-Regular.ttf"
+theme/custom_font="uid://cpjtgt4w3rgjc"
+theme/custom_theme="res://ui/themes/main_theme.tres"
 theme/default_font_size=16
+
+[internationalization]
+
+locale/test="ja"
+locale/fallback="ja"
 
 [rendering]
 
 renderer/rendering_method.mobile="forward_plus"
 environment/defaults/default_clear_color=Color(0.02, 0.02, 0.03, 1)
-environment/defaults/default_environment="res://default_environment.tres"
