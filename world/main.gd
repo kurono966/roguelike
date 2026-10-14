@@ -4995,6 +4995,36 @@ func reveal_map():
 	_update_entity_visibility()
 	_draw_map()
 
+func reveal_area(p_radius: int = 15):
+	# Reveal tiles within a radius around the player (for observation scroll)
+	if _map_data.is_empty() or not is_instance_valid(player):
+		return
+
+	# Ensure visibility/exploration arrays are initialized
+	if _visible_tiles.is_empty():
+		_visible_tiles.resize(MAP_WIDTH)
+		for x in range(MAP_WIDTH):
+			_visible_tiles[x] = []
+			_visible_tiles[x].resize(MAP_HEIGHT)
+	if _explored_tiles.is_empty():
+		_explored_tiles.resize(MAP_WIDTH)
+		for x in range(MAP_WIDTH):
+			_explored_tiles[x] = []
+			_explored_tiles[x].resize(MAP_HEIGHT)
+
+	var center = tile_map.local_to_map(player.position)
+	var radius_sq = float(p_radius * p_radius)
+	for x in range(MAP_WIDTH):
+		for y in range(MAP_HEIGHT):
+			var dx = x - center.x
+			var dy = y - center.y
+			if float(dx * dx + dy * dy) <= radius_sq:
+				_visible_tiles[x][y] = true
+				_explored_tiles[x][y] = true
+
+	_update_entity_visibility()
+	_draw_map()
+
 func reshape_map() -> int:
 	# Reshape terrain outside player's vision
 	# Returns count of entities killed by being trapped in walls

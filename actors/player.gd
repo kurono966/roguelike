@@ -1139,7 +1139,7 @@ func _start_idle_animation():
 func use_item(item: BaseItem):
 	var main_node = get_parent()
 	if main_node and main_node.get("_is_on_world_map"):
-		if item.id == "scroll_teleport" or item.id == "warp_grass" or item.id == "scroll_mapping":
+		if item.id == "scroll_teleport" or item.id == "warp_grass" or item.id == "scroll_mapping" or item.id == "scroll_observation":
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("ワールドマップではそのアイテムを使用できません。", Color.GRAY)
 			return
@@ -1216,6 +1216,16 @@ func use_item(item: BaseItem):
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("しかし、何も起こらなかった。", Color.GRAY)
 				
+	# 4.5. Observation Scroll
+	elif item.id == "scroll_observation":
+		var map_node = get_parent()
+		if map_node.has_method("reveal_area"):
+			map_node.reveal_area(15)
+			_consume_item(item, "周囲の景色がくっきりと見えた！")
+		else:
+			if has_node("/root/LogUI"):
+				get_node("/root/LogUI").add_log("しかし、何も起こらなかった。", Color.GRAY)
+
 	# 5. Poison Mushroom
 	elif item.id == "poison_mushroom":
 		apply_status_effect("paralysis", 3)

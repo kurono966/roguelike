@@ -34,6 +34,7 @@ const ITEM_RESOURCE_FILES = [
 	"round_shield.tres",
 	"rusty_sword.tres",
 	"scroll_mapping.tres",
+	"scroll_observation.tres",
 	"scroll_teleport.tres",
 	"silver_gummy.tres",
 	"slime_leg.tres",
@@ -178,6 +179,9 @@ static func _get_fallback_items() -> Array[BaseItem]:
 	
 	# Scroll of Magic Mapping
 	items.append(create_item({"id": "scroll_mapping", "name": "千里眼の巻物", "type": -1, "w": 1, "h": 1, "desc": "フロアの構造を見通す巻物。\nマップ全体を明らかにする。"}))
+	
+	# Scroll of Observation
+	items.append(create_item({"id": "scroll_observation", "name": "観測の巻物", "type": -1, "w": 1, "h": 1, "desc": "周囲の見える範囲を再構成する巻物。"}))
 	
 	# Potion of Strength
 	items.append(create_item({"id": "potion_str", "name": "怪力の薬", "type": -1, "w": 1, "h": 1, "desc": "飲むと筋肉が隆起する薬。\n力が永続的に上昇する。"}))
