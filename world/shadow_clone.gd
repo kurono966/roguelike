@@ -23,6 +23,7 @@ var skill_cooldown: int = 0
 var max_skill_cooldown: int = 0
 
 @onready var sprite: Sprite2D = $Sprite2D
+var _wobble_time: float = 0.0
 
 
 func _ready() -> void:
@@ -31,6 +32,15 @@ func _ready() -> void:
 	# 影は「実体」ではないので以下には属さない:
 	#   entities / enemies / npcs / allies / player
 	# → 攻撃されず、通行も塞がず、敵ターンの処理対象にもならない。
+
+
+func _process(delta: float) -> void:
+	_wobble_time += delta
+	# ゆらゆら揺れるアニメーション（重なっていても視認できるように）
+	var wobble_x = sin(_wobble_time * 3.0) * 2.0
+	var wobble_y = cos(_wobble_time * 2.5) * 2.0
+	if sprite:
+		sprite.position = Vector2(TILE_SIZE / 2.0 + wobble_x, TILE_SIZE / 2.0 + wobble_y)
 
 
 func setup(p_source, p_main, duration: int, current_turn: int) -> void:

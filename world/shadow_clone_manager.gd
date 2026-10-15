@@ -107,7 +107,8 @@ func _find_adjacent_walkable(src_grid: Vector2i) -> Vector2i:
 	]
 	for d in dirs:
 		var g = src_grid + d
-		if _is_walkable(g) and not _occupied_by_real_actor(g):
+		# 影は実体ではないので、エンティティと重なってもよい
+		if _is_walkable(g):
 			return g
 	return src_grid
 
@@ -116,9 +117,9 @@ func spawn_clone(source, duration: int = 20) -> ShadowClone:
 	if not is_instance_valid(source) or not (source is Node):
 		return null
 	var src_grid = _world_to_grid(source.position)
-	var spawn_grid = _find_adjacent_walkable(src_grid)
+	# 影は実体ではないので、飲んだエンティティと同じ座標に生成する
 	var clone: ShadowClone = CLONE_SCENE.instantiate()
-	clone.position = Vector2(spawn_grid) * TILE_SIZE
+	clone.position = source.position
 	main_node.add_child(clone)
 	clone.setup(source, main_node, duration, current_turn)
 	clones.append(clone)
@@ -223,8 +224,7 @@ func _replay_move(clone: ShadowClone, action: Dictionary) -> void:
 	var to_grid = from_grid + dir
 	if not _is_walkable(to_grid):
 		return
-	if _occupied_by_real_actor(to_grid):
-		return
+	# 影は実体ではないので、エンティティと重なってもよい
 	var target = Vector2(to_grid) * TILE_SIZE
 	var tw = main_node.create_tween()
 	tw.tween_property(clone, "position", target, 0.08)
