@@ -246,7 +246,8 @@ func _generate_overworld(main_inst: Node2D = null, is_starting_village: bool = f
 	if is_starting_village:
 		map_data[cave_entrance.x][cave_entrance.y] = CellType.STAIRS_GOLD
 	elif is_dungeon_village:
-		map_data[cave_entrance.x][cave_entrance.y] = CellType.STAIRS
+		# ダンジョン村は独自のブランチ（青い階段→ブランチ2）に繋がる
+		map_data[cave_entrance.x][cave_entrance.y] = CellType.STAIRS_BLUE
 	else:
 		map_data[cave_entrance.x][cave_entrance.y] = CellType.FLOOR
 		
