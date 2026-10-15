@@ -1,6 +1,8 @@
 class_name CombatManager
 extends Node
 
+const GridVisualMotion = preload("res://actors/grid_visual_motion.gd")
+
 var main_node: Node2D # Reference to main.gd
 var tile_map: TileMap
 var map_data: Array
@@ -53,24 +55,9 @@ func handle_attack(attacker, defender):
 			damage = attacker.get_attack_power()
 			
 	# Attack Animation (Bump) - always play, even on miss
-	var tween = main_node.create_tween()
-	var sprite = attacker.get_node_or_null("Sprite2D")
-	
-	if sprite:
-		var start_pos = sprite.position
-		if "sprite_offset" in attacker:
-			start_pos = attacker.sprite_offset
-			sprite.position = start_pos
-			
-		var target_pos = defender.position
-		var dir = (target_pos - attacker.position).normalized()
-		var bump_pos = start_pos + dir * 16.0
-		
-		tween.tween_property(sprite, "position", bump_pos, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(sprite, "position", start_pos, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	else:
-		tween.tween_interval(0.1)
-		
+	var dir = (defender.position - attacker.position).normalized()
+	var tween = GridVisualMotion.bump(attacker, dir, 16.0, 0.05, 0.05)
+
 	await tween.finished
 
 	# Hit Check
@@ -200,9 +187,7 @@ func handle_attack(attacker, defender):
 				var target_pixel_pos = Vector2(land_pos) * TILE_SIZE
 				
 				# Animate Knockback
-				var kb_tween = main_node.create_tween()
-				kb_tween.set_parallel(true)
-				kb_tween.tween_property(defender, "position", target_pixel_pos, 0.5).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+				var kb_tween = GridVisualMotion.slide(defender, target_pixel_pos, 0.5)
 				
 				print("Knockback! Pushed to ", land_pos)
 				_log("%s は吹き飛ばされた！" % defender_name, Color(1.0, 0.5, 0.0))

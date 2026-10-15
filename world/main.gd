@@ -1,5 +1,7 @@
 extends Node2D
 
+const GridVisualMotion = preload("res://actors/grid_visual_motion.gd")
+
 const WHITE_TILE_SOURCE_ID = 2
 const LAYER_VISIBLE = 0
 const LAYER_MEMORY = 1
@@ -1040,6 +1042,9 @@ func _try_move_character(character, direction: Vector2):
 							get_node("/root/LogUI").add_log("そちらは海か山で進めない！", Color(0.9, 0.2, 0.2))
 		return false
 
+	# AI movement must respect known traps even when bypassing A* (flee/wander).
+	if character != player and _is_revealed_trap(target_grid_pos):
+		return false
 	var cell_type = _map_data[target_grid_pos.x][target_grid_pos.y]
 	if character == player and cell_type != CellType.PIT:
 		_pending_pit_warning_grid = Vector2i(-1, -1)
@@ -1195,6 +1200,9 @@ func _try_move_character(character, direction: Vector2):
 					_draw_map()
 					return true
 			elif character == player and (child.is_in_group("npcs") or child.is_in_group("allies")):
+				# A position swap must not force the friendly actor onto a known trap.
+				if _is_revealed_trap(current_grid_pos):
+					return false
 				# 根付き状態では入れ替え（移動）できない
 				if _is_rooted(character):
 					return false
@@ -1208,10 +1216,8 @@ func _try_move_character(character, direction: Vector2):
 				_last_player_grid_pos = current_grid_pos
 				
 				# Animate swap
-				var tween = create_tween()
-				tween.set_parallel(true)
-				tween.tween_property(player, "position", npc_old_pos, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-				tween.tween_property(npc, "position", player_old_pos, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				var tween = GridVisualMotion.slide(player, npc_old_pos, 0.12)
+				GridVisualMotion.slide(npc, player_old_pos, 0.12)
 				await tween.finished
 				
 				if has_node("/root/LogUI"):
@@ -1724,6 +1730,8 @@ func _stop_auto_explore(reason: String = ""):
 	_is_auto_exploring = false
 	_auto_explore_path.clear()
 	_auto_explore_index = 0
+	if was_running and is_instance_valid(player):
+		GridVisualMotion.reset(player)
 	if was_running and reason != "":
 		var log_ui = get_tree().root.get_node_or_null("LogUI")
 		if log_ui and log_ui.has_method("add_log"):
@@ -2468,6 +2476,7 @@ func _setup_pathfinding():
 	_astar_grid_swim.cell_size = Vector2(1, 1)
 	_astar_grid_swim.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	_astar_grid_swim.jumping_enabled = false
+	_astar_grid_swim.update()
 	
 	for x in range(MAP_WIDTH):
 		for y in range(MAP_HEIGHT):
@@ -2482,6 +2491,7 @@ func _setup_pathfinding():
 	_astar_grid_fly.cell_size = Vector2(1, 1)
 	_astar_grid_fly.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	_astar_grid_fly.jumping_enabled = false
+	_astar_grid_fly.update()
 	
 	for x in range(MAP_WIDTH):
 		for y in range(MAP_HEIGHT):
@@ -2490,6 +2500,12 @@ func _setup_pathfinding():
 			else:
 				_astar_grid_fly.set_point_solid(Vector2i(x, y), false)
 	_astar_grid_fly.update()
+	# Legacy terrain setup above replaces MapController's trap exclusions.
+	for trap_pos in _traps:
+		if _is_revealed_trap(trap_pos):
+			_astar_grid.set_point_solid(trap_pos, true)
+			_astar_grid_swim.set_point_solid(trap_pos, true)
+			_astar_grid_fly.set_point_solid(trap_pos, true)
 
 
 
@@ -2927,6 +2943,7 @@ func _handle_dig(target_grid: Vector2i):
 # ---- AStarグリッドの単タイル更新 ----
 # 扉の開閉のたびに全グリッドを再構築しないための最適化
 func _update_astar_tile(pos: Vector2i, make_solid: bool):
+	make_solid = make_solid or _is_revealed_trap(pos)
 	_astar_grid.set_point_solid(pos, make_solid)
 	_astar_grid.update()
 	_astar_grid_swim.set_point_solid(pos, make_solid)
@@ -3747,6 +3764,9 @@ func _spawn_traps():
 func _get_traps() -> Dictionary:
 	return _traps
 
+func _is_revealed_trap(pos: Vector2i) -> bool:
+	return _traps.has(pos) and _traps[pos].get("is_revealed", false)
+
 # Targeting variables
 var _targeting_item = null
 var _targeting_skill = null
@@ -3823,18 +3843,10 @@ func _execute_directional_attack(direction: Vector2) -> bool:
 	# If no entity, perform a swing in empty space/grass
 	var cell_type = _map_data[target_grid.x][target_grid.y]
 	
-	# Bump/Swing Animation
-	var sprite = player.get_node_or_null("Sprite2D")
-	if sprite:
-		var start_pos = sprite.position
-		if "sprite_offset" in player:
-			start_pos = player.sprite_offset
-		var bump_pos = start_pos + direction * 16.0
-		var tween = create_tween()
-		tween.tween_property(sprite, "position", bump_pos, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		tween.tween_property(sprite, "position", start_pos, 0.05).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-		await tween.finished
-		
+	# Use the same canonical sprite origin as combat and hit reactions.
+	var tween = GridVisualMotion.bump(player, direction, 16.0, 0.05, 0.05)
+	await tween.finished
+
 	# Log the swing
 	if has_node("/root/LogUI"):
 		get_node("/root/LogUI").add_log("空振りした。", Color(0.7, 0.7, 0.7))
@@ -5228,8 +5240,7 @@ func _execute_charge_skill(target_pos: Vector2):
 	var pixel_pos = Vector2(stop_pos) * TILE_SIZE
 	
 	# Animate Dash
-	var tween = create_tween()
-	tween.tween_property(player, "position", pixel_pos, 0.2).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	var tween = GridVisualMotion.slide(player, pixel_pos, 0.2)
 	
 	# Dust particles during dash
 	_spawn_skill_particles(player.position, "web", 0.3) # Using web as dust
@@ -6759,8 +6770,7 @@ func _execute_wall_skill(target_grid: Vector2i, _targeting_skill: Dictionary):
 				var dest = valid_moves[rng.randi() % valid_moves.size()]
 				
 				var dest_world_pos = Vector2(dest) * TILE_SIZE
-				var move_tween = create_tween()
-				move_tween.tween_property(hit_entity, "position", dest_world_pos, 0.15).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				GridVisualMotion.slide(hit_entity, dest_world_pos, 0.15)
 				
 				if has_node("/root/LogUI"):
 					get_node("/root/LogUI").add_log("%s は周囲の安全なマスに吹き飛ばされた！" % e_name, Color.YELLOW)
@@ -7090,8 +7100,7 @@ func _execute_gale_thrust_skill(target_pos: Vector2, skill: Dictionary):
 											break
 								if not occupied:
 									var dest_world_pos = Vector2(dest) * TILE_SIZE
-									var move_tween = create_tween()
-									move_tween.tween_property(entity, "position", dest_world_pos, 0.1).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+									var move_tween = GridVisualMotion.slide(entity, dest_world_pos, 0.1)
 									move_tween.finished.connect(_resolve_forced_landing.bind(entity, dest))
 									if has_node("/root/LogUI"):
 										get_node("/root/LogUI").add_log("%s は後ろに押し戻された！" % e_name, Color.YELLOW)
@@ -7246,9 +7255,7 @@ func _execute_super_seoi_nage_skill(target_pos: Vector2, skill: Dictionary):
 	var throw_peak = player.position + Vector2(0.0, -TILE_SIZE * 0.8)
 	_spawn_skill_particles(user_center, "dust", 0.25)
 
-	var tween = create_tween()
-	tween.tween_property(target_entity, "position", throw_peak, 0.09).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	tween.tween_property(target_entity, "position", landing_pos, 0.18).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	var tween = GridVisualMotion.slide(target_entity, landing_pos, 0.27, throw_peak)
 	await tween.finished
 
 	var landing_damage = _calculate_throw_damage(skill, target_entity, "landing_damage")

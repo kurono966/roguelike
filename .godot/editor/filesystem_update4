@@ -14,3 +14,4 @@ res://world/hazard_manager.gd
 res://world/map_controller.gd
 res://world/dungeon_generator.gd
 res://ui/PlayerUI.gd
+res://actors/enemy/enemy_ai.gd

@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const GridVisualMotion = preload("res://actors/grid_visual_motion.gd")
+
 const TILE_SIZE = 32  # 1タイルのサイズ（ピクセル）
 const BASE_MAX_HP = 10  # 基本の最大HP
 const BASE_MAX_MP = 5   # 基本の最大MP
@@ -504,6 +506,7 @@ var _move_tween: Tween
 var is_moving: bool = false
 
 func move_to_grid(target_grid: Vector2i, is_auto: bool = false):
+	GridVisualMotion.reset(self)
 	var target_pos = Vector2(target_grid) * TILE_SIZE
 	var diff = target_pos - position
 	position = target_pos # Strict Grid Alignment
@@ -518,12 +521,7 @@ func move_to_grid(target_grid: Vector2i, is_auto: bool = false):
 			_idle_tween.kill()
 			
 		sprite.position -= diff
-		
-		# Prevent huge visual lag trail during fast auto-move
-		if is_auto and sprite.position.length() > TILE_SIZE:
-			# Snap closer if trailing too far
-			sprite.position = sprite.position.limit_length(TILE_SIZE)
-		
+
 		if _move_tween:
 			_move_tween.kill()
 		_move_tween = create_tween()
@@ -533,7 +531,7 @@ func move_to_grid(target_grid: Vector2i, is_auto: bool = false):
 		
 		_move_tween.set_parallel(true)
 		_move_tween.tween_property(sprite, "position", sprite_offset, anim_time).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		_move_tween.tween_callback(func(): is_moving = false)
+		_move_tween.chain().tween_callback(func(): is_moving = false)
 		
 		if _base_scale.is_zero_approx() or _base_scale == Vector2.ONE:
 			_base_scale = sprite.scale
@@ -553,12 +551,7 @@ func move_to_grid(target_grid: Vector2i, is_auto: bool = false):
 			
 		scale_tween.tween_callback(_start_idle_animation)
 		
-	# Light
-	var light = get_node_or_null("PointLight2D")
-	if light:
-		light.position -= diff
-		var l_tween = create_tween()
-		l_tween.tween_property(light, "position", Vector2(16, 16), 0.1)
+	# The light follows the logical tile immediately.
 
 # Deprecated wrapper for non-main callers if any
 func move(direction: Vector2):
@@ -612,15 +605,8 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 	
 	# --- Juicy Hit Feedback ---
 	
-	# Kill movement tween to prevent position desync during damage
-	if _move_tween and _move_tween.is_valid():
-		_move_tween.kill()
-		is_moving = false
-		# Reset sprite position to correct offset
-		var sprite = get_node_or_null("Sprite2D")
-		if sprite:
-			sprite.position = sprite_offset
-	
+	GridVisualMotion.reset(self)
+
 	var sprite = get_node_or_null("Sprite2D")
 	# 1. Hit Flash modulation (Intense Red HDR flash with safe reset)
 	if sprite:
@@ -642,17 +628,12 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 		flash_tween.tween_interval(0.04)
 		flash_tween.tween_property(sprite, "modulate", base_color, 0.08)
 
-	# 2. Micro-recoil (nudge away from attacker then snap back)
+	# Recoil shares ownership of sprite position with movement and attacks.
 	if sprite and attacker:
-		var orig_pos = sprite.position
 		var recoil_dir = (position - attacker.position).normalized()
 		if recoil_dir.is_zero_approx():
 			recoil_dir = Vector2.DOWN
-		var recoil_pos = orig_pos + recoil_dir * (8.0 if is_crit else 4.0)
-		var recoil_tween = create_tween()
-		recoil_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		recoil_tween.tween_property(sprite, "position", recoil_pos, 0.04)
-		recoil_tween.tween_property(sprite, "position", orig_pos, 0.06)
+		GridVisualMotion.bump(self, recoil_dir, 8.0 if is_crit else 4.0, 0.04, 0.06)
 
 	# 3. Screen shake trigger
 	var main_node = get_parent()

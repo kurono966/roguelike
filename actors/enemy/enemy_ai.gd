@@ -74,7 +74,7 @@ static func determine_move_target(enemy: CharacterBody2D, player_grid_pos: Vecto
 
 	return result
 
-static func get_flee_direction(enemy: CharacterBody2D, player_grid_pos: Vector2i, map_data: Array) -> Vector2:
+static func get_flee_direction(enemy: CharacterBody2D, player_grid_pos: Vector2i, map_data: Array, main_node: Node = null) -> Vector2:
 	var enemy_grid_pos = Vector2i(int(enemy.position.x / TILE_SIZE), int(enemy.position.y / TILE_SIZE))
 	var flee_dirs = []
 	
@@ -84,6 +84,8 @@ static func get_flee_direction(enemy: CharacterBody2D, player_grid_pos: Vector2i
 			if dx == 0 and dy == 0: continue
 			var dir = Vector2(dx, dy)
 			var next_pos = enemy_grid_pos + Vector2i(dir)
+			if main_node and main_node._is_revealed_trap(next_pos):
+				continue
 			
 			# Check bounds and terrain
 			# Note: We assume map_data is [x][y]

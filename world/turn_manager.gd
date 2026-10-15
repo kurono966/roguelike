@@ -222,7 +222,7 @@ func process_enemy_turns():
 		if is_instance_valid(enemy):
 			# Flee Logic
 			if not acted and flee_target:
-				var flee_dir = EnemyAI.get_flee_direction(enemy, ai_target_input, main_node._map_data)
+				var flee_dir = EnemyAI.get_flee_direction(enemy, ai_target_input, main_node._map_data, main_node)
 				if flee_dir != Vector2.ZERO:
 					if enemy.skill_id == "flame_scatter":
 						var grass_dir = main_node._get_grass_preferred_direction(enemy, flee_dir)
@@ -274,8 +274,10 @@ func process_enemy_turns():
 			if not moved and not acted:
 				var directions = [Vector2.UP, Vector2.DOWN, Vector2.LEFT, Vector2.RIGHT, 
 								  Vector2(1, 1), Vector2(1, -1), Vector2(-1, 1), Vector2(-1, -1)]
-				var random_dir = directions.pick_random()
-				await main_node._try_move_character(enemy, random_dir)
+				directions.shuffle()
+				for random_dir in directions:
+					if await main_node._try_move_character(enemy, random_dir):
+						break
 			
 			if main_node.visibility_manager:
 				main_node.visibility_manager.update_single_entity_visibility(enemy)
@@ -341,6 +343,8 @@ func process_enemy_turns():
 						if dx == 0 and dy == 0: continue
 						var test_dir = Vector2(dx, dy)
 						var test_pos = ally_grid_pos + Vector2i(int(test_dir.x), int(test_dir.y))
+						if main_node._is_revealed_trap(test_pos):
+							continue
 						
 						# Check if position is valid
 						if test_pos.x >= 0 and test_pos.x < main_node.MAP_WIDTH and test_pos.y >= 0 and test_pos.y < main_node.MAP_HEIGHT:

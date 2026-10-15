@@ -298,6 +298,8 @@ func get_grass_preferred_direction(enemy, desired_dir: Vector2) -> Vector2:
 				continue
 			var dir = Vector2(dx, dy)
 			var pos = origin + Vector2i(dir)
+			if main._is_revealed_trap(pos):
+				continue
 			if pos.x < 0 or pos.x >= main.MAP_WIDTH or pos.y < 0 or pos.y >= main.MAP_HEIGHT:
 				continue
 			if main._map_data[pos.x][pos.y] != main.CellType.GRASS:

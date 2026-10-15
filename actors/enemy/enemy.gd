@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const GridVisualMotion = preload("res://actors/grid_visual_motion.gd")
+
 const TILE_SIZE = 32  # 1タイルのサイズ（ピクセル）
 
 @onready var sprite = $Sprite2D
@@ -474,6 +476,8 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 		var log_color = Color.RED if "弱点" in ext_text else Color.GRAY
 		get_node("/root/LogUI").add_log("%s%s" % [enemy_name, ext_text], log_color)
 	
+	GridVisualMotion.reset(self)
+
 	# --- Juicy Hit Feedback ---
 	
 	# 1. Hit Flash modulation (Using over-bright modulate values to achieve white/red flash with safe reset)
@@ -496,17 +500,12 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 		flash_tween.tween_interval(0.04)
 		flash_tween.tween_property(sprite, "modulate", base_color, 0.06)
 
-	# 2. Micro-recoil (nudge away from attacker then snap back)
+	# Recoil shares ownership of sprite position with movement and attacks.
 	if sprite and attacker:
-		var orig_pos = sprite.position
 		var recoil_dir = (position - attacker.position).normalized()
 		if recoil_dir.is_zero_approx():
 			recoil_dir = Vector2.UP
-		var recoil_pos = orig_pos + recoil_dir * (10.0 if is_crit else 5.0)
-		var recoil_tween = create_tween()
-		recoil_tween.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		recoil_tween.tween_property(sprite, "position", recoil_pos, 0.04)
-		recoil_tween.tween_property(sprite, "position", orig_pos, 0.06)
+		GridVisualMotion.bump(self, recoil_dir, 10.0 if is_crit else 5.0, 0.04, 0.06)
 
 	# 3. Trigger global camera shake via parent main node
 	var main_node = get_parent()
@@ -701,6 +700,7 @@ func _start_idle_animation():
 	_idle_tween.tween_property(sprite, "scale", stretch, 1.2).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 
 func move_to_grid(target_grid: Vector2i, is_auto: bool = false):
+	GridVisualMotion.reset(self)
 	var target_pos = Vector2(target_grid) * TILE_SIZE
 	var diff = target_pos - position
 	position = target_pos.snapped(Vector2.ONE)
