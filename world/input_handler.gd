@@ -76,9 +76,8 @@ func _get_downstairs_branch() -> int:
 	return 0
 
 func _get_upstairs_branch() -> int:
-	if main_node.current_floor <= 1:
-		return 0
-	return main_node._current_branch
+	# Upstairs always go to branch 0 (normal dungeon)
+	return 0
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not main_node or not is_instance_valid(player):
