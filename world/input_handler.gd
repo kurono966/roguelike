@@ -72,9 +72,8 @@ func _is_numpad_wait_key(key_event: InputEventKey) -> bool:
 	return key_event.physical_keycode == KEY_KP_5 or key_event.keycode == KEY_KP_5 or key_event.keycode == KEY_5 or key_event.keycode == KEY_CLEAR
 
 func _get_downstairs_branch() -> int:
-	if main_node.current_floor == 0:
-		return 0
-	return main_node._current_branch
+	# Normal stairs always go to branch 0 (normal dungeon)
+	return 0
 
 func _get_upstairs_branch() -> int:
 	if main_node.current_floor <= 1:

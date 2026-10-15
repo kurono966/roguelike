@@ -1,8 +1,2 @@
+res://world/shadow_clone.gd
 res://world/input_handler.gd
-res://world/main.gd
-res://world/map_controller.gd
-res://actors/player.gd
-res://items/item_database.gd
-res://world/tileset_manager.gd
-res://world/depth_layer_manager.gd
-res://world/visibility_manager.gd

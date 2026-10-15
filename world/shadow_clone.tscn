@@ -1,0 +1,8 @@
+[gd_scene format=3 uid="uid://bg471n32k65c7"]
+
+[ext_resource type="Script" path="res://world/shadow_clone.gd" id="1_shadow"]
+
+[node name="ShadowClone" type="Node2D"]
+script = ExtResource("1_shadow")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
