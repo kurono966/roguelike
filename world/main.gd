@@ -254,7 +254,7 @@ func _ready():
 	if global_gs and global_gs.player_class == 99:
 		current_floor = 4
 		if PlayerUi:
-			PlayerUi.update_floor(current_floor)
+			PlayerUi.update_floor(current_floor, _current_branch)
 			
 	if current_floor == 0:
 		_init_world_map()
@@ -323,7 +323,7 @@ func _ready():
 
 	
 	if PlayerUi:
-		PlayerUi.update_floor(current_floor)
+		PlayerUi.update_floor(current_floor, _current_branch)
 	
 	# プレイヤーのHPをUIに反映
 	if PlayerUi and player:
@@ -3319,9 +3319,9 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 				#   each floor's cache remembers where the player left it.
 				#   Falls back to the generic stair search below if the exit tile
 				#   is not a downward stair.
-				# Floor 0 (Overworld) -> Always place on cave entrance (STAIRS)
+				# This also preserves the gold entrance when returning to the village.
 				var use_exit_stair := false
-				if is_upward and current_floor != 0:
+				if is_upward:
 					var exit_pos: Vector2i = cache["player_exit_grid"]
 					if exit_pos.x >= 0 and exit_pos.x < MAP_WIDTH and exit_pos.y >= 0 and exit_pos.y < MAP_HEIGHT and _is_stairs_cell(_map_data[exit_pos.x][exit_pos.y]):
 						spawn_pos = exit_pos
@@ -3436,6 +3436,11 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 	return true
 
 func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = false, is_pit: bool = false):
+	# Keep stairs, falls and other transitions inside the beginner dungeon.
+	if _current_branch == 10 and target_floor > 0:
+		target_branch = 10
+		if target_floor > 3:
+			return
 	# Save current floor
 	_save_current_floor_to_cache()
 
@@ -3489,7 +3494,7 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 			get_node("/root/LogUI").add_log("%s 階層 %d へ (Branch %d)" % [msg, current_floor, target_branch], color)
 	
 	if PlayerUi:
-		PlayerUi.update_floor(current_floor)
+		PlayerUi.update_floor(current_floor, _current_branch)
 		
 	if player and player.has_method("replenish_ammo"):
 		player.replenish_ammo(20)
@@ -5616,7 +5621,7 @@ func _load_game():
 		if _is_on_world_map:
 			PlayerUi.update_floor("ワールド")
 		else:
-			PlayerUi.update_floor(current_floor)
+			PlayerUi.update_floor(current_floor, _current_branch)
 		PlayerUi.update_hp(player.hp, player.max_hp)
 		PlayerUi.update_mp(player.mp, player.max_mp)
 		PlayerUi.update_level(player.level)

@@ -12,3 +12,5 @@ res://world/shadow_clone_manager.gd
 res://items/base_item.gd
 res://world/hazard_manager.gd
 res://world/map_controller.gd
+res://world/dungeon_generator.gd
+res://ui/PlayerUI.gd

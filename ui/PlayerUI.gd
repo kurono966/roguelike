@@ -328,14 +328,22 @@ func update_turns(turn_count: int) -> void:
 	if turn_val_label:
 		turn_val_label.text = str(turn_count)
 
-func update_floor(floor_val: Variant):
+func update_floor(floor_val: Variant, branch: int = 0):
 	var floor_str = ""
 	if floor_val is String:
 		floor_str = floor_val
 	elif floor_val == 0:
 		floor_str = "地上"
 	else:
-		floor_str = "B%dF" % floor_val
+		var dungeon_name = "通常のダンジョン"
+		match branch:
+			1: dungeon_name = "通常のダンジョン（危険地帯）"
+			2: dungeon_name = "通常のダンジョン（水域）"
+			3: dungeon_name = "通常のダンジョン（草原）"
+			4: dungeon_name = "通常のダンジョン（火山）"
+			5: dungeon_name = "通常のダンジョン（水晶）"
+			10: dungeon_name = "始まりのダンジョン"
+		floor_str = "%s B%dF" % [dungeon_name, floor_val]
 		
 	var main_node = get_tree().get_first_node_in_group("main")
 	if main_node and main_node.get("minimap_controller"):
