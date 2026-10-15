@@ -222,9 +222,7 @@ func _replay_move(clone: ShadowClone, action: Dictionary) -> void:
 		return
 	var from_grid = clone.get_grid()
 	var to_grid = from_grid + dir
-	if not _is_walkable(to_grid):
-		return
-	# 影は実体ではないので、エンティティと重なってもよい
+	# 影は壁もすり抜けられる
 	var target = Vector2(to_grid) * TILE_SIZE
 	var tw = main_node.create_tween()
 	tw.tween_property(clone, "position", target, 0.08)
@@ -281,6 +279,15 @@ func _replay_skill(clone: ShadowClone, action: Dictionary) -> void:
 	match kind:
 		"heal":
 			clone.heal(int(action.get("amount", 0)))
+		"charge":
+			var target_grid: Vector2i = action.get("target_grid", clone.get_grid())
+			# 影は壁をすり抜けて移動
+			var target = Vector2(target_grid) * TILE_SIZE
+			var tw = main_node.create_tween()
+			tw.tween_property(clone, "position", target, 0.2).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+			await tw.finished
+			if main_node.has_method("_spawn_skill_particles"):
+				main_node._spawn_skill_particles(clone.position, "web", 0.3)
 		"shot":
 			var grid: Vector2i = action.get("target_grid", clone.get_grid())
 			var dmg = int(action.get("damage", 0))

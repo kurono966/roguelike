@@ -21,6 +21,7 @@ var defense: int = 0
 var enemy_name: String = "影の分身"
 var skill_cooldown: int = 0
 var max_skill_cooldown: int = 0
+var known_skills: Array[String] = []  # ソースのスキルをコピー
 
 @onready var sprite: Sprite2D = $Sprite2D
 var _wobble_time: float = 0.0
@@ -37,8 +38,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_wobble_time += delta
 	# ゆらゆら揺れるアニメーション（重なっていても視認できるように）
-	var wobble_x = sin(_wobble_time * 3.0) * 2.0
-	var wobble_y = cos(_wobble_time * 2.5) * 2.0
+	var wobble_x = sin(_wobble_time * 3.0) * 4.0
+	var wobble_y = cos(_wobble_time * 2.5) * 4.0
 	if sprite:
 		sprite.position = Vector2(TILE_SIZE / 2.0 + wobble_x, TILE_SIZE / 2.0 + wobble_y)
 
@@ -64,6 +65,11 @@ func _copy_combat_stats() -> void:
 		hit_rate = float(source.hit_rate)
 	if "defense" in source:
 		defense = int(source.defense)
+	# スキルをコピー
+	if "known_skills" in source:
+		known_skills = source.known_skills.duplicate()
+	elif "base_known_skills" in source:
+		known_skills = source.base_known_skills.duplicate()
 	# 表示名は本体の名前を引き継ぎつつ「影」であることを明示する
 	var src_name = "分身"
 	if "enemy_name" in source:

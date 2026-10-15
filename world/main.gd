@@ -5236,6 +5236,10 @@ func _execute_charge_skill(target_pos: Vector2):
 	_calculate_fov()
 	_draw_map()
 	
+	# 影の行動記録（突進スキル）
+	if shadow_clone_manager:
+		shadow_clone_manager.record(player, {"type": "skill", "kind": "charge", "target_grid": stop_pos})
+	
 	# Apply Hit
 	if hit_entity and is_instance_valid(hit_entity):
 		var dmg = _calculate_skill_damage(_targeting_skill, hit_entity)
