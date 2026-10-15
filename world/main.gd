@@ -3313,20 +3313,32 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 			else:
 				# Reposition player on matching stairs when returning
 				# Downward (is_upward == false) -> Place on STAIRS_UP
-				# Upward (is_upward == true) -> Place on STAIRS
+				# Upward (is_upward == true) -> Return to the exact stair the player
+				#   descended from (this floor's player_exit_grid). This keeps special
+				#   (coloured) stairs working and handles nested backtracking, since
+				#   each floor's cache remembers where the player left it.
+				#   Falls back to the generic stair search below if the exit tile
+				#   is not a downward stair.
 				# Floor 0 (Overworld) -> Always place on cave entrance (STAIRS)
+				var use_exit_stair := false
+				if is_upward and current_floor != 0:
+					var exit_pos: Vector2i = cache["player_exit_grid"]
+					if exit_pos.x >= 0 and exit_pos.x < MAP_WIDTH and exit_pos.y >= 0 and exit_pos.y < MAP_HEIGHT and _is_stairs_cell(_map_data[exit_pos.x][exit_pos.y]):
+						spawn_pos = exit_pos
+						use_exit_stair = true
 				var target_stair_type = CellType.STAIRS if is_upward else CellType.STAIRS_UP
 				if current_floor == 0:
 					target_stair_type = CellType.STAIRS
 					
-				var found_stair = false
-				for x in range(MAP_WIDTH):
-					for y in range(MAP_HEIGHT):
-						if _map_data[x][y] == target_stair_type:
-							spawn_pos = Vector2i(x, y)
-							found_stair = true
-							break
-					if found_stair: break
+				if not use_exit_stair:
+					var found_stair = false
+					for x in range(MAP_WIDTH):
+						for y in range(MAP_HEIGHT):
+							if _map_data[x][y] == target_stair_type:
+								spawn_pos = Vector2i(x, y)
+								found_stair = true
+								break
+						if found_stair: break
 				
 			player.position = Vector2(spawn_pos) * TILE_SIZE
 			_last_player_grid_pos = spawn_pos

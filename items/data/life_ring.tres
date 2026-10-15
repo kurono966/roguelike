@@ -6,7 +6,7 @@
 script = ExtResource("1_base_item")
 id = "life_ring"
 display_name = "命の指輪"
-equipment_type = -1
+equipment_type = 2
 attack = 0
 defense = 0
 max_hp = 5

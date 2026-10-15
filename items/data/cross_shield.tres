@@ -6,7 +6,7 @@
 script = ExtResource("1_base_item")
 id = "cross_shield"
 display_name = "聖騎士の盾"
-equipment_type = -1
+equipment_type = 1
 attack = 0
 defense = 4
 max_hp = 0

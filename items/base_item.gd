@@ -28,6 +28,10 @@ extends Resource
 
 var grid_position: Vector2i = Vector2i(-1, -1)
 
+# Helper to check if this is a consumable item
+func is_consumable() -> bool:
+	return equipment_type == -1
+
 var name: String:
 	get:
 		return display_name
@@ -121,6 +125,9 @@ func rotate():
 
 func ensure_connectors():
 	if not connectors.is_empty() or shape.is_empty():
+		return
+	# Consumables don't need connectors
+	if is_consumable():
 		return
 	if attack == 0 and defense == 0 and max_hp == 0 and max_mp == 0 and strength == 0 and dexterity == 0 and intelligence == 0 and effects.is_empty() and granted_skills.is_empty():
 		return

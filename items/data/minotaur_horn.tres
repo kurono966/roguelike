@@ -6,7 +6,7 @@
 script = ExtResource("1_base_item")
 id = "minotaur_horn"
 display_name = "牛頭鬼の角"
-equipment_type = -1
+equipment_type = 0
 attack = 3
 defense = 0
 max_hp = 0

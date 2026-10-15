@@ -6,7 +6,7 @@
 script = ExtResource("1_base_item")
 id = "long_sword"
 display_name = "鋼の長剣"
-equipment_type = -1
+equipment_type = 0
 attack = 6
 defense = 0
 max_hp = 0
