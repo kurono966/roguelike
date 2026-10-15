@@ -438,7 +438,7 @@ func _try_attack_adjacent_enemy() -> bool:
 			var target_grid = tile_map.local_to_map(target.position)
 			var diff = target_grid - player_grid
 			if _can_player_recognize_entity(target) and abs(diff.x) <= 1 and abs(diff.y) <= 1 and (abs(diff.x) + abs(diff.y) > 0):
-				_handle_attack(player, target)
+				await _handle_attack(player, target)
 				return true
 
 	# 2. その他の隣接する敵を攻撃
@@ -468,7 +468,7 @@ func _try_attack_adjacent_enemy() -> bool:
 				if check_pos.x >= 0 and check_pos.x < MAP_WIDTH and \
 				   check_pos.y >= 0 and check_pos.y < MAP_HEIGHT and \
 				   _visible_tiles[check_pos.x][check_pos.y]:
-					_handle_attack(player, child)
+					await _handle_attack(player, child)
 					return true
 	
 	return false
@@ -2447,69 +2447,6 @@ func _setup_pathfinding():
 	_astar_grid_swim = map_controller.astar_grid_swim
 	_astar_grid_fly = map_controller.astar_grid_fly
 
-	if _is_on_world_map:
-		for x in range(MAP_WIDTH):
-			for y in range(MAP_HEIGHT):
-				var pos = Vector2i(x, y)
-				var cell = _world_map_data[x][y]
-				if cell != WorldCell.SEA and cell != WorldCell.MOUNTAIN:
-					_astar_grid.set_point_solid(pos, false)
-				else:
-					_astar_grid.set_point_solid(pos, true)
-		_astar_grid.update()
-		return
-
-	for x in range(MAP_WIDTH):
-		for y in range(MAP_HEIGHT):
-			var pos = Vector2i(x, y)
-			var is_walkable_base = _map_data[x][y] == CellType.FLOOR or _map_data[x][y] == CellType.STAIRS or _map_data[x][y] == CellType.GRASS or _map_data[x][y] == CellType.ASH or _map_data[x][y] == CellType.CRYSTAL_FLOOR or _map_data[x][y] == CellType.STAIRS_BLUE or _map_data[x][y] == CellType.STAIRS_GREEN or _map_data[x][y] == CellType.STAIRS_RED or _map_data[x][y] == CellType.STAIRS_PURPLE or _map_data[x][y] == CellType.STAIRS_GOLD or _map_data[x][y] == CellType.DOOR_OPEN or _map_data[x][y] == CellType.DOOR_CLOSED or _map_data[x][y] == CellType.ICE
-			var is_frozen = _frozen_tiles.has(pos)
-			
-			if is_walkable_base or is_frozen:
-				_astar_grid.set_point_solid(pos, false)
-			else:
-				_astar_grid.set_point_solid(pos, true)
-	_astar_grid.update()
-
-	_astar_grid_swim.clear()
-	_astar_grid_swim.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
-	_astar_grid_swim.cell_size = Vector2(1, 1)
-	_astar_grid_swim.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-	_astar_grid_swim.jumping_enabled = false
-	_astar_grid_swim.update()
-	
-	for x in range(MAP_WIDTH):
-		for y in range(MAP_HEIGHT):
-			if _map_data[x][y] == CellType.WALL or _map_data[x][y] == CellType.LAVA or _map_data[x][y] == CellType.PIT or _map_data[x][y] == CellType.TREE or _map_data[x][y] == CellType.TREE_FRUIT or _map_data[x][y] == CellType.ROCK:
-				_astar_grid_swim.set_point_solid(Vector2i(x, y), true)
-			else:
-				_astar_grid_swim.set_point_solid(Vector2i(x, y), false)
-	_astar_grid_swim.update()
-
-	_astar_grid_fly.clear()
-	_astar_grid_fly.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
-	_astar_grid_fly.cell_size = Vector2(1, 1)
-	_astar_grid_fly.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-	_astar_grid_fly.jumping_enabled = false
-	_astar_grid_fly.update()
-	
-	for x in range(MAP_WIDTH):
-		for y in range(MAP_HEIGHT):
-			if _map_data[x][y] == CellType.WALL:
-				_astar_grid_fly.set_point_solid(Vector2i(x, y), true)
-			else:
-				_astar_grid_fly.set_point_solid(Vector2i(x, y), false)
-	_astar_grid_fly.update()
-	# Legacy terrain setup above replaces MapController's trap exclusions.
-	for trap_pos in _traps:
-		if _is_revealed_trap(trap_pos):
-			_astar_grid.set_point_solid(trap_pos, true)
-			_astar_grid_swim.set_point_solid(trap_pos, true)
-			_astar_grid_fly.set_point_solid(trap_pos, true)
-
-
-
-
 func _get_map_cell_atlas_coords(map_data: Array, x: int, y: int) -> Vector2i:
 	var cell_type = map_data[x][y]
 	var atlas_coords = Vector2i(0, 0)
@@ -2943,13 +2880,7 @@ func _handle_dig(target_grid: Vector2i):
 # ---- AStarグリッドの単タイル更新 ----
 # 扉の開閉のたびに全グリッドを再構築しないための最適化
 func _update_astar_tile(pos: Vector2i, make_solid: bool):
-	make_solid = make_solid or _is_revealed_trap(pos)
-	_astar_grid.set_point_solid(pos, make_solid)
-	_astar_grid.update()
-	_astar_grid_swim.set_point_solid(pos, make_solid)
-	_astar_grid_swim.update()
-	_astar_grid_fly.set_point_solid(pos, make_solid)
-	_astar_grid_fly.update()
+	map_controller.update_pathfinding_tile(pos, make_solid)
 
 
 func _handle_reload():
@@ -6572,7 +6503,12 @@ func _check_drowning() -> bool:
 	
 	return false
 
+var _stairs_texture_cache: Dictionary = {}
+var _stairs_memory_material: CanvasItemMaterial
+
 func _create_ascii_stairs_texture(color: Color) -> Texture2D:
+	if _stairs_texture_cache.has(color):
+		return _stairs_texture_cache[color]
 	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	img.fill(Color(0, 0, 0, 0))
 	var bitmap = _get_stairs_bitmap()
@@ -6584,7 +6520,9 @@ func _create_ascii_stairs_texture(color: Color) -> Texture2D:
 				for dx in range(scale):
 					for dy in range(scale):
 						img.set_pixel(origin.x + x * scale + dx, origin.y + y * scale + dy, color)
-	return ImageTexture.create_from_image(img)
+	var texture = ImageTexture.create_from_image(img)
+	_stairs_texture_cache[color] = texture
+	return texture
 
 func _get_stairs_bitmap() -> Array:
 	return [".....", "....#", "...##", "..###", ".####", ".....", "....."]
@@ -6601,9 +6539,10 @@ func _draw_custom_stairs(grid_pos: Vector2i, color: Color, with_particles: bool)
 	
 	if not with_particles:
 		# For out-of-sight (memory) stairs, use Unshaded material to bypass CanvasModulate
-		var memory_mat = CanvasItemMaterial.new()
-		memory_mat.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
-		sprite.material = memory_mat
+		if _stairs_memory_material == null:
+			_stairs_memory_material = CanvasItemMaterial.new()
+			_stairs_memory_material.light_mode = CanvasItemMaterial.LIGHT_MODE_UNSHADED
+		sprite.material = _stairs_memory_material
 		# Dim the color slightly since it won't be darkened by CanvasModulate
 		sprite.modulate = sprite.modulate * Color(0.35, 0.35, 0.40, 1.0)
 		

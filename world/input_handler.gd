@@ -270,7 +270,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			tm.update_cursor_mouse(main_node.get_global_mouse_position())
 		return
 
-	if main_node._current_game_state != main_node.TurnPhase.PLAYER_TURN:
+	if main_node._current_game_state != main_node.TurnPhase.PLAYER_TURN or main_node._is_processing_action:
 		# ターン進行中(敵ターン等)のクリックは移動要求として保留し、プレイヤーターンで実行する
 		if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
 			main_node.request_move_to_tile(tile_map.local_to_map(main_node.get_global_mouse_position()))
@@ -341,7 +341,13 @@ func _unhandled_input(event: InputEvent) -> void:
 				main_node._descend_stairs(0)
 			return
 	if event.is_action_pressed("target_enemy") or (event is InputEventKey and event.pressed and event.keycode == KEY_S):
-		if main_node._try_attack_adjacent_enemy():
+		if event is InputEventKey and event.is_echo():
+			return
+		if player.get("is_moving") == true:
+			return
+		main_node._is_processing_action = true
+		get_viewport().set_input_as_handled()
+		if await main_node._try_attack_adjacent_enemy():
 			await main_node._end_player_turn()
 		else:
 			var log_ui = main_node.get_tree().root.get_node_or_null("LogUI")
@@ -349,6 +355,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				log_ui.add_log("待機中...", Color(0.7, 0.7, 0.7))
 			print("Player waits.")
 			await main_node._end_player_turn()
+		main_node._is_processing_action = false
 		return
 
 	# Handle talk choice input (must be before V key to prevent repeats)

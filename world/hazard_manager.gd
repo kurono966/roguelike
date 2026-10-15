@@ -563,8 +563,7 @@ func reveal_trap(pos: Vector2i):
 	main._draw_map()
 	
 	# Update pathfinding so enemies avoid the revealed trap
-	if main.has_method("_setup_pathfinding"):
-		main._setup_pathfinding()
+	main._update_astar_tile(pos, false)
 	
 	if main.has_node("/root/LogUI"):
 		main.get_node("/root/LogUI").add_log("罠を発見した！", Color.YELLOW)

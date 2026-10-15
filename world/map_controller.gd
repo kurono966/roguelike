@@ -34,6 +34,7 @@ const CellType = MapDefinitions.CellType
 const MAP_WIDTH = MapDefinitions.MAP_WIDTH
 const MAP_HEIGHT = MapDefinitions.MAP_HEIGHT
 const TILE_SIZE = MapDefinitions.TILE_SIZE
+const SWIM_PATH_BLOCKERS = [CellType.WALL, CellType.LAVA, CellType.PIT, CellType.TREE, CellType.TREE_FRUIT, CellType.ROCK]
 
 func setup(main: Node2D):
 	main_node = main
@@ -59,73 +60,62 @@ func generate_map(floor: int, branch: int, local_type: int = -1, is_starting_vil
 		return res
 
 func setup_pathfinding():
-	# main側で直接生成されたマップデータも反映する（map_controllerを経由しない生成フロー対策）
+	# Build each movement mode once, using the live map held by Main.
 	if main_node:
-		var main_map = main_node.get("_map_data")
-		if typeof(main_map) == TYPE_ARRAY and main_map.size() >= MAP_WIDTH:
-			map_data = main_map
+		map_data = main_node._map_data
+	if astar_grid == null:
+		astar_grid = AStarGrid2D.new()
+		astar_grid_swim = AStarGrid2D.new()
+		astar_grid_fly = AStarGrid2D.new()
+	for grid in [astar_grid, astar_grid_swim, astar_grid_fly]:
+		grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
+		grid.cell_size = Vector2.ONE
+		grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+		grid.jumping_enabled = false
+		if grid.is_dirty():
+			grid.update()
 
-	astar_grid = AStarGrid2D.new()
-	astar_grid_swim = AStarGrid2D.new()
-	astar_grid_fly = AStarGrid2D.new()
-	
-	_setup_astar_grid(astar_grid, false, false)
-	_setup_astar_grid(astar_grid_swim, true, false)
-	_setup_astar_grid(astar_grid_fly, false, true)
-
-func _setup_astar_grid(grid: AStarGrid2D, allow_swim: bool, allow_fly: bool):
-	# Guard against uninitialized or malformed map_data
-	if map_data.is_empty() or map_data.size() < MAP_WIDTH:
-		grid.update()
-		return
-	
-	grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
-	grid.cell_size = Vector2(1, 1)
-	grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-	grid.update()
-	
-	# Get trap data from main_node to avoid revealed traps
-	var traps = {}
-	if main_node and main_node.has_method("_get_traps"):
-		traps = main_node._get_traps()
-	
+	var use_world_map = main_node != null and main_node._is_on_world_map
+	var source: Array = main_node._world_map_data if use_world_map else map_data
+	var traps: Dictionary = main_node._traps if main_node else {}
+	var frozen: Dictionary = main_node._frozen_tiles if main_node else {}
 	for x in range(MAP_WIDTH):
-		# Check if row exists
-		if x >= map_data.size():
-			for y in range(MAP_HEIGHT):
-				grid.set_point_solid(Vector2i(x, y), true)
-			continue
-		
-		var row = map_data[x]
-		# Check if row is a valid non-empty array
-		if typeof(row) != TYPE_ARRAY or row.size() == 0:
-			for y in range(MAP_HEIGHT):
-				grid.set_point_solid(Vector2i(x, y), true)
-			continue
-		
+		var row: Array = source[x] if x < source.size() and source[x] is Array else []
 		for y in range(MAP_HEIGHT):
-			if y >= row.size():
-				grid.set_point_solid(Vector2i(x, y), true)
-				continue
-			var cell = row[y]
-			var is_solid = cell == CellType.WALL or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED
-			
-			if not is_solid:
-				if cell == CellType.WATER and not allow_swim and not allow_fly:
-					is_solid = true
-				elif (cell == CellType.LAVA or cell == CellType.PIT) and not allow_fly:
-					is_solid = true
-				elif cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
-					is_solid = true
-			
-			# Avoid revealed traps for pathfinding (enemies/NPCs)
 			var pos = Vector2i(x, y)
-			if not is_solid and traps.has(pos):
-				var trap_data = traps[pos]
-				if trap_data.get("is_revealed", false):
-					is_solid = true
-			
-			grid.set_point_solid(Vector2i(x, y), is_solid)
+			var cell: int = row[y] if y < row.size() else CellType.WALL
+			if use_world_map:
+				var blocked = y >= row.size() or cell == MapDefinitions.WorldCell.SEA or cell == MapDefinitions.WorldCell.MOUNTAIN
+				astar_grid.set_point_solid(pos, blocked)
+				astar_grid_swim.set_point_solid(pos, blocked)
+				astar_grid_fly.set_point_solid(pos, blocked)
+				continue
+			var known_trap = traps.has(pos) and traps[pos].get("is_revealed", false)
+			_set_path_tile(pos, cell, frozen.has(pos), known_trap)
+
+func _set_path_tile(pos: Vector2i, cell: int, frozen: bool, blocked: bool):
+	astar_grid.set_point_solid(pos, blocked or not _can_path_through(cell, frozen, false, false))
+	astar_grid_swim.set_point_solid(pos, blocked or not _can_path_through(cell, frozen, true, false))
+	astar_grid_fly.set_point_solid(pos, blocked or not _can_path_through(cell, frozen, false, true))
+
+static func _can_path_through(cell: int, frozen: bool, swim: bool, fly: bool) -> bool:
+	# Path planning includes doors actors can open; collision is checked on moving.
+	if fly:
+		return cell != CellType.WALL
+	if swim:
+		return cell not in SWIM_PATH_BLOCKERS
+	if frozen:
+		return true
+	match cell:
+		CellType.FLOOR, CellType.GRASS, CellType.ASH, CellType.VOLCANIC_ASH, CellType.CRYSTAL_FLOOR, CellType.ICE, CellType.DOOR_OPEN, CellType.DOOR_CLOSED, CellType.STAIRS, CellType.STAIRS_UP, CellType.STAIRS_BLUE, CellType.STAIRS_GREEN, CellType.STAIRS_RED, CellType.STAIRS_PURPLE, CellType.STAIRS_GOLD:
+			return true
+	return false
+
+func update_pathfinding_tile(pos: Vector2i, make_solid: bool = false):
+	if not is_grid_in_bounds(pos):
+		return
+	var blocked = make_solid or main_node._is_revealed_trap(pos)
+	_set_path_tile(pos, main_node._map_data[pos.x][pos.y], main_node._frozen_tiles.has(pos), blocked)
 
 func is_walkable(grid_pos: Vector2i, allow_swim: bool = false, allow_fly: bool = false) -> bool:
 	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT:

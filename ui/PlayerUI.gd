@@ -26,6 +26,7 @@ var hp_container: Control
 
 # Tween & State
 var current_tween: Tween = null
+var _hp_target = Vector2i(-1, -1)
 var _last_active_skill_id: String = ""
 
 # Skill Bar
@@ -64,6 +65,11 @@ func _ready():
 	turn_label = Label.new()
 	floor_label = Label.new()
 	hp_container = Control.new()
+	# Compatibility nodes need an owner in the tree so they are freed with the UI.
+	hp_container.visible = false
+	add_child(hp_container)
+	for label in [level_label, gold_label, hunger_label, turn_label, floor_label]:
+		hp_container.add_child(label)
 	
 	# 2. Build consolidated Status Panel
 	status_panel = PanelContainer.new()
@@ -278,6 +284,10 @@ func create_progress_bar(fill_color: Color) -> ProgressBar:
 
 func update_hp(current_hp: int, max_hp: int) -> void:
 	if not hp_bar or not hp_label: return
+	var target = Vector2i(current_hp, max_hp)
+	if target == _hp_target:
+		return
+	_hp_target = target
 	hp_bar.max_value = max_hp
 	
 	if current_tween:
