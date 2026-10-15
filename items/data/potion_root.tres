@@ -16,7 +16,6 @@ dexterity = 0
 intelligence = 0
 value = 0
 description = "飲むと足が大地に根付く薬。\n5ターン動けなくなるが、受けるダメージが激減する。"
-shape = [Vector2i(0, 0)]
 effects = {"rooted": {"duration": 5}}
 granted_skills = []
 heal = 0

@@ -8,3 +8,4 @@ res://ui/context_menu.gd
 res://ui/item_context_menu.gd
 res://world/combat_manager.gd
 res://world/turn_manager.gd
+res://world/shadow_clone_manager.gd

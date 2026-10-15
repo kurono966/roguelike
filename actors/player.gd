@@ -308,6 +308,13 @@ func add_initial_equipment():
 				for item in items:
 					if item.id == "ge_claw" or item.id == "mirrored_ge_claw":
 						equipment_component.add_to_bag(item)
+				# 二重の薬と根付きの薬
+				for item in items:
+					if item.id == "potion_double":
+						equipment_component.add_to_bag(item)
+				for item in items:
+					if item.id == "potion_root":
+						equipment_component.add_to_bag(item)
 	
 	# 初期スキル: ヒールを追加
 	if (not gs or gs.player_class != -1) and not base_known_skills.has("heal"):

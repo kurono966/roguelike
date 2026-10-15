@@ -16,7 +16,6 @@ dexterity = 0
 intelligence = 0
 value = 0
 description = "飲むと影の分身が生まれる薬。\n20ターンの間、あなたの直近の行動を1ターン遅れで繰り返す。\n投げると相手の影が動き出す。"
-shape = [Vector2i(0, 0)]
 effects = {"spawn_shadow": {"duration": 20}}
 granted_skills = []
 heal = 0
