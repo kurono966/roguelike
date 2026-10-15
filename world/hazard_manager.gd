@@ -560,6 +560,10 @@ func reveal_trap(pos: Vector2i):
 	# Trigger a redraw to show the ASCII trap symbol
 	main._draw_map()
 	
+	# Update pathfinding so enemies avoid the revealed trap
+	if main.has_method("_setup_pathfinding"):
+		main._setup_pathfinding()
+	
 	if main.has_node("/root/LogUI"):
 		main.get_node("/root/LogUI").add_log("罠を発見した！", Color.YELLOW)
 

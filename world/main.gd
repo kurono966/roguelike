@@ -3738,6 +3738,10 @@ func _spawn_traps():
 				attempts -= 1
 	print("Total traps spawned: ", traps_spawned)
 
+
+func _get_traps() -> Dictionary:
+	return _traps
+
 # Targeting variables
 var _targeting_item = null
 var _targeting_skill = null

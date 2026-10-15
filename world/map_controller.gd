@@ -84,6 +84,11 @@ func _setup_astar_grid(grid: AStarGrid2D, allow_swim: bool, allow_fly: bool):
 	grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	grid.update()
 	
+	# Get trap data from main_node to avoid revealed traps
+	var traps = {}
+	if main_node and main_node.has_method("_get_traps"):
+		traps = main_node._get_traps()
+	
 	for x in range(MAP_WIDTH):
 		# Check if row exists
 		if x >= map_data.size():
@@ -111,6 +116,13 @@ func _setup_astar_grid(grid: AStarGrid2D, allow_swim: bool, allow_fly: bool):
 				elif (cell == CellType.LAVA or cell == CellType.PIT) and not allow_fly:
 					is_solid = true
 				elif cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
+					is_solid = true
+			
+			# Avoid revealed traps for pathfinding (enemies/NPCs)
+			var pos = Vector2i(x, y)
+			if not is_solid and traps.has(pos):
+				var trap_data = traps[pos]
+				if trap_data.get("is_revealed", false):
 					is_solid = true
 			
 			grid.set_point_solid(Vector2i(x, y), is_solid)
