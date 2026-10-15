@@ -1,2 +1,10 @@
 res://world/shadow_clone.gd
 res://world/input_handler.gd
+res://world/main.gd
+res://actors/player.gd
+res://actors/enemy/enemy.gd
+res://items/item_database.gd
+res://ui/context_menu.gd
+res://ui/item_context_menu.gd
+res://world/combat_manager.gd
+res://world/turn_manager.gd

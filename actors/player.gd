@@ -580,6 +580,9 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 				multiplier = 0.5
 				
 	var damage = max(0 if multiplier == 0.0 else 1, int(amount * multiplier))
+	# 根付き状態: 受けるダメージを約10%に軽減
+	if has_status_effect("rooted") and damage > 0:
+		damage = max(1, int(round(float(damage) * 0.1)))
 	hp -= damage
 	
 	var main_p = get_parent()
@@ -872,6 +875,11 @@ func apply_status_effect(effect_id: String, duration: int):
 
 func apply_effect(effect_id: String, params: Dictionary = {}):
 	if status_effects.has(effect_id):
+		# 根付きは重複時にも持続時間を更新（延長）する
+		if effect_id == "rooted" and params.has("duration"):
+			status_effects[effect_id].duration = params.duration
+			if has_node("/root/LogUI"):
+				get_node("/root/LogUI").add_log("根付き状態が更新された（残り%dターン）" % params.duration, Color.YELLOW)
 		return # 重ねがけ防止
 	status_effects[effect_id] = params
 	print("Applied status: ", effect_id, " Params: ", params)
@@ -880,6 +888,7 @@ func apply_effect(effect_id: String, params: Dictionary = {}):
 		if effect_id == "paralysis": effect_name = "麻痺"
 		elif effect_id == "burn": effect_name = "炎上"
 		elif effect_id == "sleep": effect_name = "睡眠"
+		elif effect_id == "rooted": effect_name = "根付き"
 		get_node("/root/LogUI").add_log("%s 状態になった！" % effect_name, Color.YELLOW)
 
 func remove_status_effect(effect_id: String):
@@ -910,6 +919,7 @@ func process_status_effects():
 			var effect_name = k
 			if k == "paralysis": effect_name = "麻痺"
 			elif k == "sleep": effect_name = "睡眠"
+			elif k == "rooted": effect_name = "根付き"
 			get_node("/root/LogUI").add_log("%s が治った！" % effect_name, Color.GREEN)
 
 # ターン終了時の処理（HP自動回復）
@@ -1136,6 +1146,13 @@ func _start_idle_animation():
 
 
 
+# 二重の薬などで影の分身を生成する（main.shadow_clone_manager に委譲）
+func _spawn_shadow_clone(duration: int):
+	var main_node = get_parent()
+	if main_node and main_node.shadow_clone_manager:
+		main_node.shadow_clone_manager.spawn_clone(self, duration)
+
+
 func use_item(item: BaseItem):
 	var main_node = get_parent()
 	if main_node and main_node.get("_is_on_world_map"):
@@ -1231,6 +1248,16 @@ func use_item(item: BaseItem):
 		apply_status_effect("paralysis", 3)
 		_consume_item(item, "毒キノコを食べた！体が痺れる！")
 		
+	# 5.5. Root Potion (根付きの薬)
+	elif item.id == "potion_root":
+		apply_effect("rooted", {"duration": 5})
+		_consume_item(item, "根付きの薬を飲んだ。5ターン動けなくなるが、受けるダメージが激減する。")
+
+	# 5.6. Double Potion (二重の薬)
+	elif item.id == "potion_double":
+		_spawn_shadow_clone(20)
+		_consume_item(item, "二重の薬を飲んだ。影の分身が動き出す！")
+
 	# 6. Generic Consumable (Fallback for newly added items via Editor)
 	else:
 		var has_effect = false
@@ -1516,9 +1543,18 @@ func _execute_self_skill(skill):
 			final_heal += intelligence
 			
 		heal(final_heal)
+		# 影の行動記録（回復スキル）
+		var _mn = get_parent()
+		if _mn and _mn.shadow_clone_manager:
+			_mn.shadow_clone_manager.record(self, {"type": "heal", "amount": final_heal})
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s を唱えた。(+%d回復)" % [skill.name, final_heal], Color.CYAN)
 	elif skill.id == "teleport":
+		# 根付き状態ではテレポート（移動系スキル）を使えない
+		if has_status_effect("rooted"):
+			if has_node("/root/LogUI"):
+				get_node("/root/LogUI").add_log("根付いてテレポートできない！", Color.YELLOW)
+			return
 		_teleport_randomly()
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s を唱えた。空間が歪む！" % skill.name, Color.PURPLE)

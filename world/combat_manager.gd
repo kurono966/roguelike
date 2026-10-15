@@ -20,6 +20,17 @@ const MAP_WIDTH = MapDefinitions.MAP_WIDTH
 const MAP_HEIGHT = MapDefinitions.MAP_HEIGHT
 const TILE_SIZE = MapDefinitions.TILE_SIZE
 
+# 根付き状態（rooted）判定。根付いているキャラクターは強制移動されない。
+func _is_rooted(entity) -> bool:
+	if not is_instance_valid(entity):
+		return false
+	if entity.has_method("has_status_effect"):
+		return entity.has_status_effect("rooted")
+	if "status_effects" in entity:
+		return entity.status_effects.has("rooted")
+	return false
+
+
 func handle_attack(attacker, defender):
 	var attacker_name = attacker.name
 	if "enemy_name" in attacker:
@@ -163,7 +174,7 @@ func handle_attack(attacker, defender):
 		
 		print("Knockback Debug: Attacker ", att_grid, " Defender ", def_grid, " Dir ", knock_dir)
 		
-		if knock_dir != Vector2i.ZERO:
+		if knock_dir != Vector2i.ZERO and not _is_rooted(defender):
 			var current_check = def_grid
 			var land_pos = current_check
 			

@@ -48,6 +48,8 @@ const SHOP_OFFERS = [
 const CellType = MapDefinitions.CellType
 var _map_data = []
 var _current_branch = 0 # 0: Normal, 1: Dangerous/Alternative
+var _previous_branch = 0 # Track the branch we came from for upstairs
+var _descended_stair_type = 0 # Track the stair type we descended from
 var current_floor = 0 # Start on floor 0 (Overworld)
 var _is_on_world_map: bool = false
 var _world_map_data: Array = []
@@ -70,6 +72,7 @@ var turn_manager: TurnManager
 var visibility_manager: VisibilityManager
 var tileset_manager: TilesetManager
 var shadow_manager: ShadowManager
+var shadow_clone_manager: ShadowCloneManager
 var input_handler: InputHandler
 var target_manager: TargetManager
 var hazard_manager: HazardManager
@@ -176,6 +179,11 @@ func _ready():
 	shadow_manager = ShadowManager.new()
 	shadow_manager.name = "ShadowManager"
 	add_child(shadow_manager)
+	
+	shadow_clone_manager = ShadowCloneManager.new()
+	shadow_clone_manager.name = "ShadowCloneManager"
+	shadow_clone_manager.setup(self)
+	add_child(shadow_clone_manager)
 	
 	minimap_controller = MinimapController.new()
 	add_child(minimap_controller)
@@ -785,6 +793,17 @@ func _is_hostile(a, b) -> bool:
 	if a.is_in_group("npcs") and b.is_in_group("enemies"): return true
 	return false
 
+# 根付き状態（rooted）判定
+func _is_rooted(character) -> bool:
+	if not is_instance_valid(character):
+		return false
+	if character.has_method("has_status_effect"):
+		return character.has_status_effect("rooted")
+	if "status_effects" in character:
+		return character.status_effects.has("rooted")
+	return false
+
+
 func _try_move_character(character, direction: Vector2):
 	# Cancel trade if player moves
 	if character == player and _is_trading:
@@ -1176,6 +1195,9 @@ func _try_move_character(character, direction: Vector2):
 					_draw_map()
 					return true
 			elif character == player and (child.is_in_group("npcs") or child.is_in_group("allies")):
+				# 根付き状態では入れ替え（移動）できない
+				if _is_rooted(character):
+					return false
 				# Swap positions with friendly actors.
 				var npc = child
 				var npc_name = "NPC"
@@ -1203,6 +1225,12 @@ func _try_move_character(character, direction: Vector2):
 				return true
 			else:
 				return false
+
+	# 根付き状態: 空きタイルへの移動はできないが、ターンは消費する
+	if _is_rooted(character):
+		if character == player and has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("足が大地に根付いて動けない！", Color.YELLOW)
+		return true # 行動済み扱い（ターン消費）するが移動はしない
 
 	if character.has_method("move_to_grid"):
 		var is_fast = (_is_auto_moving or _is_path_following or _is_auto_exploring) if character == player else false
@@ -1283,6 +1311,10 @@ func _try_move_character(character, direction: Vector2):
 				else:
 					pass # Cooldown active
 	
+	# 影の行動記録（移動）
+	if shadow_clone_manager:
+		shadow_clone_manager.record(character, {"type": "move", "dir": Vector2i(direction)})
+
 	return true
 
 func _process(delta):
@@ -2149,6 +2181,9 @@ func _continue_rest():
 	_is_processing_action = false
 
 func _handle_attack(attacker, defender):
+	# 影の行動記録（近接攻撃）
+	if shadow_clone_manager:
+		shadow_clone_manager.record(attacker, {"type": "attack", "target_ref": defender})
 	if combat_manager:
 		await combat_manager.handle_attack(attacker, defender)
 	else:
@@ -3392,8 +3427,18 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 	# Save current floor
 	_save_current_floor_to_cache()
 
+	# 階層が変わったら根付き状態と影の分身を解除する
+	if shadow_clone_manager:
+		shadow_clone_manager.clear_all()
+	if is_instance_valid(player) and player.has_method("remove_effect"):
+		player.remove_effect("rooted")
+
 	if target_floor == 0:
 		target_branch = 0
+	
+	# Save previous branch before changing
+	if not is_upward:
+		_previous_branch = _current_branch
 	
 	current_floor = target_floor
 	_current_branch = target_branch
@@ -3516,7 +3561,7 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 				spawn_pos = _get_center_spawn_pos(spawn_pos)
 				
 			if current_floor >= 1:
-				var target_stair = CellType.STAIRS if is_upward else CellType.STAIRS_UP
+				var target_stair = _descended_stair_type if is_upward and _descended_stair_type != 0 else (CellType.STAIRS if is_upward else CellType.STAIRS_UP)
 				var found_stair = false
 				for x in range(MAP_WIDTH):
 					for y in range(MAP_HEIGHT):
@@ -3525,6 +3570,9 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 							found_stair = true
 							break
 					if found_stair: break
+				# Reset descended stair type after using it
+				if is_upward:
+					_descended_stair_type = 0
 					
 			player.position = Vector2(spawn_pos) * TILE_SIZE
 			_last_player_grid_pos = spawn_pos
@@ -4103,6 +4151,26 @@ func _execute_throw(target_pos: Vector2):
 		# Strength Potion (Throwing it wastes it or gives str?)
 		# Maybe throwing a str potion at enemy increases their str? Let's treat as waste/damage for now
 		
+		# Root Potion (根付きの薬) - 投げ当てると相手を根付かせる
+		elif _targeting_item.id == "potion_root":
+			if hit_entity.has_method("add_effect"):
+				hit_entity.add_effect("rooted", 5)
+			elif hit_entity.has_method("apply_effect"):
+				hit_entity.apply_effect("rooted", {"duration": 5})
+			if has_node("/root/LogUI"):
+				var rn = hit_entity.name
+				if "enemy_name" in hit_entity: rn = hit_entity.enemy_name
+				get_node("/root/LogUI").add_log("%s は %s に当たって砕けた！ %s は根付いて動けなくなった！" % [_targeting_item.name, rn, rn], Color(0.4, 0.8, 0.4))
+
+		# Double Potion (二重の薬) - 投げ当てた相手の影が動き出す
+		elif _targeting_item.id == "potion_double":
+			if shadow_clone_manager:
+				shadow_clone_manager.spawn_clone(hit_entity, 20)
+			if has_node("/root/LogUI"):
+				var dn = hit_entity.name
+				if "enemy_name" in hit_entity: dn = hit_entity.enemy_name
+				get_node("/root/LogUI").add_log("%s は %s に当たって砕けた！ %s の影が動き出した！" % [_targeting_item.name, dn, dn], Color(0.6, 0.6, 1.0))
+
 		else:
 			# Normal Thrown Damage
 			var damage = 1
@@ -5095,6 +5163,13 @@ func _remove_hazard_visual(grid_pos: Vector2i):
 	hazard_manager.remove_hazard_visual(grid_pos)
 
 func _execute_charge_skill(target_pos: Vector2):
+	# 根付き状態では突進（移動系スキル）を使えない
+	if _is_rooted(player):
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("根付いて突進できない！", Color.YELLOW)
+		if target_manager:
+			target_manager.cancel_targeting()
+		return
 	var _targeting_skill = target_manager.targeting_skill
 	# Charge Logic: Move player along path until hit
 	var player_grid = tile_map.local_to_map(player.position)
@@ -6286,6 +6361,9 @@ func _apply_chain_lightning(source, current_target, damage: int, chain_left: int
 		await _apply_chain_lightning(current_target, n, damage, chain_left - 1, hit_list)
 
 func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: String, is_reflected_depth: int = 0):
+	# 影の行動記録（遠距離攻撃）
+	if shadow_clone_manager:
+		shadow_clone_manager.record(attacker, {"type": "ranged", "target_grid": target_grid, "damage": damage, "ptype": type})
 	# 弾道の視覚化
 	var start_pos = attacker.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
 	var end_pos = Vector2(target_grid) * TILE_SIZE + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
@@ -6826,6 +6904,10 @@ func _execute_point_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 							if has_node("/root/LogUI"):
 								var crit_text = " (会心!)" if is_crit else ""
 								get_node("/root/LogUI").add_log("%s に爆発が命中！(%dダメ)%s" % [e_name, dmg, crit_text], Color.ORANGE)
+
+	# 影の行動記録（範囲スキル）
+	if shadow_clone_manager:
+		shadow_clone_manager.record(player, {"type": "skill", "kind": "burst", "target_grid": target_grid, "damage": dmg, "radius": radius, "elements": _get_skill_elements(_targeting_skill), "particle": "fire"})
 
 	if hit_count == 0:
 		if has_node("/root/LogUI"):
@@ -7378,6 +7460,9 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 		if dmg > 0 and is_instance_valid(hit_entity):
 			var elems = _get_skill_elements(_targeting_skill)
 			hit_entity.take_damage(dmg, player, elems)
+			# 影の行動記録（方向スキル）
+			if shadow_clone_manager:
+				shadow_clone_manager.record(player, {"type": "skill", "kind": "shot", "skill_id": current_skill_id, "target_grid": hit_pos, "damage": dmg, "elements": elems, "particle": projectile_particle_type})
 			if has_node("/root/LogUI"):
 				var e_name = hit_entity.name
 				if "enemy_name" in hit_entity:

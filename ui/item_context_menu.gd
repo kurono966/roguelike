@@ -43,7 +43,7 @@ func show_menu(item: BaseItem, position: Vector2, is_equipped: bool = false, is_
 			item_list.add_item("装備する")
 		
 		# 消費アイテムなら使用オプションも追加
-		if item.effects.has("heal") or item.effects.has("mp") or item.effects.has("restore_hunger"):
+		if item.effects.has("heal") or item.effects.has("mp") or item.effects.has("restore_hunger") or item.effects.has("rooted") or item.effects.has("spawn_shadow"):
 			action_ids.append("use")
 			item_list.add_item("使う")
 	elif is_equipped:
@@ -56,7 +56,7 @@ func show_menu(item: BaseItem, position: Vector2, is_equipped: bool = false, is_
 		item_list.add_item("装備する")
 	
 	# バッグ内の消費アイテム（床アイテムの場合は上で処理済み）
-	if not is_floor_item and (item.effects.has("heal") or item.effects.has("mp") or item.effects.has("restore_hunger")):
+	if not is_floor_item and (item.effects.has("heal") or item.effects.has("mp") or item.effects.has("restore_hunger") or item.effects.has("rooted") or item.effects.has("spawn_shadow")):
 		action_ids.append("use")
 		item_list.add_item("使う")
 	

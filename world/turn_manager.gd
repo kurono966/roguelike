@@ -42,7 +42,15 @@ func end_player_turn():
 	if main_node._turn_count % main_node.SPAWN_INTERVAL == 0:
 		main_node._try_spawn_periodic_enemy()
 		
+	# 影の行動再現（1ターン遅れ）
+	if main_node.shadow_clone_manager:
+		await main_node.shadow_clone_manager.replay_pending()
+
 	await process_enemy_turns()
+
+	# 影のターン処理（存続時間の経過）
+	if main_node.shadow_clone_manager:
+		main_node.shadow_clone_manager.tick()
 
 func start_player_turn():
 	if player.hp <= 0: return

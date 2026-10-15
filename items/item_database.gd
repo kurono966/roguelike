@@ -28,6 +28,8 @@ const ITEM_RESOURCE_FILES = [
 	"mirrored_ge_claw.tres",
 	"pistol.tres",
 	"plate_armor.tres",
+	"potion_double.tres",
+	"potion_root.tres",
 	"potion_str.tres",
 	"potion.tres",
 	"ring.tres",

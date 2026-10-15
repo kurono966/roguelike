@@ -76,8 +76,8 @@ func _get_downstairs_branch() -> int:
 	return 0
 
 func _get_upstairs_branch() -> int:
-	# Upstairs always go to branch 0 (normal dungeon)
-	return 0
+	# Return to the branch we came from (stored in _previous_branch)
+	return main_node._previous_branch
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not main_node or not is_instance_valid(player):
@@ -441,6 +441,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if clicked_tile == player_tile:
 				var cell = main_node._map_data[player_tile.x][player_tile.y]
 				if cell == main_node.CellType.STAIRS:
+					main_node._descended_stair_type = main_node.CellType.STAIRS
 					main_node._change_floor(main_node.current_floor + 1, _get_downstairs_branch(), false)
 					get_viewport().set_input_as_handled()
 					return
@@ -449,22 +450,27 @@ func _unhandled_input(event: InputEvent) -> void:
 					get_viewport().set_input_as_handled()
 					return
 				elif cell == main_node.CellType.STAIRS_BLUE:
+					main_node._descended_stair_type = main_node.CellType.STAIRS_BLUE
 					main_node._change_floor(main_node.current_floor + 1, 2, false)
 					get_viewport().set_input_as_handled()
 					return
 				elif cell == main_node.CellType.STAIRS_GREEN:
+					main_node._descended_stair_type = main_node.CellType.STAIRS_GREEN
 					main_node._change_floor(main_node.current_floor + 1, 3, false)
 					get_viewport().set_input_as_handled()
 					return
 				elif cell == main_node.CellType.STAIRS_RED:
+					main_node._descended_stair_type = main_node.CellType.STAIRS_RED
 					main_node._change_floor(main_node.current_floor + 1, 4, false)
 					get_viewport().set_input_as_handled()
 					return
 				elif cell == main_node.CellType.STAIRS_PURPLE:
+					main_node._descended_stair_type = main_node.CellType.STAIRS_PURPLE
 					main_node._change_floor(main_node.current_floor + 1, 5, false)
 					get_viewport().set_input_as_handled()
 					return
 				elif cell == main_node.CellType.STAIRS_GOLD:
+					main_node._descended_stair_type = main_node.CellType.STAIRS_GOLD
 					if main_node._current_branch == 10 and main_node.current_floor == 3:
 						main_node._change_floor(0, 0, true)
 					else:
@@ -574,24 +580,30 @@ func _unhandled_input(event: InputEvent) -> void:
 			var player_grid_pos = Vector2i(player.position / main_node.TILE_SIZE)
 			var cell = main_node._map_data[player_grid_pos.x][player_grid_pos.y]
 			if cell == main_node.CellType.STAIRS:
+				main_node._descended_stair_type = main_node.CellType.STAIRS
 				main_node._change_floor(main_node.current_floor + 1, _get_downstairs_branch(), false)
 				return
 			elif cell == main_node.CellType.STAIRS_UP:
 				main_node._change_floor(main_node.current_floor - 1, _get_upstairs_branch(), true)
 				return
 			elif cell == main_node.CellType.STAIRS_BLUE:
+				main_node._descended_stair_type = main_node.CellType.STAIRS_BLUE
 				main_node._change_floor(main_node.current_floor + 1, 2, false)
 				return
 			elif cell == main_node.CellType.STAIRS_GREEN:
+				main_node._descended_stair_type = main_node.CellType.STAIRS_GREEN
 				main_node._change_floor(main_node.current_floor + 1, 3, false)
 				return
 			elif cell == main_node.CellType.STAIRS_RED:
+				main_node._descended_stair_type = main_node.CellType.STAIRS_RED
 				main_node._change_floor(main_node.current_floor + 1, 4, false)
 				return
 			elif cell == main_node.CellType.STAIRS_PURPLE:
+				main_node._descended_stair_type = main_node.CellType.STAIRS_PURPLE
 				main_node._change_floor(main_node.current_floor + 1, 5, false)
 				return
 			elif cell == main_node.CellType.STAIRS_GOLD:
+				main_node._descended_stair_type = main_node.CellType.STAIRS_GOLD
 				if main_node._current_branch == 10 and main_node.current_floor == 3:
 					main_node._change_floor(0, 0, true)
 				else:

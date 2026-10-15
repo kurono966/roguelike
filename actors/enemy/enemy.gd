@@ -446,7 +446,11 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 			if "耐性" not in ext_text: ext_text += " (耐性)"
 		
 	var final_amount = max(1, int(amount * multiplier))
-	
+
+	# 根付き状態: 受けるダメージを約10%に軽減
+	if status_effects.has("rooted") and final_amount > 0:
+		final_amount = max(1, int(round(float(final_amount) * 0.1)))
+
 	hp -= final_amount
 	turns_since_damage = 0
 	queue_redraw()
@@ -575,8 +579,12 @@ func die():
 		var players = tree.get_nodes_in_group("player")
 		if players.size() > 0:
 			var player = players[0]
+			# 影の分身がとどめを刺した場合は、その源（プレイヤー）を倒した者として扱う
+			var credited = last_attacker
+			if credited is ShadowClone and is_instance_valid(credited.source):
+				credited = credited.source
 			# Grant EXP only if killed by the player, not by an NPC ally
-			if last_attacker == player or (last_attacker == null and not is_in_group("npcs")):
+			if credited == player or (credited == null and not is_in_group("npcs")):
 				killer_is_player = true
 			if killer_is_player and player.has_method("gain_exp"):
 				player.gain_exp(exp_reward)

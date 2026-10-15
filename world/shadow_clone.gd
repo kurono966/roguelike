@@ -55,11 +55,11 @@ func _copy_combat_stats() -> void:
 	if "defense" in source:
 		defense = int(source.defense)
 	# 表示名は本体の名前を引き継ぎつつ「影」であることを明示する
-	var src_name = "影"
+	var src_name = "分身"
 	if "enemy_name" in source:
 		src_name = source.enemy_name
-	else:
-		src_name = "影"
+	elif source.is_in_group("player"):
+		src_name = "あなた"
 	enemy_name = "%s(影)" % src_name
 
 
