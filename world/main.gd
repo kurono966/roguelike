@@ -1450,7 +1450,7 @@ func _update_tooltip():
 			else:
 				# Show terrain info for non-stairs tiles
 				tooltip_text = _get_terrain_tooltip(cell_type)
-			if tooltip_text != "" and not _is_on_world_map:
+			if ElevationMap.ENABLED and tooltip_text != "" and not _is_on_world_map:
 				if cell_type in [CellType.WATER, CellType.ICE]:
 					tooltip_text += "\n底の高さ: %d / 水面: %.2f" % [get_tile_height(grid_pos), get_surface_height(grid_pos)]
 				else:
@@ -8099,6 +8099,9 @@ func set_tile_height(pos: Vector2i, value: int):
 	_draw_height_overlay()
 
 func _draw_height_overlay():
+	if not ElevationMap.ENABLED:
+		if is_instance_valid(_elevation_overlay): _elevation_overlay.hide()
+		return
 	if not is_instance_valid(_elevation_overlay):
 		_elevation_overlay = load("res://world/elevation_overlay.gd").new()
 		_elevation_overlay.main = self
@@ -8126,6 +8129,7 @@ func get_default_liquid_volume(pos: Vector2i) -> int:
 	return 1
 
 func get_surface_height(pos: Vector2i) -> float:
+	if not ElevationMap.ENABLED: return float(ElevationMap.NORMAL)
 	var bed = float(get_tile_height(pos))
 	if not _is_grid_in_bounds(pos): return bed
 	if _map_data[pos.x][pos.y] in [CellType.WATER, CellType.ICE]:
@@ -8146,7 +8150,7 @@ func get_navigation_heights() -> Array:
 func _update_height_camera(delta: float):
 	if not is_instance_valid(camera) or not is_instance_valid(player): return
 	var zoom_value = BASE_CAMERA_ZOOM
-	if not _is_on_world_map:
+	if ElevationMap.ENABLED and not _is_on_world_map:
 		var pos = tile_map.local_to_map(player.position)
 		zoom_value += (clampf(get_surface_height(pos), 0.0, 2.0) - 1.0) * CAMERA_HEIGHT_ZOOM_STEP
 	var target_zoom = Vector2.ONE * zoom_value
@@ -8158,6 +8162,7 @@ func _has_height_line_of_sight(from: Vector2i, to: Vector2i, height_at: Callable
 	return _get_height_occluder(from, to, height_at) == Vector2i(-1, -1)
 
 func _get_height_occluder(from: Vector2i, to: Vector2i, height_at: Callable = Callable()) -> Vector2i:
+	if not ElevationMap.ENABLED: return Vector2i(-1, -1)
 	if _is_on_world_map: return Vector2i(-1, -1)
 	if not height_at.is_valid(): height_at = get_surface_height
 	var points = _get_line_points(from, to)
@@ -8170,6 +8175,7 @@ func _get_height_occluder(from: Vector2i, to: Vector2i, height_at: Callable = Ca
 	return Vector2i(-1, -1)
 
 func _get_preview_surface_height(pos: Vector2i) -> float:
+	if not ElevationMap.ENABLED: return float(ElevationMap.NORMAL)
 	var chunk = Vector2i(floori(float(pos.x) / MAP_WIDTH), floori(float(pos.y) / MAP_HEIGHT))
 	var local = pos - chunk * Vector2i(MAP_WIDTH, MAP_HEIGHT)
 	if chunk == Vector2i.ZERO: return get_surface_height(local)

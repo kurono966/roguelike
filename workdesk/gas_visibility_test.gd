@@ -43,7 +43,7 @@ func run_test():
 		var overlays = active_gases()
 		check(overlays.size() == 3, "Both renderers must draw grass/floor gas and steam, hiding unseen gas")
 		for overlay in overlays:
-			check(overlay.z_index > main._elevation_overlay.z_index and overlay.z_index < 4, "Gas must render above grass and below items")
+			check(overlay.z_index > 1 and overlay.z_index < 4, "Gas must render above grass and below items")
 			check(overlay.position != Vector2(27, 25) * 32, "Unseen gas leaked")
 	main._poison_gas_tiles.clear()
 	main._steam_tiles.clear()

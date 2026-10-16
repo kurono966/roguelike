@@ -145,6 +145,7 @@ func refresh_view():
 			item_container.add_child(item_view)
 		else:
 			add_child(item_view)
+	_update_connected_group_effects()
 	print("GridView: refresh_view completed")
 
 func _create_item_view(item: BaseItem) -> Control:
@@ -408,9 +409,7 @@ func _create_center_gem(cell: Vector2i, direction: Vector2i, color: Color) -> Po
 	return gem
 
 func _create_active_ring(cell: Vector2i, direction: Vector2i, glow_color: Color) -> Polygon2D:
-	const PulsingRingScript = preload("res://ui/pulsing_connector_ring.gd")
-	
-	var ring = PulsingRingScript.new()
+	var ring = Polygon2D.new()
 	ring.z_index = 18
 	
 	var cell_center = Vector2(cell.x * CELL_SIZE + CELL_SIZE / 2.0, cell.y * CELL_SIZE + CELL_SIZE / 2.0)
@@ -445,16 +444,13 @@ func _create_active_ring(cell: Vector2i, direction: Vector2i, glow_color: Color)
 	
 	ring.polygon = PackedVector2Array(triangle_points)
 	
-	# Setup pulsing animation
-	ring.setup({
-		"base": glow_color.lightened(0.3),
-		"bright": glow_color.lightened(0.7)
-	}, randf() * PI * 2)
-	
+	# A steady bright port joins the permanent bridge.
+	ring.color = glow_color.lightened(0.4)
+
 	return ring
 
 func _is_connector_active(item: BaseItem, connector: Dictionary) -> bool:
-	if not grid_data:
+	if not is_equipment_view or not grid_data:
 		return false
 	var cell: Vector2i = connector.get("cell", Vector2i.ZERO)
 	var direction: Vector2i = connector.get("direction", Vector2i.ZERO)
@@ -709,8 +705,6 @@ func on_item_pickup_request(item: BaseItem):
 func _on_grid_changed():
 	queue_redraw()
 	refresh_view()
-	if is_equipment_view:
-		_update_connected_group_effects()
 
 # Cursor Logic
 func set_cursor_active(active: bool):
@@ -793,10 +787,8 @@ func _update_connected_group_effects():
 			else:
 				add_child(overlay)
 	
-	# Start pulse timer if not already running
-	if not pulse_timer.is_stopped():
-		pulse_timer.stop()
-	pulse_timer.start()
+	# The connection and group markers remain fully visible at all times.
+	if pulse_timer: pulse_timer.stop()
 
 func _create_group_overlay(group: Array) -> Control:
 	if group.is_empty():
@@ -805,8 +797,10 @@ func _create_group_overlay(group: Array) -> Control:
 	# Create a container for all item outlines and fills
 	var container = Control.new()
 	container.mouse_filter = MOUSE_FILTER_IGNORE
-	container.z_index = 50  # Above items but below cursor
+	container.z_index = 20  # Children stay below the keyboard cursor (100).
 	
+	_add_connection_bridges(container, group)
+
 	# Create fill for all cells in the group
 	_add_group_fill(container, group)
 	
@@ -815,6 +809,36 @@ func _create_group_overlay(group: Array) -> Control:
 		_add_item_outline(container, item, group)
 	
 	return container
+
+func _add_connection_bridges(container: Control, group: Array):
+	var colors = {
+		"red": Color(1.0, 0.3, 0.23), "blue": Color(0.3, 0.65, 1.0),
+		"yellow": Color(1.0, 0.9, 0.25), "purple": Color(0.85, 0.45, 1.0)
+	}
+	for item in group:
+		for connector in item.connectors:
+			var direction: Vector2i = connector.get("direction", Vector2i.ZERO)
+			# Each connection is drawn once, across the shared cell boundary.
+			if direction not in [Vector2i.RIGHT, Vector2i.DOWN]: continue
+			if not _is_connector_active(item, connector): continue
+			var cell: Vector2i = item.grid_position + connector.get("cell", Vector2i.ZERO)
+			var seam = (Vector2(cell) + Vector2.ONE * 0.5 + Vector2(direction) * 0.5) * CELL_SIZE
+			var tint: Color = colors.get(str(connector.get("color", "")), Color.WHITE)
+			for layer in range(3):
+				var link = Line2D.new()
+				link.name = "ConnectionBridge" + str(layer)
+				link.z_index = 60 + layer
+				link.points = PackedVector2Array([seam - Vector2(direction) * 10, seam + Vector2(direction) * 10])
+				link.width = [9.0, 5.0, 1.5][layer]
+				link.default_color = [Color(0.03, 0.04, 0.06, 0.95), tint, Color.WHITE][layer]
+				container.add_child(link)
+			var joint = Polygon2D.new()
+			joint.name = "ConnectedJoint"
+			joint.z_index = 63
+			joint.position = seam
+			joint.polygon = PackedVector2Array([Vector2(0, -4), Vector2(4, 0), Vector2(0, 4), Vector2(-4, 0)])
+			joint.color = Color.WHITE
+			container.add_child(joint)
 
 func _add_group_fill(container: Control, group: Array):
 	# Create a fill for all cells in the connected group
@@ -825,7 +849,7 @@ func _add_group_fill(container: Control, group: Array):
 			var fill = ColorRect.new()
 			fill.mouse_filter = MOUSE_FILTER_IGNORE
 			fill.z_index = 49  # Below outlines but above items
-			fill.color = Color(1.0, 0.8, 0.2, 0.2)  # Golden color with low alpha
+			fill.color = Color(1.0, 0.8, 0.2, 0.07)  # Keep item names legible.
 			fill.position = Vector2(world_pos.x * CELL_SIZE, world_pos.y * CELL_SIZE)
 			fill.size = Vector2(CELL_SIZE, CELL_SIZE)
 			fill.set_meta("is_fill", true)
@@ -869,7 +893,7 @@ func _add_item_outline(container: Control, item: BaseItem, group: Array):
 		var line = ColorRect.new()
 		line.mouse_filter = MOUSE_FILTER_IGNORE
 		line.z_index = 50
-		line.color = Color(1.0, 0.8, 0.2, 0.8)  # Golden color
+		line.color = Color(1.0, 0.85, 0.3, 0.95)  # Steady group boundary.
 		
 		# Position and size based on edge direction
 		match edge:
@@ -892,16 +916,5 @@ func _add_item_outline(container: Control, item: BaseItem, group: Array):
 		container.add_child(line)
 
 func _on_pulse_timer():
-	pulse_phase += 0.5  # Slower increment for slower blinking
-	var alpha = 0.3 + 0.5 * (sin(pulse_phase) + 1.0) / 2.0  # Oscillate between 0.3 and 0.8
-	var fill_alpha = 0.1 + 0.15 * (sin(pulse_phase) + 1.0) / 2.0  # Oscillate between 0.1 and 0.25 for fill
-	
-	for container in connected_group_overlays:
-		if not is_instance_valid(container):
-			continue
-		# Iterate through all children in the container
-		for child in container.get_children():
-			if child.has_meta("is_outline"):
-				child.color = Color(1.0, 0.8, 0.2, alpha)
-			elif child.has_meta("is_fill"):
-				child.color = Color(1.0, 0.8, 0.2, fill_alpha)
+	# Retained for existing scene connections; markers no longer blink.
+	pass

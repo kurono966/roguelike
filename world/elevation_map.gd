@@ -1,6 +1,9 @@
 class_name ElevationMap
 extends RefCounted
 
+# Temporary feature switch. Preserve the implementation and saved height data.
+const ENABLED = false
+
 const LOW = 0
 const NORMAL = 1
 const HIGH = 2
@@ -16,6 +19,7 @@ static func normalize(data: Array, width: int, depth: int) -> Array:
 	return result
 
 static func get_height(data: Array, pos: Vector2i) -> int:
+	if not ENABLED: return NORMAL
 	if pos.x < 0 or pos.x >= data.size() or pos.y < 0 or pos.y >= data[pos.x].size():
 		return NORMAL
 	return int(data[pos.x][pos.y])
@@ -33,6 +37,7 @@ static func generate(terrain: Array) -> Array:
 	var width = terrain.size()
 	var depth = terrain[0].size()
 	var result = normalize([], width, depth)
+	if not ENABLED: return result
 	var noise = FastNoiseLite.new()
 	noise.seed = randi()
 	noise.frequency = 0.045

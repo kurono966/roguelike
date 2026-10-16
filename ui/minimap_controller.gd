@@ -149,8 +149,8 @@ func update_minimap():
 		_minimap_texture_rect.texture = _minimap_texture
 
 	var is_world = main_scene._is_on_world_map
-	_height_legend.visible = not is_world
-	_current_height_label.visible = not is_world
+	_height_legend.visible = ElevationMap.ENABLED and not is_world
+	_current_height_label.visible = ElevationMap.ENABLED and not is_world
 
 	for x in range(map_w):
 		for y in range(map_h):

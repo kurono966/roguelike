@@ -8,6 +8,7 @@ const FLOODABLE = [C.FLOOR, C.GRASS, C.ASH, C.VOLCANIC_ASH, C.CRYSTAL_FLOOR, C.D
 var main
 
 func process_turn():
+	if not ElevationMap.ENABLED: return
 	if main._is_on_world_map: return
 	_sync_liquids()
 	# Snapshot sources: transferred water never moves twice in one turn.

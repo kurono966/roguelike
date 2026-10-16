@@ -64,7 +64,8 @@ func setup_pathfinding():
 	if main_node:
 		map_data = main_node._map_data
 		main_node._height_data = ElevationMap.normalize(main_node._height_data, MAP_WIDTH, MAP_HEIGHT)
-		ElevationMap.flatten_roads(main_node._height_data, map_data)
+		if ElevationMap.ENABLED:
+			ElevationMap.flatten_roads(main_node._height_data, map_data)
 	if astar_grid == null:
 		astar_grid = ElevationPathGrid.new()
 		astar_grid_swim = ElevationPathGrid.new()
