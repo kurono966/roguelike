@@ -510,6 +510,7 @@ const SKILL_LEARNING_REQUIREMENTS = {
 	"helm_splitter": {"level": 3, "str": 9, "dex": 0, "int": 0},
 	"super_seoi_nage": {"level": 5, "str": 10, "dex": 2, "int": 0},
 	"freeze": {"level": 4, "str": 0, "dex": 0, "int": 9},
+	"water_escape": {"level": 4, "str": 0, "dex": 0, "int": 9},
 	"gale_thrust": {"level": 4, "str": 0, "dex": 9, "int": 0},
 	"grass_snipe": {"level": 5, "str": 0, "dex": 10, "int": 0},
 	"wall": {"level": 7, "str": 0, "dex": 12, "int": 10},
@@ -926,9 +927,9 @@ const CONNECTOR_GROWTH_OPTIONS = [
 	{"key": "purple", "label": "紫 +1", "detail": "紫の接続1辺につき会心補正 +1%。"}
 ]
 const SKILL_COLOR_REQUIREMENTS = {
-	"fireball": {"purple": 1}, "iceball": {"blue": 1, "purple": 1},
+	"fireball": {"red": 1}, "iceball": {"blue": 1, "purple": 1},
 	"helm_splitter": {"red": 1}, "super_seoi_nage": {"red": 2, "blue": 1},
-	"freeze": {"blue": 2}, "gale_thrust": {"yellow": 2}, "grass_snipe": {"yellow": 2},
+	"freeze": {"blue": 2}, "water_escape": {"blue": 1}, "gale_thrust": {"yellow": 2}, "grass_snipe": {"yellow": 2},
 	"wall": {"blue": 3, "purple": 1}, "lightning": {"yellow": 2, "purple": 2},
 	"blood_beam": {"red": 2, "purple": 2}, "teleport": {"purple": 3, "yellow": 1},
 	"cyclone_slash": {"red": 2, "yellow": 2}, "explosion": {"purple": 4, "red": 2},
