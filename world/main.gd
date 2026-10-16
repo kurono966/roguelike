@@ -3370,6 +3370,11 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 		target_branch = 10
 		if target_floor > 3:
 			return
+	# Arrival starts a fresh player decision; discard actions from the old map.
+	_cancel_active_auto_movement()
+	_has_pending_path_target = false
+	_current_game_state = TurnPhase.PLAYER_TURN
+	_is_processing_action = false
 	# Save current floor
 	_save_current_floor_to_cache()
 
@@ -3574,8 +3579,6 @@ func _spawn_torches():
 						torch.visible = false # Start hidden, reveal in FOV update
 						add_child(torch)
 	_draw_map()
-
-	await _end_player_turn()
 
 func _spawn_items():
 	print("Spawning items...")
