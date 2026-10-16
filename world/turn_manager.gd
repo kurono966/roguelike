@@ -16,7 +16,9 @@ func setup(main: Node2D):
 	tile_map = main.tile_map
 
 func end_player_turn():
+	var floor_epoch = main_node._floor_epoch
 	await player.wait_for_growth_choices()
+	if floor_epoch != main_node._floor_epoch: return
 	# Check for bonus action (e.g. Speed Bonus)
 	if player and ("bonus_action_available" in player and player.bonus_action_available):
 		player.bonus_action_available = false
@@ -46,15 +48,19 @@ func end_player_turn():
 	# 影の行動再現（1ターン遅れ）
 	if main_node.shadow_clone_manager:
 		await main_node.shadow_clone_manager.replay_pending()
+		if floor_epoch != main_node._floor_epoch: return
 
 	await process_enemy_turns()
+	if floor_epoch != main_node._floor_epoch: return
 
 	# 影のターン処理（存続時間の経過）
 	if main_node.shadow_clone_manager:
 		main_node.shadow_clone_manager.tick()
 
 func start_player_turn():
+	var floor_epoch = main_node._floor_epoch
 	await player.wait_for_growth_choices()
+	if floor_epoch != main_node._floor_epoch: return
 	if player.hp <= 0: return
 
 	main_node._check_drowning()
@@ -67,8 +73,10 @@ func start_player_turn():
 			
 			# 麻痺時のウェイト (0.15秒)
 			await main_node.get_tree().create_timer(0.15).timeout
+			if floor_epoch != main_node._floor_epoch: return
 			
 			await end_player_turn()
+			if floor_epoch != main_node._floor_epoch: return
 			return
 		elif player.has_status_effect("sleep"):
 			if main_node.has_node("/root/LogUI"):
@@ -77,14 +85,18 @@ func start_player_turn():
 			
 			# ウェイト (0.15秒)
 			await main_node.get_tree().create_timer(0.15).timeout
+			if floor_epoch != main_node._floor_epoch: return
 			
 			await end_player_turn()
+			if floor_epoch != main_node._floor_epoch: return
 			return
 
 	main_node._current_game_state = main_node.TurnPhase.PLAYER_TURN
 
 func process_enemy_turns():
+	var floor_epoch = main_node._floor_epoch
 	await player.wait_for_growth_choices()
+	if floor_epoch != main_node._floor_epoch: return
 	tile_map.clear_layer(main_node.LAYER_DEBUG)
 	
 	if main_node.has_method("_check_and_pull_neighbor_enemies"):
@@ -93,10 +105,15 @@ func process_enemy_turns():
 	var player_grid_pos = tile_map.local_to_map(player.position)
 	
 	main_node._process_hazards()
+	if floor_epoch != main_node._floor_epoch: return
 	main_node._process_burning_grass()
+	if floor_epoch != main_node._floor_epoch: return
 	main_node._process_steam()
+	if floor_epoch != main_node._floor_epoch: return
 	main_node._process_poison_gas()
+	if floor_epoch != main_node._floor_epoch: return
 	main_node._process_frozen_tiles()
+	if floor_epoch != main_node._floor_epoch: return
 	if main_node.liquid_manager:
 		main_node.liquid_manager.process_turn()
 	
@@ -106,6 +123,7 @@ func process_enemy_turns():
 	
 	for child in all_actors:
 		await player.wait_for_growth_choices()
+		if floor_epoch != main_node._floor_epoch: return
 		# GLOBAL DEATH CHECK
 		if player.hp <= 0:
 			print("Player is dead. Stopping enemy turns.")
@@ -125,6 +143,7 @@ func process_enemy_turns():
 		if child.has_method("process_turn_effects"):
 			child.process_turn_effects()
 		await player.wait_for_growth_choices()
+		if floor_epoch != main_node._floor_epoch: return
 			
 		# Check if enemy died from DOT
 		if not is_instance_valid(child) or child.is_queued_for_deletion(): continue
@@ -135,7 +154,9 @@ func process_enemy_turns():
 			
 		var enemy = child
 		if enemy.is_gravekeeper and main_node.corpse_manager:
-			if await main_node.corpse_manager.act(enemy): continue
+			var corpse_action = await main_node.corpse_manager.act(enemy)
+			if floor_epoch != main_node._floor_epoch: return
+			if corpse_action: continue
 		if _try_eat_grass(enemy):
 			continue
 		
@@ -163,10 +184,12 @@ func process_enemy_turns():
 				var can_fireball = dist_to_target <= enemy.attack_range and main_node._has_line_of_sight(enemy_grid_pos, target_grid_pos)
 				if enemy.skill_cooldown <= 0 and main_node._flame_scatter_has_grass(enemy):
 					await main_node._execute_flame_scatter(enemy)
+					if floor_epoch != main_node._floor_epoch: return
 					enemy.skill_cooldown = randi_range(7, enemy.max_skill_cooldown)
 					acted = true
 				elif can_fireball:
 					await main_node._execute_enemy_fireball(enemy, target_grid_pos)
+					if floor_epoch != main_node._floor_epoch: return
 					acted = true
 			
 			# Check Attack Range
@@ -183,9 +206,11 @@ func process_enemy_turns():
 				if can_attack_now:
 					if has_skill and skill_ready:
 						await main_node._execute_enemy_skill_v2(enemy, target_grid_pos) # target_grid_pos works as arg
+						if floor_epoch != main_node._floor_epoch: return
 						acted = true
 					elif dist_to_target <= 1.5:
 						await main_node._handle_attack(enemy, target_node)
+						if floor_epoch != main_node._floor_epoch: return
 						acted = true
 		
 		# Update Memory
@@ -224,6 +249,7 @@ func process_enemy_turns():
 						if grass_dir != Vector2.ZERO:
 							flee_dir = grass_dir
 					moved = await main_node._try_move_character(enemy, flee_dir)
+					if floor_epoch != main_node._floor_epoch: return
 
 			# Move if not acted (and didn't flee)
 			if not acted and not moved and move_target != null:
@@ -243,6 +269,7 @@ func process_enemy_turns():
 						if grass_dir != Vector2.ZERO:
 							move_direction = grass_dir
 					moved = await main_node._try_move_character(enemy, move_direction)
+					if floor_epoch != main_node._floor_epoch: return
 					
 					# Avoidance Logic
 					if not moved:
@@ -261,7 +288,9 @@ func process_enemy_turns():
 						alternatives.shuffle()
 						
 						for alt_dir in alternatives:
-							if await main_node._try_move_character(enemy, alt_dir):
+							var alternative_moved = await main_node._try_move_character(enemy, alt_dir)
+							if floor_epoch != main_node._floor_epoch: return
+							if alternative_moved:
 								moved = true
 								break
 			
@@ -271,7 +300,9 @@ func process_enemy_turns():
 								  Vector2(1, 1), Vector2(1, -1), Vector2(-1, 1), Vector2(-1, -1)]
 				directions.shuffle()
 				for random_dir in directions:
-					if await main_node._try_move_character(enemy, random_dir):
+					var wander_moved = await main_node._try_move_character(enemy, random_dir)
+					if floor_epoch != main_node._floor_epoch: return
+					if wander_moved:
 						break
 			
 			if main_node.visibility_manager:
@@ -283,10 +314,12 @@ func process_enemy_turns():
 		if not is_instance_valid(ally) or ally.is_queued_for_deletion(): continue
 		
 		await player.wait_for_growth_choices()
+		if floor_epoch != main_node._floor_epoch: return
 		# Process status effects
 		if ally.has_method("process_turn_effects"):
 			ally.process_turn_effects()
 		await player.wait_for_growth_choices()
+		if floor_epoch != main_node._floor_epoch: return
 		if not is_instance_valid(ally) or ally.is_queued_for_deletion(): continue
 		
 		# Skip if paralyzed
@@ -315,6 +348,7 @@ func process_enemy_turns():
 		if nearby_enemies.size() > 0:
 			var target = nearby_enemies[0]
 			await main_node._handle_attack(ally, target.enemy)
+			if floor_epoch != main_node._floor_epoch: return
 		# Follow into the player's previous tile so allies stay adjacent behind the player.
 		elif dist_to_player > 1.5:
 			var follow_target = main_node._last_player_grid_pos
@@ -332,6 +366,7 @@ func process_enemy_turns():
 			if path.size() > 1:
 				var move_direction = path[1] - Vector2(ally_grid_pos)
 				moved = await main_node._try_move_character(ally, move_direction)
+				if floor_epoch != main_node._floor_epoch: return
 			
 			# Fallback: try direct direction if pathfinding fails
 			if not moved:
@@ -372,9 +407,11 @@ func process_enemy_turns():
 				
 				if best_dir != Vector2.ZERO:
 					await main_node._try_move_character(ally, best_dir)
+					if floor_epoch != main_node._floor_epoch: return
 
 	print("Enemy turns processing complete. Starting player turn.")
 	await start_player_turn()
+	if floor_epoch != main_node._floor_epoch: return
 
 func _get_closest_hostile(actor: Node2D) -> Node2D:
 	var hostiles = []

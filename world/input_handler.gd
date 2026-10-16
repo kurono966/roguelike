@@ -87,6 +87,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not main_node or not is_instance_valid(player):
 		return
 
+	var action_floor_epoch = main_node._floor_epoch
 	# Block input if major UI is open
 	var game_ui = get_node_or_null("/root/GameUI")
 	if game_ui:
@@ -348,13 +349,13 @@ func _unhandled_input(event: InputEvent) -> void:
 		main_node._is_processing_action = true
 		get_viewport().set_input_as_handled()
 		if await main_node._try_attack_adjacent_enemy():
-			await main_node._end_player_turn()
+			await main_node._end_player_turn(action_floor_epoch)
 		else:
 			var log_ui = main_node.get_tree().root.get_node_or_null("LogUI")
 			if log_ui and log_ui.has_method("add_log"):
 				log_ui.add_log("待機中...", Color(0.7, 0.7, 0.7))
 			print("Player waits.")
-			await main_node._end_player_turn()
+			await main_node._end_player_turn(action_floor_epoch)
 		main_node._is_processing_action = false
 		return
 
@@ -374,7 +375,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				main_node._talk_choice_npc = null
 				if main_node.has_node("/root/LogUI"):
 					main_node.get_node("/root/LogUI").add_log("会話をキャンセルしました", Color(0.6, 0.6, 0.6))
-				await main_node._end_player_turn()
+				await main_node._end_player_turn(action_floor_epoch)
 				get_viewport().set_input_as_handled()
 				return
 		return
@@ -395,7 +396,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				main_node._talk_choice_npc = null
 				if main_node.has_node("/root/LogUI"):
 					main_node.get_node("/root/LogUI").add_log("会話をキャンセルしました", Color(0.6, 0.6, 0.6))
-				await main_node._end_player_turn()
+				await main_node._end_player_turn(action_floor_epoch)
 				get_viewport().set_input_as_handled()
 				return
 		return
@@ -416,7 +417,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				main_node._talk_choice_npc = null
 				if main_node.has_node("/root/LogUI"):
 					main_node.get_node("/root/LogUI").add_log("会話をキャンセルしました", Color(0.6, 0.6, 0.6))
-				await main_node._end_player_turn()
+				await main_node._end_player_turn(action_floor_epoch)
 				get_viewport().set_input_as_handled()
 				return
 		return
@@ -437,7 +438,7 @@ func _unhandled_input(event: InputEvent) -> void:
 				main_node._talk_choice_npc = null
 				if main_node.has_node("/root/LogUI"):
 					main_node.get_node("/root/LogUI").add_log("会話をキャンセルしました", Color(0.6, 0.6, 0.6))
-				await main_node._end_player_turn()
+				await main_node._end_player_turn(action_floor_epoch)
 				get_viewport().set_input_as_handled()
 				return
 		return
@@ -676,7 +677,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if event.ctrl_pressed:
 				var attacked = await main_node._execute_directional_attack(direction)
 				if attacked:
-					await main_node._end_player_turn()
+					await main_node._end_player_turn(action_floor_epoch)
 				get_viewport().set_input_as_handled()
 				return
 			elif event.shift_pressed:
@@ -686,4 +687,4 @@ func _unhandled_input(event: InputEvent) -> void:
 				action_taken = await main_node._try_move_character(player, direction)
 		
 		if action_taken:
-			await main_node._end_player_turn()
+			await main_node._end_player_turn(action_floor_epoch)

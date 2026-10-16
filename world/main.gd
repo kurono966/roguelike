@@ -10,6 +10,7 @@ const LAYER_DEBUG = 2
 enum TurnPhase { PLAYER_TURN, ENEMY_TURN, TARGETING }
 const BASE_CAMERA_ZOOM = 0.66
 const CAMERA_HEIGHT_ZOOM_STEP = 0.06
+var _floor_epoch: int = 0 # Invalidates action/turn continuations from an earlier floor.
 var _current_game_state = TurnPhase.PLAYER_TURN
 var _current_target_enemy = null  # 現在ターゲット中の敵
 
@@ -687,7 +688,8 @@ func _resolve_forced_landing(entity, landing_grid: Vector2i) -> bool:
 	return true
 
 # プレイヤーのターン終了処理
-func _end_player_turn():
+func _end_player_turn(action_floor_epoch: int = -1):
+	if action_floor_epoch >= 0 and action_floor_epoch != _floor_epoch: return
 	if _is_on_world_map:
 		if _world_map_move_turn_cost_pending:
 			_world_map_move_turn_cost_pending = false
@@ -1479,6 +1481,7 @@ func _update_tooltip():
 		GameUI.hide_tooltip()
 
 func _continue_auto_move():
+	var action_floor_epoch = _floor_epoch
 	if _auto_move_cooldown > 0.0: return
 	if _is_processing_action: return
 
@@ -1547,7 +1550,7 @@ func _continue_auto_move():
 			print("Auto-move stopped: Found item")
 			break
 
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 	_auto_move_cooldown = AUTO_MOVE_DELAY
 	_is_processing_action = false
 
@@ -1582,6 +1585,7 @@ func _calculate_lockpick_chance(dex: int) -> int:
 	return clamp(chance, 5, 95)
 
 func _continue_path_following():
+	var action_floor_epoch = _floor_epoch
 	if _auto_move_cooldown > 0.0: return
 	if _is_processing_action: return
 	
@@ -1650,7 +1654,7 @@ func _continue_path_following():
 	if path_gen != _path_generation:
 		# 移動先が変更された/キャンセルされた:移動が済んでいればターンのみ消費して新しい経路を優先する
 		if moved:
-			await _end_player_turn()
+			await _end_player_turn(action_floor_epoch)
 		_is_processing_action = false
 		return
 
@@ -1663,7 +1667,7 @@ func _continue_path_following():
 			_stop_path_following_state()
 			_log_path_stopped("敵が経路上にいるため移動を停止しました。")
 
-		await _end_player_turn()
+		await _end_player_turn(action_floor_epoch)
 
 		if path_gen != _path_generation:
 			_is_processing_action = false
@@ -1685,7 +1689,7 @@ func _continue_path_following():
 			# Found an alternative route to avoid dynamic obstacle
 			_current_path = rebuilt
 			_path_index = 1 # Start towards new first step
-			await _end_player_turn() # Costs a turn to recalculate / wait
+			await _end_player_turn(action_floor_epoch) # Costs a turn to recalculate / wait
 			if path_gen != _path_generation:
 				_is_processing_action = false
 				return
@@ -1752,6 +1756,7 @@ func _stop_auto_explore(reason: String = ""):
 			log_ui.add_log(reason, Color(1.0, 0.8, 0.4))
 
 func _continue_auto_explore():
+	var action_floor_epoch = _floor_epoch
 	if not _is_auto_exploring:
 		return
 	if _auto_move_cooldown > 0.0:
@@ -1811,7 +1816,7 @@ func _continue_auto_explore():
 	# Auto-pickup items at feet
 	_auto_pickup_items_at_feet()
 
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 	if player.hp < hp_before:
 		_stop_auto_explore("ダメージを受けたため自動探索を停止しました。")
@@ -2145,6 +2150,7 @@ func _start_rest():
 	_continue_rest()
 
 func _continue_rest():
+	var action_floor_epoch = _floor_epoch
 	if not _is_resting:
 		return
 	if _current_game_state != TurnPhase.PLAYER_TURN:
@@ -2201,7 +2207,7 @@ func _continue_rest():
 	var log_ui4 = get_tree().root.get_node_or_null("LogUI")
 	if log_ui4 and log_ui4.has_method("add_log"):
 		log_ui4.add_log("休憩中...", Color(0.6, 0.8, 1.0))
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 	
 	if player and player.hp < hp_before:
 		_is_resting = false
@@ -2837,6 +2843,7 @@ func _draw_map():
 # ---- 扉を閉じる処理 ----
 # プレイヤーの隣接マス（斜め含む）にある開いた扉を探して閉じる
 func _handle_close_door():
+	var action_floor_epoch = _floor_epoch
 	if not is_instance_valid(player): return
 	var player_grid = tile_map.local_to_map(player.position)
 	var dirs = [Vector2i.UP, Vector2i.DOWN, Vector2i.LEFT, Vector2i.RIGHT, Vector2i(1,1), Vector2i(1,-1), Vector2i(-1,1), Vector2i(-1,-1)]
@@ -2866,13 +2873,14 @@ func _handle_close_door():
 				get_node("/root/LogUI").add_log("扉を閉じた。", Color(0.85, 0.65, 0.30))
 			if player.has_method("play_door_close_sound"):
 				player.play_door_close_sound()
-			await _end_player_turn()
+			await _end_player_turn(action_floor_epoch)
 			return
 	if has_node("/root/LogUI"):
 		get_node("/root/LogUI").add_log("閉じられる扉が隣にない。", Color(0.6, 0.6, 0.6))
 
 # ---- 壁を掘る処理 ----
 func _handle_dig(target_grid: Vector2i):
+	var action_floor_epoch = _floor_epoch
 	if not is_instance_valid(player): return
 	
 	if player.hunger <= 0:
@@ -2906,7 +2914,7 @@ func _handle_dig(target_grid: Vector2i):
 			hit_sound_player.pitch_scale = randf_range(0.8, 0.9)
 			hit_sound_player.play()
 			
-		await _end_player_turn()
+		await _end_player_turn(action_floor_epoch)
 	else:
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("そこには掘れる壁がありません。", Color(0.6, 0.6, 0.6))
@@ -2918,6 +2926,7 @@ func _update_astar_tile(pos: Vector2i, make_solid: bool):
 
 
 func _handle_reload():
+	var action_floor_epoch = _floor_epoch
 	if not player: return
 	
 	var ranged_weapon = player._get_ranged_weapon() if player.has_method("_get_ranged_weapon") else null
@@ -2974,7 +2983,7 @@ func _handle_reload():
 	if player.has_method("play_reload_sound"):
 		player.play_reload_sound()
 	
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _calculate_fov():
 	if visibility_manager:
@@ -3428,12 +3437,13 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 	return true
 
 func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = false, is_pit: bool = false):
-	if corpse_manager: corpse_manager.clear_all()
 	# Keep stairs, falls and other transitions inside the beginner dungeon.
 	if _current_branch == 10 and target_floor > 0:
 		target_branch = 10
 		if target_floor > 3:
 			return
+	_floor_epoch += 1
+	if corpse_manager: corpse_manager.clear_all()
 	# Arrival starts a fresh player decision; discard actions from the old map.
 	_cancel_active_auto_movement()
 	_has_pending_path_target = false
@@ -3923,6 +3933,7 @@ func _draw_targeting_line():
 	_targeting_line.add_point(target_center)
 
 func _execute_ranged_attack(target_pos: Vector2):
+	var action_floor_epoch = _floor_epoch
 	if not target_manager.targeting_item: return
 	var _targeting_item = target_manager.targeting_item
 	
@@ -4071,9 +4082,10 @@ func _execute_ranged_attack(target_pos: Vector2):
 		player.ranged_weapon_cooldown = weapon_cooldown
 	
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_throw(target_pos: Vector2):
+	var action_floor_epoch = _floor_epoch
 	if not target_manager.targeting_item: return
 	var _targeting_item = target_manager.targeting_item
 	
@@ -4244,9 +4256,10 @@ func _execute_throw(target_pos: Vector2):
 		
 	# 5. End Turn
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _handle_pickup():
+	var action_floor_epoch = _floor_epoch
 	if not player: return
 	
 	var picked_any = false
@@ -4273,7 +4286,7 @@ func _handle_pickup():
 			picked_any = true
 	
 	if picked_any:
-		await _end_player_turn()
+		await _end_player_turn(action_floor_epoch)
 	else:
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("インベントリがいっぱいで拾えない", Color.RED)
@@ -4300,6 +4313,7 @@ func _handle_talk():
 			get_node("/root/LogUI").add_log("話しかける相手を選択してください (方向キー/クリックで指定, ENTER/Vキー/左クリックで決定, ESC/右クリックでキャンセル)", Color.YELLOW)
 
 func _execute_talk_at(target_grid: Vector2i):
+	var action_floor_epoch = _floor_epoch
 	# Find npc or ally at target_grid
 	var target_entity = null
 	for entity in get_tree().get_nodes_in_group("entities"):
@@ -4323,7 +4337,7 @@ func _execute_talk_at(target_grid: Vector2i):
 		if target_entity.is_in_group("allies"):
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("%s: 「もう仲間だよ！」" % entity_name, Color(0.8, 1.0, 0.8))
-			await _end_player_turn()
+			await _end_player_turn(action_floor_epoch)
 			return
 		
 		# Check if NPC is weakened (HP <= 40%)
@@ -4378,11 +4392,12 @@ func _execute_talk_at(target_grid: Vector2i):
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s は話しかけられても反応しない..." % entity_name, Color(0.8, 0.8, 0.8))
 	
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 var _talk_choice_npc = null
 
 func _handle_dialog_choice(option: String):
+	var action_floor_epoch = _floor_epoch
 	if not _talk_choice_npc:
 		return
 	
@@ -4397,7 +4412,7 @@ func _handle_dialog_choice(option: String):
 		else:
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("%s: 「取引できるものはないよ」" % entity_name, Color(0.8, 0.8, 0.8))
-			await _end_player_turn()
+			await _end_player_turn(action_floor_epoch)
 	elif option == "仲間にする":
 		_show_recruitment_demand(npc)
 	elif option == "助ける":
@@ -4420,7 +4435,7 @@ func _handle_dialog_choice(option: String):
 		else:
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("ゴールドが足りません！", Color.RED)
-			await _end_player_turn()
+			await _end_player_turn(action_floor_epoch)
 	elif option == "エーテルを渡す":
 		_recruit_with_item(npc, "ether", "エーテル")
 	elif option == "銀のグミを渡す":
@@ -4440,11 +4455,11 @@ func _handle_dialog_choice(option: String):
 		else:
 			if has_node("/root/LogUI"):
 				get_node("/root/LogUI").add_log("ポーションを持っていません！", Color.RED)
-			await _end_player_turn()
+			await _end_player_turn(action_floor_epoch)
 	elif option == "キャンセル":
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("会話をキャンセルしました", Color(0.6, 0.6, 0.6))
-		await _end_player_turn()
+		await _end_player_turn(action_floor_epoch)
 
 func _show_recruitment_demand(npc):
 	var entity_name = npc.enemy_name if "enemy_name" in npc else "誰か"
@@ -4484,6 +4499,7 @@ func _show_recruitment_demand(npc):
 		game_ui.show_dialog_menu(dialog_title, options)
 
 func _recruit_with_item(npc, item_id: String, item_name: String):
+	var action_floor_epoch = _floor_epoch
 	var item_to_remove = null
 	if player.equipment_component and player.equipment_component.bag_data:
 		for item in player.equipment_component.bag_data.items:
@@ -4498,9 +4514,10 @@ func _recruit_with_item(npc, item_id: String, item_name: String):
 	else:
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s を持っていません！" % item_name, Color.RED)
-		await _end_player_turn()
+		await _end_player_turn(action_floor_epoch)
 
 func _help_npc(npc):
+	var action_floor_epoch = _floor_epoch
 	var entity_name = npc.enemy_name if "enemy_name" in npc else "誰か"
 	
 	# Check for Potion / High Potion
@@ -4558,16 +4575,17 @@ func _help_npc(npc):
 			get_node("/root/LogUI").add_log("%s: 「うう... ポーションかヒール魔法があれば...」" % entity_name, Color(0.8, 0.8, 0.8))
 			get_node("/root/LogUI").add_log("回復させる手段（ポーションまたはヒール魔法とMP5）がありません！", Color.RED)
 			
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _recruit_npc(npc):
+	var action_floor_epoch = _floor_epoch
 	var entity_name = npc.enemy_name if "enemy_name" in npc else "誰か"
 	
 	# Check if NPC is already an ally
 	if npc.is_in_group("allies"):
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s はすでに仲間だ" % entity_name, Color.GRAY)
-		await _end_player_turn()
+		await _end_player_turn(action_floor_epoch)
 		return
 	
 	# Add NPC to allies group
@@ -4584,7 +4602,7 @@ func _recruit_npc(npc):
 	if has_node("/root/LogUI"):
 		get_node("/root/LogUI").add_log("%s を仲間にした！" % entity_name, Color(0.0, 1.0, 0.5))
 	
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 var _current_trade_npc = null
 var _is_trading = false
@@ -4612,6 +4630,7 @@ func cancel_trade():
 			get_node("/root/LogUI").add_log("取引をキャンセルしました", Color.GRAY)
 
 func _handle_shop_purchase():
+	var action_floor_epoch = _floor_epoch
 	if not player: return
 	if _shop_uses_this_floor >= SHOP_MAX_USES_PER_FLOOR:
 		if has_node("/root/LogUI"):
@@ -4653,7 +4672,7 @@ func _handle_shop_purchase():
 	_shop_uses_this_floor += 1
 	if has_node("/root/LogUI"):
 		get_node("/root/LogUI").add_log("Traded %dG for %s." % [price, item.name], Color(1.0, 0.85, 0.0))
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_skill(target_pos: Vector2):
 	if not target_manager.targeting_skill: return
@@ -5194,6 +5213,7 @@ func _remove_hazard_visual(grid_pos: Vector2i):
 	hazard_manager.remove_hazard_visual(grid_pos)
 
 func _execute_charge_skill(target_pos: Vector2):
+	var action_floor_epoch = _floor_epoch
 	# 根付き状態では突進（移動系スキル）を使えない
 	if _is_rooted(player):
 		if has_node("/root/LogUI"):
@@ -5296,7 +5316,7 @@ func _execute_charge_skill(target_pos: Vector2):
 		player.on_skill_executed(_targeting_skill, false)
 
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func report_player_crime(crime_type: String, victim, perpetrator):
 	if crime_type != "assault_neutral" or perpetrator != player:
@@ -5688,6 +5708,10 @@ func _deserialize_map(map_array: Array, is_bool_map: bool = false) -> Array:
 func _deserialize_player(p, data: Dictionary):
 	if is_instance_valid(p._growth_selection): p._growth_selection.close()
 	p.pending_growth_choices = maxi(0, int(data.get("pending_growth_choices", 0)))
+	p.pending_connector_choices = maxi(0, int(data.get("pending_connector_choices", p.pending_growth_choices)))
+	var saved_affinity = data.get("connector_affinity", {})
+	for color in ["red", "blue", "yellow", "purple"]:
+		p.connector_affinity[color] = maxi(0, int(saved_affinity.get(color, 0)))
 	if "is_moving" in p:
 		p.is_moving = false
 	# 0. Load Class
@@ -6002,9 +6026,12 @@ func _get_grass_preferred_direction(enemy, desired_dir: Vector2) -> Vector2:
 	return hazard_manager.get_grass_preferred_direction(enemy, desired_dir)
 
 func _execute_enemy_fireball(enemy, target_grid_pos: Vector2i):
+	var action_floor_epoch = _floor_epoch
 	await hazard_manager.execute_enemy_fireball(enemy, target_grid_pos)
+	if action_floor_epoch != _floor_epoch: return
 
 func _execute_flame_scatter(enemy):
+	var action_floor_epoch = _floor_epoch
 	hazard_manager.execute_flame_scatter(enemy)
 
 func _update_burning_grass_visual(pos: Vector2i):
@@ -6031,6 +6058,7 @@ func _process_frozen_tiles():
 # ------------------------------------------------------------------------------
 
 func _execute_enemy_skill_v2(enemy, target_grid_pos: Vector2i):
+	var action_floor_epoch = _floor_epoch
 	var skill_id = enemy.skill_id
 	var log_ui = get_node_or_null("/root/LogUI")
 	var damage = enemy.attack_power
@@ -6039,6 +6067,7 @@ func _execute_enemy_skill_v2(enemy, target_grid_pos: Vector2i):
 		if log_ui:
 			log_ui.add_log("%s は火球を放った！" % enemy.enemy_name, Color.ORANGE_RED)
 		await _handle_ranged_attack(enemy, target_grid_pos, damage, "fire")
+		if action_floor_epoch != _floor_epoch: return
 
 	elif skill_id == "lightning":
 		if "intelligence" in enemy:
@@ -6070,18 +6099,22 @@ func _execute_enemy_skill_v2(enemy, target_grid_pos: Vector2i):
 	elif skill_id == "arrow_shot":
 		if log_ui: log_ui.add_log("%s は矢を放った！" % enemy.enemy_name, Color.WHITE)
 		await _handle_ranged_attack(enemy, target_grid_pos, damage, "arrow")
+		if action_floor_epoch != _floor_epoch: return
 
 	elif skill_id == "web_shot":
 		if log_ui: log_ui.add_log("%s は糸を吐いた！" % enemy.enemy_name, Color.WHITE)
 		await _handle_ranged_attack(enemy, target_grid_pos, damage, "web")
+		if action_floor_epoch != _floor_epoch: return
 		
 	elif skill_id == "paralyze_touch":
 		if log_ui: log_ui.add_log("%s は麻痺攻撃を繰り出した！" % enemy.enemy_name, Color.VIOLET)
 		await _handle_ranged_attack(enemy, target_grid_pos, damage, "paralyze")
+		if action_floor_epoch != _floor_epoch: return
 
 	elif skill_id == "freeze":
 		if log_ui: log_ui.add_log("%s は凍結魔法を唱えた！" % enemy.enemy_name, Color.CYAN)
 		await _execute_freeze_skill(enemy, target_grid_pos)
+		if action_floor_epoch != _floor_epoch: return
 
 	elif skill_id == "scramble":
 		# Check if target is player
@@ -6208,13 +6241,14 @@ func _execute_freeze_skill(enemy, target_grid_pos: Vector2i):
 			log_ui.add_log("凍結できる水がなかった。", Color(0.6, 0.6, 0.6))
 
 func _execute_freeze_skill_player(target_grid: Vector2i):
+	var action_floor_epoch = _floor_epoch
 	var freeze_skill_data = SkillDatabase.get_skill_by_id("freeze")
 	_apply_freeze_area(player, target_grid, freeze_skill_data)
 	
 	if player.has_method("on_skill_executed"):
 		player.on_skill_executed(freeze_skill_data, false)
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 	return
 
 	var log_ui = get_node_or_null("/root/LogUI")
@@ -6275,7 +6309,7 @@ func _execute_freeze_skill_player(target_grid: Vector2i):
 	if player.has_method("on_skill_executed"):
 		player.on_skill_executed(skill_data, false)
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _apply_freeze_area(caster, target_grid: Vector2i, skill_data: Dictionary):
 	var log_ui = get_node_or_null("/root/LogUI")
@@ -6366,6 +6400,7 @@ func _apply_chain_lightning(source, current_target, damage: int, chain_left: int
 		_apply_chain_lightning(source, neighbor, damage, chain_left - 1, hit_list, snapshot)
 
 func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: String, is_reflected_depth: int = 0):
+	var action_floor_epoch = _floor_epoch
 	# Stop at solid walls, including walls which are currently burning.
 	var shot_start = tile_map.local_to_map(attacker.position)
 	var height_obstacle = _get_height_occluder(shot_start, target_grid)
@@ -6445,6 +6480,10 @@ func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: S
 	tween.tween_property(trail_line, "points", PackedVector2Array([start_pos, end_pos]), 0.25)
 	
 	await tween.finished
+	if action_floor_epoch != _floor_epoch:
+		projectile.queue_free()
+		trail_line.queue_free()
+		return
 	
 	# ターゲットへのダメージ適用（着弾時に即座に適用）
 	var target = null
@@ -6675,6 +6714,7 @@ func _get_skill_elements(skill: Dictionary) -> Array:
 	return elems
 
 func _execute_wall_skill(target_grid: Vector2i, _targeting_skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	if not _is_grid_in_bounds(target_grid):
 		return
 		
@@ -6776,9 +6816,10 @@ func _execute_wall_skill(target_grid: Vector2i, _targeting_skill: Dictionary):
 		player.on_skill_executed(_targeting_skill, false)
 		
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_point_skill(target_pos: Vector2, _targeting_skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	var target_grid = tile_map.local_to_map(target_pos)
 	
 	# LOS Check (Optional, but good for balance)
@@ -6942,9 +6983,10 @@ func _execute_point_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 	if player.has_method("on_skill_executed"):
 		player.on_skill_executed(_targeting_skill, false)
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_collapse_skill(target_pos: Vector2, _targeting_skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	var player_grid = tile_map.local_to_map(player.position)
 	var target_grid = tile_map.local_to_map(target_pos)
 	var line_points = _get_line_points(player_grid, target_grid)
@@ -7019,9 +7061,10 @@ func _execute_collapse_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 		player.on_skill_executed(_targeting_skill, false)
 		
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_gale_thrust_skill(target_pos: Vector2, skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	var player_grid = tile_map.local_to_map(player.position)
 	var target_grid = tile_map.local_to_map(target_pos)
 	var line_points = _get_line_points(player_grid, target_grid)
@@ -7098,9 +7141,10 @@ func _execute_gale_thrust_skill(target_pos: Vector2, skill: Dictionary):
 	if player.has_method("on_skill_executed"):
 		player.on_skill_executed(skill, false)
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_cyclone_slash(skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	var player_grid = tile_map.local_to_map(player.position)
 	
 	for dx in range(-1, 2):
@@ -7131,9 +7175,10 @@ func _execute_cyclone_slash(skill: Dictionary):
 							get_node("/root/LogUI").add_log("%s に %d ダメージ！" % [e_name, dmg], Color.ORANGE)
 							
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_helm_splitter_skill(target_pos: Vector2, skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	var player_grid = tile_map.local_to_map(player.position)
 	var target_grid = tile_map.local_to_map(target_pos)
 	
@@ -7189,9 +7234,10 @@ func _execute_helm_splitter_skill(target_pos: Vector2, skill: Dictionary):
 	if player.has_method("on_skill_executed"):
 		player.on_skill_executed(skill, false)
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _execute_super_seoi_nage_skill(target_pos: Vector2, skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	var user_grid = tile_map.local_to_map(player.position)
 	var target_grid = tile_map.local_to_map(target_pos)
 	var offset = target_grid - user_grid
@@ -7300,7 +7346,7 @@ func _execute_super_seoi_nage_skill(target_pos: Vector2, skill: Dictionary):
 	if player.has_method("on_skill_executed"):
 		player.on_skill_executed(skill, false)
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 func _calculate_throw_damage(skill: Dictionary, target_entity, damage_key: String) -> int:
 	var damage = int(skill.get(damage_key, 0))
@@ -7364,6 +7410,7 @@ func _can_throw_target_to(target_entity, grid_pos: Vector2i) -> bool:
 	return true
 
 func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
 	var current_skill_id = _targeting_skill.get("id", "")
 	# Water-only gate (double-check in case terrain changed after targeting started)
 	if _targeting_skill.get("requires_water", false) and player and not player.is_on_water:
@@ -7601,7 +7648,7 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 		
 	# 5. End Turn
 	target_manager.cancel_targeting()
-	await _end_player_turn()
+	await _end_player_turn(action_floor_epoch)
 
 # === WORLD MAP EXPANSION ===
 const WorldCell = MapDefinitions.WorldCell

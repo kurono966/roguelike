@@ -124,7 +124,48 @@ var attack_power: int:
 		# 攻撃力 = (力 * 2) + 装備の攻撃力
 		var total_str = strength + equipment_stats.strength
 		var base_value = (total_str * 2) + equipment_stats.attack 
-		return int(round(base_value * _get_hunger_attack_multiplier()))
+		var mult = _get_hunger_attack_multiplier() * _get_warrior_instinct_multiplier()
+		return int(round(base_value * mult))
+
+# ウォリアーパッシブ: 闘争本能 (隣接敵1体につき攻撃+40%、最大+120%)
+func _get_warrior_instinct_multiplier() -> float:
+	var st = get_battle_instinct_state()
+	return 1.0 + float(st.get("bonus", 0.0))
+
+func get_battle_instinct_state() -> Dictionary:
+	var gs = get_node_or_null("/root/GameState")
+	if gs == null or gs.player_class != 1:
+		return {"count": 0, "bonus": 0.0}
+	var count = _count_adjacent_hostiles()
+	var capped = mini(count, 3)
+	return {"count": count, "bonus": capped * 0.4}
+
+func _count_adjacent_hostiles() -> int:
+	if not is_inside_tree():
+		return 0
+	var tree = get_tree()
+	if tree == null:
+		return 0
+	var pg = Vector2i(position / TILE_SIZE)
+	var targets = tree.get_nodes_in_group("enemies") + tree.get_nodes_in_group("npcs")
+	var n = 0
+	for child in targets:
+		if not is_instance_valid(child) or child.is_queued_for_deletion():
+			continue
+		if not (child is Node2D):
+			continue
+		if child == self:
+			continue
+		var friendly = child.is_in_group("allies") or (child.is_in_group("npcs") and not child.is_in_group("enemies"))
+		if friendly:
+			continue
+		if "hp" in child and int(child.hp) <= 0:
+			continue
+		var eg = Vector2i((child as Node2D).position / TILE_SIZE)
+		var d = eg - pg
+		if abs(d.x) <= 1 and abs(d.y) <= 1 and (abs(d.x) + abs(d.y) > 0):
+			n += 1
+	return n
 
 var defense_power: int:
 	get:
@@ -169,7 +210,23 @@ var crit_rate: float:
 var penetration_rate: float:
 	get:
 		var equipment_stats = _get_equipment_stats()
-		return clamp(float(equipment_stats.get("penetration_bonus", 0.0)), 0.0, 0.9)
+		var base_pen = clamp(float(equipment_stats.get("penetration_bonus", 0.0)), 0.0, 0.9)
+		# 命中率の超過分(100%を超えた分)の半分を貫通率に加算する
+		# 例: 命中110% → 超過10% → 貫通+5%
+		var overflow = maxf(0.0, get_raw_hit_rate() - 1.0)
+		return clamp(base_pen + overflow * 0.5, 0.0, 0.9)
+
+# 命中率の素値(上限クランプ前)。装備・整頓ボーナス込み。
+func get_raw_hit_rate() -> float:
+	var equipment_stats = _get_equipment_stats()
+	var org_bonus = 0.0
+	if equipment_component and equipment_component.equipment_data:
+		org_bonus = float(get_inventory_bonus_state().get("hit_bonus", 0.0))
+	return 0.85 + org_bonus + float(equipment_stats.get("hit_bonus", 0.0))
+
+# 命中超過から変換された貫通ボーナス分(表示用)
+func get_overflow_penetration_bonus() -> float:
+	return maxf(0.0, get_raw_hit_rate() - 1.0) * 0.5
 
 func get_total_strength() -> int:
 	var eq = _get_equipment_stats()
@@ -419,19 +476,19 @@ func get_inventory_bonus_state() -> Dictionary:
 
 func _check_skill_learning():
 	var skill_requirements = {
-		"fireball": {"level": 2, "str": 0, "dex": 0, "int": 10},
-		"iceball": {"level": 3, "str": 0, "dex": 0, "int": 12},
-		"helm_splitter": {"level": 3, "str": 10, "dex": 0, "int": 0},
-		"super_seoi_nage": {"level": 5, "str": 11, "dex": 2, "int": 0},
-		"freeze": {"level": 4, "str": 0, "dex": 0, "int": 11},
-		"gale_thrust": {"level": 4, "str": 0, "dex": 10, "int": 0},
-		"grass_snipe": {"level": 5, "str": 0, "dex": 11, "int": 0},
-		"wall": {"level": 5, "str": 0, "dex": 15, "int": 14},
-		"lightning": {"level": 5, "str": 0, "dex": 0, "int": 15},
-		"blood_beam": {"level": 6, "str": 13, "dex": 0, "int": 9},
-		"teleport": {"level": 6, "str": 0, "dex": 0, "int": 14},
-		"cyclone_slash": {"level": 6, "str": 12, "dex": 9, "int": 0},
-		"explosion": {"level": 8, "str": 0, "dex": 0, "int": 18},
+		"fireball": {"level": 2, "str": 0, "dex": 0, "int": 8},
+		"iceball": {"level": 3, "str": 0, "dex": 0, "int": 10},
+		"helm_splitter": {"level": 3, "str": 9, "dex": 0, "int": 0},
+		"super_seoi_nage": {"level": 5, "str": 10, "dex": 2, "int": 0},
+		"freeze": {"level": 4, "str": 0, "dex": 0, "int": 9},
+		"gale_thrust": {"level": 4, "str": 0, "dex": 9, "int": 0},
+		"grass_snipe": {"level": 5, "str": 0, "dex": 10, "int": 0},
+		"wall": {"level": 7, "str": 0, "dex": 12, "int": 10},
+		"lightning": {"level": 5, "str": 0, "dex": 0, "int": 13},
+		"blood_beam": {"level": 6, "str": 12, "dex": 0, "int": 8},
+		"teleport": {"level": 6, "str": 0, "dex": 3, "int": 12},
+		"cyclone_slash": {"level": 6, "str": 11, "dex": 8, "int": 0},
+		"explosion": {"level": 8, "str": 0, "dex": 0, "int": 16},
 		"collapse": {"level": 10, "str": 20, "dex": 0, "int": 20},
 		"meteor": {"level": 12, "str": 0, "dex": 0, "int": 22}
 	}
@@ -443,7 +500,7 @@ func _check_skill_learning():
 			
 		var req = skill_requirements[skill_id]
 		# 装備やバフを除いた生ステータスで判定
-		if level >= req["level"] and strength >= req["str"] and dexterity >= req["dex"] and intelligence >= req["int"]:
+		if level >= req["level"] and strength >= req["str"] and dexterity >= req["dex"] and intelligence >= req["int"] and meets_skill_color_requirements(skill_id):
 			base_known_skills.append(skill_id)
 			learned_any = true
 			
@@ -578,6 +635,12 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 				multiplier = 0.0
 			elif _check_equipment_effect("fire_resist"):
 				multiplier = 0.5
+	# Mage passive: always halve fire damage (stacks multiplicatively with gear)
+	var gs_passive = get_node_or_null("/root/GameState")
+	if gs_passive and gs_passive.player_class == 3 and "fire" in elements and multiplier > 0.0:
+		multiplier *= 0.5
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("炎耐性(魔道士)でダメージ半減！", Color(1.0, 0.6, 0.2))
 				
 	var damage = max(0 if multiplier == 0.0 else 1, int(amount * multiplier))
 	# 根付き状態: 受けるダメージを約10%に軽減
@@ -761,6 +824,8 @@ func gain_exp(amount: int):
 
 signal growth_choices_finished
 var pending_growth_choices: int = 0
+var pending_connector_choices: int = 0
+var connector_affinity: Dictionary = {"red": 0, "blue": 0, "yellow": 0, "purple": 0}
 var _growth_selection = null
 const GROWTH_OPTIONS = [
 	{"key": "strength", "label": "力 +1", "detail": "物理攻撃を強化。力3ごとに最大HPも上昇。"},
@@ -768,8 +833,72 @@ const GROWTH_OPTIONS = [
 	{"key": "intelligence", "label": "知力 +1", "detail": "魔法を強化。最大MPも2上昇。"}
 ]
 
+const CONNECTOR_GROWTH_OPTIONS = [
+	{"key": "red", "label": "赤 +1", "detail": "赤の接続1辺につき攻撃補正 +1。"},
+	{"key": "blue", "label": "青 +1", "detail": "青の接続1辺につき防御補正 +1。"},
+	{"key": "yellow", "label": "黄 +1", "detail": "黄の接続1辺につき命中補正 +1%。"},
+	{"key": "purple", "label": "紫 +1", "detail": "紫の接続1辺につき会心補正 +1%。"}
+]
+const SKILL_COLOR_REQUIREMENTS = {
+	"fireball": {"purple": 1}, "iceball": {"blue": 1, "purple": 1},
+	"helm_splitter": {"red": 1}, "super_seoi_nage": {"red": 2, "blue": 1},
+	"freeze": {"blue": 2}, "gale_thrust": {"yellow": 2}, "grass_snipe": {"yellow": 2},
+	"wall": {"blue": 3, "purple": 1}, "lightning": {"yellow": 2, "purple": 2},
+	"blood_beam": {"red": 2, "purple": 2}, "teleport": {"purple": 3, "yellow": 1},
+	"cyclone_slash": {"red": 2, "yellow": 2}, "explosion": {"purple": 4, "red": 2},
+	"collapse": {"red": 4, "blue": 4}, "meteor": {"purple": 5, "red": 3}
+}
+
+func get_connector_affinity(color: String) -> int:
+	return maxi(0, int(connector_affinity.get(color, 0)))
+
+func meets_skill_color_requirements(skill_id: String) -> bool:
+	var requirements = SKILL_COLOR_REQUIREMENTS.get(skill_id, {})
+	for color in requirements:
+		if get_connector_affinity(color) < int(requirements[color]): return false
+	return true
+
+func has_pending_growth_choices() -> bool:
+	return pending_growth_choices > 0 or pending_connector_choices > 0
+
+func is_connector_growth_turn() -> bool:
+	return pending_connector_choices > 0 and pending_connector_choices > pending_growth_choices
+
+func get_growth_options() -> Array:
+	return CONNECTOR_GROWTH_OPTIONS if is_connector_growth_turn() else GROWTH_OPTIONS
+
+func _finish_growth_choice():
+	_refresh_growth_stats()
+	_check_skill_learning()
+	if is_instance_valid(_growth_selection): _growth_selection.refresh()
+	if not has_pending_growth_choices(): growth_choices_finished.emit()
+
+func choose_connector_growth(color: String) -> bool:
+	if not is_connector_growth_turn() or not connector_affinity.has(color): return false
+	connector_affinity[color] = get_connector_affinity(color) + 1
+	pending_connector_choices -= 1
+	var log_ui = get_node_or_null("/root/LogUI")
+	if log_ui:
+		for option in CONNECTOR_GROWTH_OPTIONS:
+			if option.key == color: log_ui.add_log("コネクタ成長：%s" % option.label, Color.GOLD)
+	_finish_growth_choice()
+	return true
+
+func get_skill_color_requirements_text(filter_color: String = "") -> String:
+	var names = {"red": "赤", "blue": "青", "yellow": "黄", "purple": "紫"}
+	var lines = []
+	for skill_id in SKILL_COLOR_REQUIREMENTS:
+		if filter_color != "" and not SKILL_COLOR_REQUIREMENTS[skill_id].has(filter_color): continue
+		var parts = []
+		for color in SKILL_COLOR_REQUIREMENTS[skill_id]:
+			parts.append("%s%d" % [names[color], SKILL_COLOR_REQUIREMENTS[skill_id][color]])
+		var skill = SkillDatabase.get_skill_by_id(skill_id)
+		lines.append("%s：%s" % [skill.get("name", skill_id), "・".join(parts)])
+	return "\n".join(lines)
+
 func _refresh_growth_stats():
 	var stats = _get_equipment_stats()
+	hit_rate = 0.85 + float(get_inventory_bonus_state().hit_bonus) + float(stats.hit_bonus)
 	max_hp = BASE_MAX_HP + initial_hp_bonus + level_hp_bonus + stats.max_hp + int((strength + stats.strength) / 3)
 	max_mp = BASE_MAX_MP + level_mp_bonus + (intelligence + stats.intelligence) * 2 + stats.max_mp
 	hp = max_hp
@@ -780,14 +909,14 @@ func _refresh_growth_stats():
 		PlayerUi.update_mp(mp, max_mp)
 
 func _show_growth_selection():
-	if pending_growth_choices <= 0 or not is_inside_tree(): return
+	if not has_pending_growth_choices() or not is_inside_tree(): return
 	if is_instance_valid(_growth_selection): return
 	_growth_selection = preload("res://ui/level_growth_selection.gd").new()
 	_growth_selection.player = self
 	add_child(_growth_selection)
 
 func choose_level_growth(key: String) -> bool:
-	if pending_growth_choices <= 0: return false
+	if pending_growth_choices <= 0 or is_connector_growth_turn(): return false
 	var label = ""
 	for option in GROWTH_OPTIONS:
 		if option.key == key: label = option.label
@@ -799,16 +928,13 @@ func choose_level_growth(key: String) -> bool:
 		"hp": level_hp_bonus += 5
 		"mp": level_mp_bonus += 3
 	pending_growth_choices -= 1
-	_refresh_growth_stats()
-	_check_skill_learning()
 	var log_ui = get_node_or_null("/root/LogUI")
 	if log_ui: log_ui.add_log("成長を選択：%s" % label, Color.GOLD)
-	if is_instance_valid(_growth_selection): _growth_selection.refresh()
-	if pending_growth_choices == 0: growth_choices_finished.emit()
+	_finish_growth_choice()
 	return true
 
 func wait_for_growth_choices():
-	while pending_growth_choices > 0:
+	while has_pending_growth_choices():
 		await growth_choices_finished
 
 # レベルアップ処理
@@ -819,6 +945,7 @@ func level_up():
 	
 	# Each level grants a player-selected increase, independent of class.
 	pending_growth_choices += 1
+	pending_connector_choices += 1
 	_refresh_growth_stats()
 	call_deferred("_show_growth_selection")
 

@@ -58,3 +58,5 @@ res://ui/level_growth_selection.gd
 res://workdesk/level_growth_test.gd
 res://skills/skill_database.gd
 res://ui/skill_menu.gd
+res://ui/status_ui.gd
+res://workdesk/floor_first_turn_test.gd

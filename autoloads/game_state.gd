@@ -45,8 +45,6 @@ func set_class_stats(class_id: int):
 			initial_int = 1
 			initial_hp_bonus = 2
 			initial_can_swim = true
-			initial_hp_bonus = 2
-			initial_can_swim = true
 		99: # Debug
 			initial_str = 99
 			initial_dex = 99

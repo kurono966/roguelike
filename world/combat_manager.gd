@@ -34,6 +34,7 @@ func _is_rooted(entity) -> bool:
 
 
 func handle_attack(attacker, defender):
+	var action_floor_epoch = main_node._floor_epoch
 	var attacker_name = attacker.name
 	if "enemy_name" in attacker:
 		attacker_name = attacker.enemy_name
@@ -59,6 +60,7 @@ func handle_attack(attacker, defender):
 	var tween = GridVisualMotion.bump(attacker, dir, 16.0, 0.05, 0.05)
 
 	await tween.finished
+	if action_floor_epoch != main_node._floor_epoch: return
 
 	# Hit Check
 	if is_instance_valid(attacker):
@@ -193,6 +195,7 @@ func handle_attack(attacker, defender):
 				_log("%s は吹き飛ばされた！" % defender_name, Color(1.0, 0.5, 0.0))
 				
 				await kb_tween.finished
+				if action_floor_epoch != main_node._floor_epoch: return
 				var landed_in_pit = false
 				if main_node.has_method("_resolve_forced_landing"):
 					landed_in_pit = main_node._resolve_forced_landing(defender, land_pos)
@@ -206,8 +209,15 @@ func handle_attack(attacker, defender):
 	var crit_text = " (会心!)" if is_crit else ""
 	var message = "%sの攻撃！ %sに%dのダメージを与えた。%s" % [attacker_name, defender_name, final_damage, crit_text]
 	var is_player_atk = (attacker == main_node.player) if is_instance_valid(attacker) else false
+	var instinct_msg = ""
+	if is_player_atk and is_instance_valid(attacker) and attacker.has_method("get_battle_instinct_state"):
+		var st = attacker.get_battle_instinct_state()
+		var bonus = float(st.get("bonus", 0.0))
+		if bonus > 0.0:
+			var cnt = int(st.get("count", 0))
+			instinct_msg = " [闘争本能 +%d%%(隣接%d)]" % [int(round(bonus * 100.0)), cnt]
 	var color = Color(1.0, 0.5, 0.5) if is_crit else (Color.WHITE if is_player_atk else Color.PALE_VIOLET_RED)
-	_log(message, color)
+	_log(message + instinct_msg, color)
 
 	# Ensure the main scene redraws and visibility updates after combat
 	if main_node:

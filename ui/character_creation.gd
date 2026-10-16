@@ -94,6 +94,11 @@ func _update_ui():
 		
 	if gs.player_class == 2: # Rogue
 		txt += "[color=green]Ability: 草眼[/color]\n"
+	
+	if gs.player_class == 3: # Mage
+		txt += "[color=orange]Passive: 炎耐性 (炎ダメージ半減)[/color]\n"
+	elif gs.player_class == 1: # Warrior
+		txt += "[color=orange]Passive: 闘争本能 (隣接敵1体につき攻撃+40%、最大+120%)[/color]\n"
 		
 	if gs.player_class == 99:
 		txt += "[color=magenta]Special: All Skills & God Stats[/color]\n"

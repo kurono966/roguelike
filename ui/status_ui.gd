@@ -198,6 +198,10 @@ func update_status_info():
 	# Check for class specific abilities
 	if gs and gs.player_class == 2: # Rogue
 		traits.append("[color=green]・草眼 (草むらのなかの視界が広い)[/color]")
+	if gs and gs.player_class == 3: # Mage
+		traits.append("[color=orange]・炎耐性 (炎ダメージ常時半減)[/color]")
+	if gs and gs.player_class == 1: # Warrior
+		traits.append("[color=orange]・闘争本能 (隣接敵1体につき攻撃+40%、最大+120%)[/color]")
 		
 	var traits_text = "\n".join(traits) if not traits.is_empty() else "[color=#888888]特になし[/color]"
 
@@ -220,17 +224,33 @@ func update_status_info():
 	left_text += "[color=#aaaaaa]器用さ (DEX):[/color] %s (合計: [b]%d[/b])\n" % [dex_text, dex_total]
 	left_text += "[color=#aaaaaa]知力 (INT):[/color] %s (合計: [b]%d[/b])\n" % [int_text, int_total]
 	
+	left_text += "\n[b]コネクタ適性[/b]\n"
+	left_text += "[color=#ff4d40]赤 %d[/color] / [color=#5599ff]青 %d[/color] / [color=#ffe04d]黄 %d[/color] / [color=#bd66ff]紫 %d[/color]\n" % [player.get_connector_affinity("red"), player.get_connector_affinity("blue"), player.get_connector_affinity("yellow"), player.get_connector_affinity("purple")]
+	left_text += "接続1辺あたり：赤は攻撃、青は防御、黄は命中、紫は会心を強化。\n"
+	left_text += "\n[b]自然習得に必要な色[/b]\n（レベル・能力の条件も必要）\n" + player.get_skill_color_requirements_text() + "\n"
 	left_rich_label.text = left_text
 
 	# Right Column (Combat Stats and Equipment)
 	var right_text = ""
 	right_text += "[b][font_size=22]戦闘能力値[/font_size][/b]\n"
 	right_text += "[color=#aaaaaa]攻撃力:[/color] [color=orange][b]%d[/b][/color]\n" % player.attack_power
+	if player.has_method("get_battle_instinct_state"):
+		var _bi = player.get_battle_instinct_state()
+		if float(_bi.get("bonus", 0.0)) > 0.0:
+			right_text += "[color=orange]闘争本能 +%d%% (隣接%d)[/color]\n" % [int(round(float(_bi.get("bonus", 0.0)) * 100.0)), int(_bi.get("count", 0))]
 	right_text += "[color=#aaaaaa]防御力:[/color] [color=green][b]%d[/b][/color]\n" % player.defense_power
 	right_text += "[color=#aaaaaa]会心率:[/color] %.1f%%\n" % (player.crit_rate * 100.0)
 	right_text += "[color=#aaaaaa]貫通率:[/color] %.1f%%\n" % (player.penetration_rate * 100.0)
+	if player.has_method("get_overflow_penetration_bonus"):
+		var _ov_pen = float(player.get_overflow_penetration_bonus())
+		if _ov_pen > 0.0005:
+			right_text += "[color=cyan]命中超過→貫通 +%.1f%%[/color]\n" % (_ov_pen * 100.0)
 	
 	right_text += "[color=#aaaaaa]命中率:[/color] %.1f%%\n" % (clamp(player.hit_rate, 0.0, 1.0) * 100.0)
+	if player.has_method("get_raw_hit_rate"):
+		var _raw_hit = float(player.get_raw_hit_rate())
+		if _raw_hit > 1.0005:
+			right_text += "[color=cyan]命中超過 +%.1f%% (半分が貫通に変換)[/color]\n" % ((_raw_hit - 1.0) * 100.0)
 
 	# Organization density details
 	var bonus_info = player.get_inventory_bonus_state() if player.has_method("get_inventory_bonus_state") else {"message": ""}
@@ -277,10 +297,11 @@ func update_status_info():
 	right_text += equipped_items_text
 	if player.equipment_component:
 		var connector_bonus = player.equipment_component.get_connector_bonus()
+		var connector_effects = player.equipment_component.get_connector_effects()
 		right_text += "\n[color=#8fdcff]接続辺[/color]\n"
-		right_text += "[color=#ff4d40]赤 %d: 攻撃+%d[/color]\n" % [connector_bonus.red, connector_bonus.red]
-		right_text += "[color=#5599ff]青 %d: 防御+%d[/color]\n" % [connector_bonus.blue, connector_bonus.blue]
-		right_text += "[color=#ffe04d]黄 %d: 命中+%d%%[/color]\n" % [connector_bonus.yellow, connector_bonus.yellow * 3]
-		right_text += "[color=#bd66ff]紫 %d: 会心+%d%%[/color]\n" % [connector_bonus.purple, connector_bonus.purple * 3]
+		right_text += "[color=#ff4d40]赤 %d: 攻撃+%d[/color]\n" % [connector_bonus.red, connector_effects.attack]
+		right_text += "[color=#5599ff]青 %d: 防御+%d[/color]\n" % [connector_bonus.blue, connector_effects.defense]
+		right_text += "[color=#ffe04d]黄 %d: 命中+%d%%[/color]\n" % [connector_bonus.yellow, roundi(connector_effects.hit_bonus * 100)]
+		right_text += "[color=#bd66ff]紫 %d: 会心+%d%%[/color]\n" % [connector_bonus.purple, roundi(connector_effects.crit_bonus * 100)]
 	
 	right_rich_label.text = right_text

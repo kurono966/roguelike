@@ -4,6 +4,8 @@ var player
 var title: Label
 var summary: Label
 var buttons: Array[Button] = []
+var choices: VBoxContainer
+var hint: Label
 var _previous_paused = false
 var _owns_pause = false
 
@@ -36,36 +38,55 @@ func _ready():
 	column.add_child(title)
 	summary = Label.new()
 	column.add_child(summary)
-	for index in range(player.GROWTH_OPTIONS.size()):
-		var option = player.GROWTH_OPTIONS[index]
-		var button = Button.new()
-		button.text = "%d. %s  —  %s" % [index + 1, option.label, option.detail]
-		button.custom_minimum_size = Vector2(520, 46)
-		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		button.pressed.connect(_choose.bind(str(option.key)))
-		column.add_child(button)
-		buttons.append(button)
-	var hint = Label.new()
-	hint.text = "1～3キー、または↑↓とEnterで選択。選択中はゲームが停止します。"
+	choices = VBoxContainer.new()
+	choices.add_theme_constant_override("separation", 8)
+	column.add_child(choices)
+	hint = Label.new()
 	column.add_child(hint)
 	refresh()
-	buttons.front().grab_focus()
 
 func refresh():
-	if player.pending_growth_choices <= 0:
+	if not player.has_pending_growth_choices():
 		close()
 		return
-	title.text = "LEVEL UP  —  Lv.%d の成長を選択" % (player.level - player.pending_growth_choices + 1)
-	summary.text = "力 %d / 技 %d / 知力 %d　最大HP %d / 最大MP %d\n1つ選択してください（残り%d回）" % [player.strength, player.dexterity, player.intelligence, player.max_hp, player.max_mp, player.pending_growth_choices]
+	var color_turn = player.is_connector_growth_turn()
+	var remaining_levels = maxi(player.pending_growth_choices, player.pending_connector_choices)
+	title.text = "LEVEL UP — Lv.%d：%s" % [player.level - remaining_levels + 1, "コネクタの色を選択" if color_turn else "能力を選択"]
+	summary.text = "力 %d / 技 %d / 知力 %d　最大HP %d / 最大MP %d\n赤 %d / 青 %d / 黄 %d / 紫 %d\n毎レベル、能力1つ＋色1つを選択（残り%dレベル）" % [player.strength, player.dexterity, player.intelligence, player.max_hp, player.max_mp, player.get_connector_affinity("red"), player.get_connector_affinity("blue"), player.get_connector_affinity("yellow"), player.get_connector_affinity("purple"), remaining_levels]
+	for child in choices.get_children():
+		choices.remove_child(child)
+		child.queue_free()
+	buttons.clear()
+	var options = player.get_growth_options()
+	for index in range(options.size()):
+		var option = options[index]
+		var button = Button.new()
+		button.text = "%d. %s — %s" % [index + 1, option.label, option.detail]
+		button.custom_minimum_size = Vector2(560, 46)
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		if color_turn:
+			var palette = {"red": Color("ff756b"), "blue": Color("76b5ff"), "yellow": Color("ffe66b"), "purple": Color("d397ff")}
+			button.add_theme_color_override("font_color", palette[option.key])
+			button.add_theme_color_override("font_focus_color", palette[option.key])
+			button.tooltip_text = "習得に関わるスキル（レベル・能力の条件も必要）\n" + player.get_skill_color_requirements_text(str(option.key))
+		button.pressed.connect(_choose.bind(str(option.key)))
+		choices.add_child(button)
+		buttons.append(button)
+	hint.text = "1～%dキー、または↑↓とEnterで選択。選択中はゲームが停止します。" % options.size()
+	buttons.front().grab_focus()
 
 func _choose(key: String):
 	if not _owns_pause: return
-	player.choose_level_growth(key)
+	if player.is_connector_growth_turn():
+		player.choose_connector_growth(key)
+	else:
+		player.choose_level_growth(key)
 
 func _unhandled_key_input(event: InputEvent):
 	if not event is InputEventKey or not event.pressed or event.is_echo(): return
-	if event.keycode >= KEY_1 and event.keycode < KEY_1 + player.GROWTH_OPTIONS.size():
-		_choose(str(player.GROWTH_OPTIONS[event.keycode - KEY_1].key))
+	var options = player.get_growth_options()
+	if event.keycode >= KEY_1 and event.keycode < KEY_1 + options.size():
+		_choose(str(options[event.keycode - KEY_1].key))
 	get_viewport().set_input_as_handled()
 
 func close():

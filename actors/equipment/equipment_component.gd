@@ -77,13 +77,27 @@ func get_total_stats() -> Dictionary:
 		stats.hit_bonus += float(item.effects.get("hit_bonus", 0.0))
 		stats.penetration_bonus += float(item.effects.get("penetration_bonus", 0.0))
 
-	var connector_bonus = get_connector_bonus()
-	stats.attack += connector_bonus.red
-	stats.defense += connector_bonus.blue
-	stats.hit_bonus += float(connector_bonus.yellow) * 0.03
-	stats.crit_bonus += float(connector_bonus.purple) * 0.03
-	
+	var connector_effects = get_connector_effects()
+	stats.attack += connector_effects.attack
+	stats.defense += connector_effects.defense
+	stats.hit_bonus += connector_effects.hit_bonus
+	stats.crit_bonus += connector_effects.crit_bonus
+
 	return stats
+
+# Raw edge counts stay separate from player-scaled effects.
+func get_connector_effects() -> Dictionary:
+	var edges = get_connector_bonus()
+	var owner_actor = get_parent()
+	var affinity = {"red": 0, "blue": 0, "yellow": 0, "purple": 0}
+	if owner_actor and owner_actor.has_method("get_connector_affinity"):
+		for color in affinity: affinity[color] = owner_actor.get_connector_affinity(color)
+	return {
+		"attack": edges.red * (1 + affinity.red),
+		"defense": edges.blue * (1 + affinity.blue),
+		"hit_bonus": float(edges.yellow) * (0.03 + float(affinity.yellow) * 0.01),
+		"crit_bonus": float(edges.purple) * (0.03 + float(affinity.purple) * 0.01)
+	}
 
 func get_connector_bonus() -> Dictionary:
 	var result = {"red": 0, "blue": 0, "yellow": 0, "purple": 0, "total": 0}

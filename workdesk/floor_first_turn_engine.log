@@ -17,43 +17,40 @@ Skill toggle key (K) has been set up
 InputMap actions: [&"ui_accept", &"ui_select", &"ui_cancel", &"ui_close_dialog", &"ui_close_dialog.macos", &"ui_focus_next", &"ui_focus_prev", &"ui_left", &"ui_right", &"ui_up", &"ui_down", &"ui_page_up", &"ui_page_down", &"ui_home", &"ui_end", &"ui_accessibility_drag_and_drop", &"ui_cut", &"ui_copy", &"ui_focus_mode", &"ui_paste", &"ui_undo", &"ui_redo", &"ui_text_completion_query", &"ui_text_completion_accept", &"ui_text_completion_replace", &"ui_text_newline", &"ui_text_newline_blank", &"ui_text_newline_above", &"ui_text_indent", &"ui_text_dedent", &"ui_text_backspace", &"ui_text_backspace_word", &"ui_text_backspace_word.macos", &"ui_text_backspace_all_to_left", &"ui_text_backspace_all_to_left.macos", &"ui_text_delete", &"ui_text_delete_word", &"ui_text_delete_word.macos", &"ui_text_delete_all_to_right", &"ui_text_delete_all_to_right.macos", &"ui_text_caret_left", &"ui_text_caret_word_left", &"ui_text_caret_word_left.macos", &"ui_text_caret_right", &"ui_text_caret_word_right", &"ui_text_caret_word_right.macos", &"ui_text_caret_up", &"ui_text_caret_down", &"ui_text_caret_line_start", &"ui_text_caret_line_start.macos", &"ui_text_caret_line_end", &"ui_text_caret_line_end.macos", &"ui_text_caret_page_up", &"ui_text_caret_page_down", &"ui_text_caret_document_start", &"ui_text_caret_document_start.macos", &"ui_text_caret_document_end", &"ui_text_caret_document_end.macos", &"ui_text_caret_add_below", &"ui_text_caret_add_below.macos", &"ui_text_caret_add_above", &"ui_text_caret_add_above.macos", &"ui_text_scroll_up", &"ui_text_scroll_up.macos", &"ui_text_scroll_down", &"ui_text_scroll_down.macos", &"ui_text_select_all", &"ui_text_select_word_under_caret", &"ui_text_select_word_under_caret.macos", &"ui_text_add_selection_for_next_occurrence", &"ui_text_skip_selection_for_next_occurrence", &"ui_text_clear_carets_and_selection", &"ui_text_toggle_insert_mode", &"ui_menu", &"ui_text_submit", &"ui_unicode_start", &"ui_graph_duplicate", &"ui_graph_delete", &"ui_graph_follow_left", &"ui_graph_follow_left.macos", &"ui_graph_follow_right", &"ui_graph_follow_right.macos", &"ui_filedialog_delete", &"ui_filedialog_up_one_level", &"ui_filedialog_refresh", &"ui_filedialog_show_hidden", &"ui_filedialog_find", &"ui_filedialog_focus_path", &"ui_filedialog_focus_path.macos", &"ui_swap_input_direction", &"ui_colorpicker_delete_preset", &"ui_up_left", &"ui_up_right", &"ui_down_left", &"ui_down_right", &"target_enemy", &"toggle_inventory", &"toggle_log", &"toggle_skills", &"toggle_fullscreen"]
 Log added: ローグライクへようこそ！
 Log added: 'H' キーでヘルプを表示
-Log added: 'L'キーでログの表示/非表示
+Log added: 'L'キーでログ：通常 → 拡大 → 非表示
 Enhanced LogUI initialized!
 GameUI loaded successfully
 WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpinan8qo8qn - using text path instead: res://icon.svg
    at: load (scene/resources/resource_format_text.cpp:500)
    GDScript backtrace (most recent call first):
-       [0] _run (res://workdesk/floor_first_turn_test.gd:32)
+       [0] _run (res://workdesk/floor_first_turn_test.gd:34)
 Current Skills: []
 [ItemDatabase] Loaded 40 items from resources
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
 Current Skills: []
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
 Current Skills: []
 Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:252)
-       [1] _run (res://workdesk/floor_first_turn_test.gd:33)
+       [0] _ready (res://world/main.gd:253)
+       [1] _run (res://workdesk/floor_first_turn_test.gd:35)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:252)
-       [1] _run (res://workdesk/floor_first_turn_test.gd:33)
-Dungeon placed at: (1, 9)
-NPC Spawned: 放浪の剣士 at (160.0, 1216.0)
-NPC Spawned: 商人 at (1280.0, 1248.0)
-NPC Spawned: 村の長老 at (704.0, 1024.0)
-NPC Spawned: 村の守備隊 at (1152.0, 1344.0)
-NPC Spawned: 商人 at (1152.0, 960.0)
-NPC Spawned: 村人 at (704.0, 1120.0)
-NPC Spawned: 放浪の剣士 at (864.0, 768.0)
-NPC Spawned: 村の長老 at (1088.0, 1344.0)
+       [0] _ready (res://world/main.gd:253)
+       [1] _run (res://workdesk/floor_first_turn_test.gd:35)
+Dungeon placed at: (33, 5)
+NPC Spawned: 放浪の剣士 at (1408.0, 1216.0)
+NPC Spawned: 村の守備隊 at (512.0, 1376.0)
+NPC Spawned: 村の長老 at (672.0, 128.0)
+NPC Spawned: 商人 at (896.0, 992.0)
+NPC Spawned: 放浪の剣士 at (608.0, 224.0)
 Log added: 平穏な里に辿り着いた。
 下り階段を下りた！ Floor: 2
 Log added: 下り階段を下りた！ 階層 2 へ (Branch 0)
@@ -61,44 +58,37 @@ Ammo replenished. Current Reserve: 20
 Log added: 弾薬を補充した (予備: 20)
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
-Spawned enemy: オーク at (11, 6)
-Spawned enemy: 雑魚虫 at (21, 10)
-Spawned enemy: 小鬼 at (43, 42)
-Spawned enemy: オーク at (42, 41)
-Spawned enemy: 人魂 at (32, 44)
-Spawned enemy: ワイルド・コウモリ at (28, 31)
-Spawned enemy: オーク at (44, 23)
-Spawned enemy: 人魂 at (44, 22)
-Spawned enemy: 小鬼 at (23, 20)
-Spawned enemy: 毒キノコ at (24, 19)
-Spawned enemy: 毒キノコ at (12, 23)
-Spawned enemy: 毒キノコ at (6, 37)
-Spawned enemy: オーク at (35, 8)
-Spawned enemy: オーク at (35, 7)
-Spawned enemy: 毒キノコ at (34, 38)
-Spawned enemy: 小鬼 at (25, 46)
-Spawned enemy: ワイルド・コウモリ at (15, 43)
-Spawned enemy: 雑魚虫 at (15, 42)
-Spawned enemy: オーク at (35, 23)
-Spawned enemy: 小鬼 at (41, 3)
-Spawned enemy: 雑魚虫 at (37, 17)
-Spawned enemy: ワイルド・コウモリ at (37, 15)
-Spawned enemy: 墓守 at (8, 28)
+Spawned enemy: 人魂 at (23, 42)
+Spawned enemy: ワイルド・コウモリ at (24, 42)
+Spawned enemy: 墓守 at (22, 28)
+Spawned enemy: オーク at (23, 28)
+Spawned enemy: 毒キノコ at (28, 43)
+Spawned enemy: 毒キノコ at (21, 4)
+Spawned enemy: 人魂 at (43, 36)
+Spawned enemy: 毒キノコ at (43, 26)
+Spawned enemy: 毒キノコ at (42, 25)
+Spawned enemy: 小鬼 at (45, 19)
+Spawned enemy: 小鬼 at (45, 18)
+Spawned enemy: ワイルド・コウモリ at (16, 6)
 Spawning items...
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (896.0, 320.0)
+Item spawned at: (768.0, 928.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1024.0, 1024.0)
+Item spawned at: (864.0, 1344.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (224.0, 1248.0)
+Item spawned at: (992.0, 1088.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1024.0, 1216.0)
+Item spawned at: (768.0, 1152.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (448.0, 1408.0)
+Item spawned at: (32.0, 128.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1344.0, 64.0)
-Total items spawned: 6
-Total traps spawned: 3
+Item spawned at: (512.0, 576.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (1408.0, 768.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (512.0, 128.0)
+Total items spawned: 8
+Total traps spawned: 5
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]
@@ -125,4 +115,116 @@ Log added: 骸骨弓兵 は矢を放った！
 Player took 10 damage. HP: 9990/10000
 Log added: Player に命中！ (10)
 Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Log added: 落とし穴に落ちて 10 のダメージを受けた！
+Player took 10 damage. HP: 9980/10000
+落とし穴から次の階層へ落ちた！ Floor: 3
+Log added: 落とし穴から次の階層へ落ちた！ 階層 3 へ
+Ammo replenished. Current Reserve: 20
+Log added: 弾薬を補充した (予備: 20)
+DungeonGenerator: Unlocked a door on main path at (24, 24)
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Spawned enemy: 大カマキリ at (31, 20)
+Spawned enemy: 小鬼 at (32, 24)
+Spawned enemy: 雑魚虫 at (42, 16)
+Spawned enemy: フレイムスキャッター at (41, 16)
+Spawned enemy: ワイルド・コウモリ at (42, 15)
+Spawned enemy: 人魂 at (42, 30)
+Spawned enemy: 小鬼 at (29, 33)
+Spawned enemy: ワイルド・コウモリ at (19, 23)
+Spawned enemy: 毒キノコ at (20, 24)
+Spawned enemy: 人魂 at (19, 24)
+Spawned enemy: 墓守 at (10, 11)
+Spawned enemy: 人魂 at (3, 22)
+Spawned enemy: 毒キノコ at (5, 21)
+Spawned enemy: 人魂 at (4, 22)
+Spawned enemy: 小鬼 at (34, 11)
+Spawned enemy: ワイルド・コウモリ at (29, 44)
+Spawned enemy: フレイムスキャッター at (28, 44)
+Spawned enemy: フレイムスキャッター at (27, 40)
+Spawned enemy: 墓守 at (25, 7)
+Spawned enemy: フレイムスキャッター at (23, 7)
+Spawned enemy: 小鬼 at (7, 31)
+Spawned enemy: オーク at (5, 33)
+Spawned enemy: 人魂 at (8, 33)
+Spawned enemy: 毒キノコ at (21, 43)
+Spawned enemy: 毒キノコ at (45, 38)
+Spawned enemy: 小鬼 at (24, 26)
+Spawned enemy: 小鬼 at (25, 27)
+Spawned enemy: 小鬼 at (13, 41)
+Spawned enemy: 大カマキリ at (13, 40)
+Spawning items...
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (1312.0, 928.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (288.0, 256.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (192.0, 672.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (1056.0, 320.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (128.0, 1088.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (736.0, 1344.0)
+Total items spawned: 6
+Total traps spawned: 4
+Log added: 骸骨弓兵 は矢を放った！
+下り階段を下りた！ Floor: 4
+Log added: 下り階段を下りた！ 階層 4 へ (Branch 0)
+Ammo replenished. Current Reserve: 20
+Log added: 弾薬を補充した (予備: 20)
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Spawned enemy: 大粘液 at (13, 31)
+Spawned enemy: 骸骨兵 at (13, 32)
+Spawned enemy: 大粘液 at (14, 33)
+Spawned enemy: 墓守 at (5, 6)
+Spawned enemy: 毒キノコ at (3, 5)
+Spawned enemy: 墓守 at (3, 4)
+Spawned enemy: オーク at (27, 3)
+Spawned enemy: 毒キノコ at (36, 21)
+Spawned enemy: 墓守 at (36, 24)
+Spawned enemy: 毒キノコ at (7, 22)
+Spawned enemy: 骸骨兵 at (7, 23)
+Spawned enemy: 大粘液 at (44, 24)
+Spawned enemy: 墓守 at (43, 24)
+Spawned enemy: フレイムスキャッター at (45, 24)
+Spawned enemy: 小鬼 at (41, 11)
+Spawned enemy: フレイムスキャッター at (40, 11)
+Spawned enemy: 土蜘蛛 at (29, 44)
+Spawned enemy: 大カマキリ at (28, 44)
+Spawned enemy: 骸骨弓兵 at (29, 43)
+Spawned enemy: オーク at (9, 42)
+Spawned enemy: オーク at (7, 43)
+Spawned enemy: 大粘液 at (45, 37)
+Spawned enemy: 骸骨弓兵 at (44, 38)
+Spawned enemy: 土蜘蛛 at (43, 38)
+Spawned enemy: 墓守 at (14, 15)
+Spawned enemy: 骸骨兵 at (44, 46)
+Spawned enemy: 小鬼 at (14, 7)
+Spawned enemy: 骸骨兵 at (14, 5)
+Spawned enemy: 骸骨兵 at (14, 6)
+Spawned enemy: フレイムスキャッター at (21, 41)
+Spawned enemy: フレイムスキャッター at (21, 39)
+Spawned enemy: 大粘液 at (47, 18)
+Spawned enemy: オーク at (29, 24)
+Spawned enemy: 土蜘蛛 at (28, 23)
+Spawned enemy: オーク at (27, 24)
+Spawning items...
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (160.0, 32.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (960.0, 64.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (1152.0, 640.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (128.0, 1344.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (1440.0, 1376.0)
+[ItemDatabase] Loaded 40 items from resources
+Item spawned at: (1472.0, 480.0)
+Total items spawned: 6
+Total traps spawned: 0
 FLOOR_FIRST_TURN_TEST failures=0
