@@ -1031,6 +1031,10 @@ func level_up():
 	exp -= exp_to_next_level
 	exp_to_next_level = int(exp_to_next_level * 1.5)  # 次のレベルに必要な経験値を1.5倍
 	
+	# レベルアップで最大HPと最大MPを1ずつ上昇
+	level_hp_bonus += 1
+	level_mp_bonus += 1
+
 	# Each level grants a player-selected increase, independent of class.
 	pending_growth_choices += 1
 	pending_connector_choices += 1
@@ -1078,7 +1082,7 @@ func level_up():
 
 	# ログに表示
 	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("レベルアップ！ Lv.%d：上昇させる能力を選択してください。" % level, Color(1.0, 0.8, 0.0))
+		get_node("/root/LogUI").add_log("レベルアップ！ Lv.%d：最大HP+1、最大MP+1。上昇させる能力を選択してください。" % level, Color(1.0, 0.8, 0.0))
 
 	# Update UI
 	if PlayerUi:

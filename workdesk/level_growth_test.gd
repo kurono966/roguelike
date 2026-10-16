@@ -31,7 +31,7 @@ func run_test():
 	player.gain_exp(25)
 	check(player.level == 3 and player.pending_growth_choices == 2, "Multiple levels did not queue one choice each")
 	check(player.strength == str_before and player.dexterity == dex_before and player.intelligence == int_before, "Class still grants automatic stats")
-	check(player.level_hp_bonus == hp_before and player.level_mp_bonus == mp_before, "HP/MP still grow automatically")
+	check(player.level_hp_bonus == hp_before + 2 and player.level_mp_bonus == mp_before + 2, "HP/MP should grow by 1 per level")
 	await process_frame
 	check(paused and is_instance_valid(player._growth_selection), "Growth selection did not pause game")
 	check(player.is_level_up_sound_playing() and not player._growth_selection.content.visible, "Choices appeared before level-up sound finished")
@@ -71,7 +71,7 @@ func run_test():
 	player.choose_level_growth("intelligence")
 	player.choose_connector_growth("blue")
 	check(player.dexterity == dex_before + 2 and player.intelligence == int_before + 1, "DEX/INT growth failed")
-	check(player.level_mp_bonus == mp_before and player.hp == player.max_hp and player.mp == player.max_mp, "MP selection or restoration failed")
+	check(player.level_mp_bonus == mp_before + 2 and player.hp == player.max_hp and player.mp == player.max_mp, "MP selection or restoration failed")
 	check(not paused, "Last selection did not release pause")
 	# Existing saves default to no pending choices; newer saves can restore them.
 	main._deserialize_player(player, {"level": 4, "strength": 8, "dexterity": 7, "intelligence": 6, "pending_growth_choices": 1})
