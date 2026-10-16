@@ -205,6 +205,7 @@ func load_game() -> Dictionary:
 func _serialize_item(item: BaseItem) -> Dictionary:
 	if not item:
 		return {}
+	item.ensure_connectors()
 		
 	return {
 		"id": item.id,
@@ -227,6 +228,7 @@ func _serialize_item(item: BaseItem) -> Dictionary:
 		"rarity": item.rarity,
 		"description": item.description,
 		"shape": item.shape, # Array[Vector2i] directly supported
+		"connectors": item.connectors.duplicate(true),
 		"effects": _make_safe(item.effects) if item.effects else {},
 		"granted_skills": item.granted_skills.duplicate() if item.granted_skills else [],
 		"prefix_name": item.prefix_name,

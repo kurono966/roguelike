@@ -64,6 +64,7 @@ static func enhance_item(base_item: BaseItem, level: int = 1) -> BaseItem:
 
 static func _generate_connectors(item: BaseItem, rng: RandomNumberGenerator):
 	item.connectors.clear()
+	item.connectors_initialized = true
 	if not item.is_equippable():
 		return
 	var colors = ["red", "blue", "yellow", "purple"]

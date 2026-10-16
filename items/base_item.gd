@@ -25,6 +25,7 @@ extends Resource
 @export var suffix_name: String = ""
 @export var generated_level: int = 0
 @export var connectors: Array[Dictionary] = [] # {cell: Vector2i, direction: Vector2i, color: String}
+@export var connectors_initialized: bool = false
 
 var grid_position: Vector2i = Vector2i(-1, -1)
 var auto_pickup_ignored: bool = false # Per item; manual pickup remains available.
@@ -128,12 +129,17 @@ func rotate():
 	shape = new_shape
 	connectors = new_connectors
 
-func ensure_connectors():
+func ensure_connectors(rng: RandomNumberGenerator = null):
 	if not is_equippable():
 		connectors.clear()
+		connectors_initialized = true
 		return
-	if not connectors.is_empty() or shape.is_empty():
+	if not connectors.is_empty():
+		connectors_initialized = true
 		return
+	if connectors_initialized or shape.is_empty():
+		return
+	connectors_initialized = true
 	# Consumables don't need connectors
 	if is_consumable():
 		return
@@ -151,7 +157,14 @@ func ensure_connectors():
 		for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
 			if not shape.has(cell + direction):
 				candidates.append({"cell": cell, "direction": direction})
-	candidates.shuffle()
+	if rng:
+		for index in range(candidates.size() - 1, 0, -1):
+			var other = rng.randi_range(0, index)
+			var candidate = candidates[index]
+			candidates[index] = candidates[other]
+			candidates[other] = candidate
+	else:
+		candidates.shuffle()
 	var count = 2 if shape.size() >= 2 else 1
 	for i in range(min(count, candidates.size())):
 		connectors.append({

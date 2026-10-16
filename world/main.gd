@@ -5864,7 +5864,15 @@ func _deserialize_item(item_dict: Dictionary) -> BaseItem:
 	item.heal = int(item_dict.get("heal", definition.heal if definition else 0))
 	item.restore_mp = int(item_dict.get("restore_mp", definition.restore_mp if definition else 0))
 	item.restore_hunger = int(item_dict.get("restore_hunger", definition.restore_hunger if definition else 0))
-	item.ensure_connectors()
+	if item_dict.has("connectors"):
+		item.connectors.assign(item_dict["connectors"].duplicate(true))
+		item.connectors_initialized = true
+		item.ensure_connectors() # Also strips any invalid consumable connectors.
+	else:
+		# Old saves lack connector layouts. Reconstruct them consistently, once.
+		var legacy_rng = RandomNumberGenerator.new()
+		legacy_rng.seed = hash("%s|%s|%s" % [item.id, str(item.shape), str(item.grid_position)])
+		item.ensure_connectors(legacy_rng)
 	
 	return item
 
