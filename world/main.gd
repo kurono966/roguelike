@@ -2620,6 +2620,26 @@ func _draw_overworld_neighbor_previews() -> void:
 				continue
 			_draw_overworld_preview_map(preview["map_data"], Vector2i(dx * MAP_WIDTH, dy * MAP_HEIGHT), player_grid)
 
+# Keep atmospheric effects above elevation/grass (1) and fire (2),
+# below items (4) and actors (5). Shared by both map renderers.
+func _draw_gases_at(pos: Vector2i):
+	for gas in [
+		{"tiles": _steam_tiles, "color": Color(0.92, 0.92, 0.95)},
+		{"tiles": _poison_gas_tiles, "color": Color(0.6, 0.2, 0.8)}
+	]:
+		if not gas.tiles.has(pos): continue
+		var tint: Color = gas.color
+		tint.a = clampf(0.3 + float(gas.tiles[pos].get("density", 1)) * 0.15, 0.0, 1.0)
+		var overlay = ColorRect.new()
+		overlay.color = tint
+		overlay.size = Vector2.ONE * TILE_SIZE
+		overlay.position = Vector2(pos) * TILE_SIZE
+		overlay.z_index = 3
+		overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		overlay.add_to_group("fire_overlays")
+		overlay.add_to_group("gas_overlays")
+		add_child(overlay)
+
 func _draw_map():
 	tile_map.clear_layer(LAYER_VISIBLE)
 	tile_map.clear_layer(LAYER_MEMORY)
@@ -2746,30 +2766,8 @@ func _draw_map():
 						frost_overlay.add_to_group("fire_overlays") # Repurposing group for easy clearing
 						add_child(frost_overlay)
 						
-					# Show steam as semi-transparent white - density affects opacity
-					if _steam_tiles.has(pos):
-						var steam_data = _steam_tiles[pos]
-						var steam_density = steam_data.get("density", 1)
-						var steam_alpha = 0.3 + steam_density * 0.15  # density 1=0.45, 2=0.60, 3=0.75
-						var steam_overlay = ColorRect.new()
-						steam_overlay.color = Color(0.92, 0.92, 0.95, steam_alpha)
-						steam_overlay.size = Vector2(TILE_SIZE, TILE_SIZE)
-						steam_overlay.position = Vector2(tile_coords) * TILE_SIZE
-						steam_overlay.add_to_group("fire_overlays")
-						add_child(steam_overlay)
-						
-					# Show poison gas as semi-transparent purple
-					if _poison_gas_tiles.has(pos):
-						var gas_data = _poison_gas_tiles[pos]
-						var gas_density = gas_data.get("density", 1)
-						var gas_alpha = 0.3 + gas_density * 0.15
-						var gas_overlay = ColorRect.new()
-						gas_overlay.color = Color(0.6, 0.2, 0.8, gas_alpha)
-						gas_overlay.size = Vector2(TILE_SIZE, TILE_SIZE)
-						gas_overlay.position = Vector2(tile_coords) * TILE_SIZE
-						gas_overlay.add_to_group("fire_overlays")
-						add_child(gas_overlay)
-						
+					_draw_gases_at(pos)
+
 					# Draw revealed trap as ASCII ^ (bright, visible)
 					if _traps.has(pos) and _traps[pos].get("is_revealed", false):
 						var trap_label = Label.new()

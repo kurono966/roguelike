@@ -45,3 +45,4 @@ res://actors/equipment/equipment_component.gd
 res://actors/equipment/equipment_generator.gd
 res://items/inventory_grid_data.gd
 res://ui/unified_inventory_ui.gd
+res://ui/grid_inventory_view.gd

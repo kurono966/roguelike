@@ -306,14 +306,7 @@ func draw_map():
 						frost_overlay.add_to_group("fire_overlays") # Repurposing group for easy clearing
 						main_node.add_child(frost_overlay)
 						
-					# Show steam as semi-transparent white
-					if steam_tiles.has(pos):
-						var steam_overlay = ColorRect.new()
-						steam_overlay.color = Color(0.9, 0.9, 0.9, 0.75)
-						steam_overlay.size = Vector2(TILE_SIZE, TILE_SIZE)
-						steam_overlay.position = Vector2(tile_coords) * TILE_SIZE
-						steam_overlay.add_to_group("fire_overlays")
-						main_node.add_child(steam_overlay)
+					main_node._draw_gases_at(pos)
 				else:
 					if is_instance_valid(memory_tile_map):
 						memory_tile_map.set_cell(0, tile_coords, 0, atlas_coords)
