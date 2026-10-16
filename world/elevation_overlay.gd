@@ -66,19 +66,14 @@ func _draw_water_depth(pos: Vector2i, size: float):
 			Color(0.16, 0.40, 0.44, 0.4 * opacity), Color(0.01, 0.08, 0.18, 0.0))
 
 func _draw_grounded_grass(origin: Vector2, height: int, opacity: float):
-	var root = origin + Vector2(16, 19 + (1 - height) * 3)
-	var shadow = PackedVector2Array()
-	for i in range(12):
-		var angle = TAU * i / 12.0
-		shadow.append(root + Vector2(cos(angle) * 8.0, sin(angle) * 2.5 + 1.5))
-	draw_colored_polygon(shadow, Color(0.01, 0.025, 0.015, 0.8 * opacity))
-	var ground_color = Color(0.58, 0.57, 0.27, 0.65 * opacity) if height == ElevationMap.HIGH else Color(0.20, 0.38, 0.32, 0.65 * opacity)
-	draw_line(root + Vector2(-6, 1), root + Vector2(6, 1), ground_color, 1.5)
-	var leaf = Color(0.53, 0.88, 0.30, opacity) if height == ElevationMap.HIGH else Color(0.26, 0.63, 0.43, opacity)
-	if height == ElevationMap.NORMAL: leaf = Color(0.35, 0.80, 0.38, opacity)
-	for blade in [[Vector2(-3, 0), Vector2(-7, -7)], [Vector2.ZERO, Vector2(-1, -10)], [Vector2(3, 0), Vector2(7, -8)]]:
-		draw_line(root + blade[0] + Vector2(1, 1), root + blade[1] + Vector2(1, 1), Color(0.01, 0.04, 0.02, opacity), 3)
-		draw_line(root + blade[0], root + blade[1], leaf, 2)
+	# Use the same atlas tile as neighboring previews; height only changes its
+	# placement/tint, never the grass design itself.
+	var source = main.tile_map.tile_set.get_source(0)
+	var tint = Color(1.0, 1.0, 1.0, opacity)
+	if height == ElevationMap.HIGH: tint = Color(1.15, 1.10, 0.80, opacity)
+	elif height == ElevationMap.LOW: tint = Color(0.75, 0.85, 1.0, opacity)
+	var offset = Vector2(0, (1 - height) * 3)
+	draw_texture_rect_region(source.texture, Rect2(origin + offset, Vector2(32, 32)), Rect2(Vector2(34 * 32, 0), Vector2(32, 32)), tint)
 
 func _draw_gradient_band(start: Vector2, end: Vector2, offset: Vector2, near_color: Color, far_color: Color):
 	# Smoothstep fading keeps a broad, readable gradient without a hard outer edge.

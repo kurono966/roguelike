@@ -1070,7 +1070,6 @@ func _apply_ascii_dungeon_tiles(combined_image: Image):
 		"stairs_down": {"char": ">", "fg": Color(0.95, 0.78, 0.28, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
 		"stairs_up": {"char": "<", "fg": Color(0.88, 0.88, 0.96, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
 		"water": {"char": "~", "fg": Color(0.35, 0.62, 0.95, 1.0), "bg": Color(0.02, 0.04, 0.08, 1.0)},
-		"grass": {"char": "\"", "fg": Color(0.35, 0.80, 0.38, 1.0), "bg": Color(0.02, 0.05, 0.025, 1.0)},
 		"door_closed": {"char": "+", "fg": Color(0.75, 0.48, 0.18, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
 		"door_open": {"char": "/", "fg": Color(0.66, 0.46, 0.25, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
 		"door_locked": {"char": "+", "fg": Color(0.55, 0.62, 1.0, 1.0), "bg": Color(0.02, 0.02, 0.025, 1.0)},
@@ -1088,7 +1087,7 @@ func _apply_ascii_dungeon_tiles(combined_image: Image):
 	_blit_ascii_tile(combined_image, 17, specs["stairs_down"])
 	for i in range(16):
 		_blit_ascii_tile(combined_image, 18 + i, specs["water"])
-	_blit_ascii_tile(combined_image, 34, specs["grass"])
+	combined_image.blit_rect(_make_grass_tile(), Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(34 * TILE_SIZE, 0))
 	_blit_ascii_tile(combined_image, 35, specs["stairs_down"])
 	_blit_ascii_tile(combined_image, 36, specs["door_closed"])
 	_blit_ascii_tile(combined_image, 37, specs["door_open"])
@@ -1109,6 +1108,30 @@ func _apply_ascii_dungeon_tiles(combined_image: Image):
 	_blit_ascii_tile(combined_image, 80, specs["tree"])
 	_blit_ascii_tile(combined_image, 81, specs["tree_fruit"])
 	_blit_ascii_tile(combined_image, 82, specs["rock"])
+
+func _make_grass_tile() -> Image:
+	# Shared by local terrain, explored terrain, and neighboring chunk previews.
+	var image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.02, 0.05, 0.025))
+	for x in range(8, 25):
+		for y in range(18, 24):
+			if pow((x - 16.0) / 8.0, 2) + pow((y - 20.5) / 2.5, 2) <= 1:
+				image.set_pixel(x, y, Color(0.01, 0.025, 0.015))
+	_paint_grass_line(image, Vector2i(10, 20), Vector2i(22, 20), Color(0.20, 0.38, 0.32), 1)
+	for blade in [[Vector2i(13, 19), Vector2i(9, 12)], [Vector2i(16, 19), Vector2i(15, 9)], [Vector2i(19, 19), Vector2i(23, 11)]]:
+		_paint_grass_line(image, blade[0] + Vector2i.ONE, blade[1] + Vector2i.ONE, Color(0.01, 0.04, 0.02), 3)
+		_paint_grass_line(image, blade[0], blade[1], Color(0.35, 0.80, 0.38), 2)
+	return image
+
+func _paint_grass_line(image: Image, from: Vector2i, to: Vector2i, color: Color, thickness: int):
+	var steps = maxi(absi(to.x - from.x), absi(to.y - from.y))
+	for i in range(steps + 1):
+		var pos = Vector2(from).lerp(Vector2(to), float(i) / maxi(1, steps)).round()
+		for dx in range(thickness):
+			for dy in range(thickness):
+				var pixel = Vector2i(pos) + Vector2i(dx, dy)
+				if pixel.x >= 0 and pixel.x < TILE_SIZE and pixel.y >= 0 and pixel.y < TILE_SIZE:
+					image.set_pixelv(pixel, color)
 
 func _blit_ascii_tile(combined_image: Image, index: int, spec: Dictionary):
 	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
