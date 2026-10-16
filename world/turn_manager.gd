@@ -129,6 +129,8 @@ func process_enemy_turns():
 			continue
 			
 		var enemy = child
+		if enemy.is_gravekeeper and main_node.corpse_manager:
+			if await main_node.corpse_manager.act(enemy): continue
 		if _try_eat_grass(enemy):
 			continue
 		

@@ -143,6 +143,7 @@ var map_controller: MapController
 var player_controller: PlayerController
 var skill_executor: SkillExecutor
 var enemy_manager: EnemyManager
+var corpse_manager
 var item_manager: ItemManager
 var npc_manager: NPCManager
 var world_map_manager: WorldMapManager
@@ -217,6 +218,10 @@ func _ready():
 	enemy_manager.setup(self)
 	add_child(enemy_manager)
 	
+	corpse_manager = preload("res://world/corpse_manager.gd").new()
+	corpse_manager.setup(self)
+	add_child(corpse_manager)
+
 	item_manager = ItemManager.new()
 	item_manager.setup(self)
 	add_child(item_manager)
@@ -1441,6 +1446,12 @@ func _update_tooltip():
 					tooltip_text = child.item_data.name
 					break
 
+	if tooltip_text == "" and corpse_manager:
+		for corpse in corpse_manager.corpses:
+			if corpse.death_grid == grid_pos and corpse.visible:
+				tooltip_text = "%s の死体 / 残骸" % corpse.enemy_name
+				break
+
 	# Check stairs if no entity or item found
 	if tooltip_text == "" and _is_grid_in_bounds(grid_pos):
 		if _explored_tiles[grid_pos.x][grid_pos.y]:
@@ -2414,6 +2425,7 @@ func _spawn_single_npc(type: Dictionary, pos: Vector2):
 	print("NPC Spawned: ", npc.enemy_name, " at ", pos)
 
 func _generate_map(local_type: int = -1):
+	if corpse_manager: corpse_manager.clear_all()
 	_liquid_state.clear()
 	var preview_key = "local_overworld_%d_%d" % [_world_player_pos.x, _world_player_pos.y]
 	if current_floor == 0 and _overworld_preview_maps.has(preview_key):
@@ -3200,6 +3212,7 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 	if not _floor_caches.has(floor_key):
 		return false
 		
+	if corpse_manager: corpse_manager.clear_all()
 	var cache = _floor_caches[floor_key]
 	_map_data = cache["map_data"].duplicate(true)
 	_height_data = ElevationMap.normalize(cache.get("height_data", []), MAP_WIDTH, MAP_HEIGHT)
@@ -3415,6 +3428,7 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 	return true
 
 func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = false, is_pit: bool = false):
+	if corpse_manager: corpse_manager.clear_all()
 	# Keep stairs, falls and other transitions inside the beginner dungeon.
 	if _current_branch == 10 and target_floor > 0:
 		target_branch = 10
@@ -5433,6 +5447,7 @@ func _load_game():
 		return
 	
 	print("[Load] Clearing existing game state... (Elapsed: %d ms)" % (Time.get_ticks_msec() - start_time))
+	if corpse_manager: corpse_manager.clear_all()
 	# Clear existing game state
 	get_tree().call_group("enemies", "queue_free")
 	get_tree().call_group("npcs", "queue_free")
@@ -5515,6 +5530,8 @@ func _load_game():
 		await get_tree().process_frame
 	
 	print("[Load] Spawning items on ground... (Elapsed: %d ms)" % (Time.get_ticks_msec() - start_time))
+	if corpse_manager: corpse_manager.restore(world_data.get("corpses", []))
+
 	# Load world items
 	var items = world_data.get("items", [])
 	for i in range(items.size()):
@@ -5837,6 +5854,7 @@ func _deserialize_enemy(enemy_data: Dictionary):
 	# Restore Dynamic Data from Save
 	enemy.position = Vector2(enemy_data.get("position_x", 0), enemy_data.get("position_y", 0))
 	
+	if "attack" in enemy_data: enemy.attack_power = int(enemy_data["attack"])
 	if "hp" in enemy_data: enemy.hp = enemy_data["hp"]
 	if "max_hp" in enemy_data: enemy.max_hp = enemy_data["max_hp"] # Persist max hp changes
 	if "fear" in enemy_data: enemy.fear = int(enemy_data["fear"])
@@ -6028,7 +6046,7 @@ func _execute_enemy_skill_v2(enemy, target_grid_pos: Vector2i):
 				
 		if initial_target:
 			print("DEBUG: Initial target hit: ", initial_target.name)
-			await _apply_chain_lightning(enemy, initial_target, damage, 4, [])
+			_apply_chain_lightning(enemy, initial_target, damage, 4, [])
 		else:
 			print("DEBUG: No target found at ", target_grid_pos)
 			
@@ -6287,95 +6305,48 @@ func _apply_freeze_area(caster, target_grid: Vector2i, skill_data: Dictionary):
 	_calculate_fov()
 	_draw_map()
 
-func _find_chain_neighbors_by_pos(center_pos: Vector2, hit_list: Array, ignore_ent = null) -> Array:
+# One discharge uses a single position snapshot and resolves before actors move.
+func _capture_lightning_positions() -> Dictionary:
+	var positions = {}
+	for entity in get_tree().get_nodes_in_group("entities"):
+		if not is_instance_valid(entity) or entity.is_queued_for_deletion(): continue
+		if not entity is Node2D or not entity.has_method("take_damage"): continue
+		positions[entity] = entity.position + Vector2.ONE * TILE_SIZE / 2.0
+	return positions
+
+func _find_chain_neighbors_by_pos(center_pos: Vector2, hit_list: Array, ignore_ent = null, positions: Dictionary = {}) -> Array:
+	var snapshot = positions if not positions.is_empty() else _capture_lightning_positions()
 	var neighbors = []
-	var t_grid = tile_map.local_to_map(center_pos)
-	
-	var in_water = false
-	if t_grid.x >= 0 and t_grid.x < MAP_WIDTH and t_grid.y >= 0 and t_grid.y < MAP_HEIGHT:
-		if _map_data[t_grid.x][t_grid.y] == CellType.WATER:
-			in_water = true
-			
-	var reach = 1.6
-	if in_water: reach = 3.0
-	
-	var entities = get_tree().get_nodes_in_group("entities")
-	for ent in entities:
-		if not is_instance_valid(ent): continue
-		if ent == ignore_ent: continue
-		if hit_list.has(ent): continue
-		
-		var e_grid = tile_map.local_to_map(ent.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0))
-		var dist = Vector2(t_grid).distance_to(Vector2(e_grid))
-		
-		if dist <= reach:
-			neighbors.append(ent)
-			
+	var origin = tile_map.local_to_map(center_pos)
+	for entity in snapshot:
+		if not is_instance_valid(entity) or entity.is_queued_for_deletion(): continue
+		if entity == ignore_ent or hit_list.has(entity): continue
+		var cell = tile_map.local_to_map(snapshot[entity])
+		var delta = cell - origin
+		# Direct neighbors only, including diagonals. Water conduction is separate.
+		if maxi(absi(delta.x), absi(delta.y)) == 1:
+			neighbors.append(entity)
 	return neighbors
 
-func _apply_chain_lightning(source, current_target, damage: int, chain_left: int, hit_list: Array):
-	if chain_left < 0: return
-	if hit_list.has(current_target): return
-	
-	# Cache position explicitly BEFORE damage (in case target dies/queue_free)
-	var target_pos_center = Vector2.ZERO
-	if is_instance_valid(current_target):
-		target_pos_center = current_target.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
-	else:
-		return # Cannot chain from invalid target
-	
+func _apply_chain_lightning(source, current_target, damage: int, chain_left: int, hit_list: Array, positions: Dictionary = {}):
+	if chain_left < 0 or hit_list.has(current_target): return
+	if not is_instance_valid(current_target) or current_target.is_queued_for_deletion(): return
+	var snapshot = positions if not positions.is_empty() else _capture_lightning_positions()
+	if not snapshot.has(current_target): return
+	var target_pos_center: Vector2 = snapshot[current_target]
 	hit_list.append(current_target)
-	
-	# Visual effect at target position
+	# Select neighbors before damage, death reactions, or knockback can change them.
+	var neighbors = _find_chain_neighbors_by_pos(target_pos_center, hit_list, current_target, snapshot)
 	_spawn_skill_particles(target_pos_center, "lightning", 0.4)
-	
-	if is_instance_valid(current_target) and current_target.has_method("take_damage"):
-		var t_name = current_target.name
-		if "enemy_name" in current_target: t_name = current_target.enemy_name
-		elif current_target == player: t_name = "Player"
-		
-		current_target.take_damage(damage, source, ["electric"])
-		
-		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("[雷] %s に電撃が走る！ (%d)" % [t_name, damage], Color.YELLOW)
-			
-		if is_instance_valid(current_target) and current_target.has_method("apply_effect") and randf() < 0.3:
-			current_target.apply_effect("paralysis", {"duration": 2})
-
-	await get_tree().create_timer(0.15).timeout
-
-	# Use cached position for grid check
-	var t_grid = tile_map.local_to_map(target_pos_center)
-	
-	# Check for Water Conductivity
-	var in_water = false
-	if t_grid.x >= 0 and t_grid.x < MAP_WIDTH and t_grid.y >= 0 and t_grid.y < MAP_HEIGHT:
-		if _map_data[t_grid.x][t_grid.y] == CellType.WATER:
-			in_water = true
-
-	var neighbors = []
-	var entities = get_tree().get_nodes_in_group("entities")
-	
-	for ent in entities:
-		if not is_instance_valid(ent): continue
-		if ent == current_target: continue
-		if hit_list.has(ent): continue
-		
-		var e_grid = tile_map.local_to_map(ent.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0))
-		var dist = Vector2(t_grid).distance_to(Vector2(e_grid))
-		
-		var reach = 1.6 # Slighly more than 1.5 to be safe
-		if in_water: reach = 3.0
-			
-		if dist <= reach:
-			neighbors.append(ent)
-	
-	# Debug log to UI to visualize chain
-	# if has_node("/root/LogUI") and neighbors.size() > 0:
-	# 	get_node("/root/LogUI").add_log("連鎖: %d 体の敵を感知" % neighbors.size(), Color.ORANGE)
-
-	for n in neighbors:
-		await _apply_chain_lightning(current_target, n, damage, chain_left - 1, hit_list)
+	var target_name = current_target.enemy_name if "enemy_name" in current_target else current_target.name
+	current_target.take_damage(damage, source, ["electric"])
+	if has_node("/root/LogUI"):
+		get_node("/root/LogUI").add_log("[雷] %s に電撃が走る！ (%d)" % [target_name, damage], Color.YELLOW)
+	if is_instance_valid(current_target) and not current_target.is_queued_for_deletion() and current_target.has_method("apply_effect") and randf() < 0.3:
+		current_target.apply_effect("paralysis" if current_target == player else "paralyze", {"duration": 2})
+	# Particle lifetimes supply the animation; damage never waits across turns.
+	for neighbor in neighbors:
+		_apply_chain_lightning(source, neighbor, damage, chain_left - 1, hit_list, snapshot)
 
 func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: String, is_reflected_depth: int = 0):
 	# Stop at solid walls, including walls which are currently burning.
@@ -7487,6 +7458,8 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 			_calculate_fov()
 			_draw_map()
 	
+	var lightning_positions = _capture_lightning_positions() if current_skill_id == "lightning" else {}
+
 	# 3. Apply Effect
 	if hit_entity:
 		var dmg = _calculate_skill_damage(_targeting_skill, hit_entity)
@@ -7572,9 +7545,9 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 			var ignore = hit_entity if is_instance_valid(hit_entity) else null
 			var hit_list = []
 			if ignore: hit_list.append(ignore)
-			var neighbors = _find_chain_neighbors_by_pos(center_pos, hit_list, ignore)
+			var neighbors = _find_chain_neighbors_by_pos(center_pos, hit_list, ignore, lightning_positions)
 			for n in neighbors:
-				await _apply_chain_lightning(player, n, chain_dmg, 3, hit_list)
+				_apply_chain_lightning(player, n, chain_dmg, 3, hit_list, lightning_positions)
 
 		var hit_cell = _map_data[hit_pos.x][hit_pos.y]
 		if hit_cell == CellType.WATER:
@@ -7723,6 +7696,7 @@ func _zoom_out_to_world_map():
 		return
 		
 	# Save current local map to cache
+	if corpse_manager: corpse_manager.clear_all()
 	_save_current_floor_to_cache()
 	
 	# Gather allies data so they travel with the player
@@ -8105,6 +8079,7 @@ func set_tile_height(pos: Vector2i, value: int):
 	_draw_height_overlay()
 
 func _draw_height_overlay():
+	if corpse_manager: corpse_manager.refresh_visibility()
 	if not ElevationMap.ENABLED:
 		if is_instance_valid(_elevation_overlay): _elevation_overlay.hide()
 		return

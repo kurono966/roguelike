@@ -25,30 +25,28 @@ GameUI loaded successfully
 Current Skills: []
 [ItemDatabase] Loaded 40 items from resources
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
 Current Skills: []
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
 Current Skills: []
 Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:247)
+       [0] _ready (res://world/main.gd:252)
        [1] _run (res://workdesk/enemy_spawn_behavior_test.gd:34)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:247)
+       [0] _ready (res://world/main.gd:252)
        [1] _run (res://workdesk/enemy_spawn_behavior_test.gd:34)
-Dungeon placed at: (28, 30)
-NPC Spawned: 村の長老 at (288.0, 544.0)
-NPC Spawned: 村人 at (160.0, 960.0)
-NPC Spawned: 村の長老 at (1312.0, 992.0)
-NPC Spawned: 村の長老 at (224.0, 512.0)
-NPC Spawned: 村人 at (512.0, 992.0)
+Dungeon placed at: (22, 47)
+NPC Spawned: 村の長老 at (160.0, 928.0)
+NPC Spawned: 村の長老 at (832.0, 416.0)
+NPC Spawned: 村の長老 at (1440.0, 1312.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
@@ -59,23 +57,17 @@ PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 Spawned enemy: フレイムスキャッター at (28, 25)
-_update_skill_ui() called with skills: ["heal"]
-PlayerUi found, calling update_skill_bar
 Log added: フレイムスキャッター は小さな火球を放った！
 Player took 3 damage. HP: 9997/10000
 Log added: Player に命中！ (3)
 Applied status: burn Params: { "duration": 3, "damage": 1 }
 Log added: 炎上 状態になった！
 Enemy turns processing complete. Starting player turn.
-_update_skill_ui() called with skills: ["heal"]
-PlayerUi found, calling update_skill_bar
 Log added: [炎] 草むらが燃え始めた！
 Log added: 💨 蒸気が立ち込めた！
 Log added: フレイムスキャッター は炎の種をまき散らした！
 Enemy turns processing complete. Starting player turn.
 Spawned enemy: 毒キノコ at (26, 25)
-_update_skill_ui() called with skills: ["heal"]
-PlayerUi found, calling update_skill_bar
 Player took 2 damage. HP: 9995/10000
 Paralyze check: Risk 0.40 vs Roll 0.79
 毒キノコ attacks Player for 2 damage!
@@ -137,6 +129,7 @@ Spawned enemy: フレイムスキャッター at (26, 25)
 Spawned enemy: 森 of 雑魚虫 at (26, 25)
 Spawned enemy: 大カマキリ at (26, 25)
 Spawned enemy: 小鬼 at (26, 25)
+Spawned enemy: 墓守 at (26, 25)
 Spawned enemy: 死神 at (26, 25)
 Spawned enemy: 村の守備隊 at (26, 25)
 Spawned enemy: 人魂 at (26, 25)
@@ -151,6 +144,7 @@ Spawned enemy: オーク at (26, 25)
 Spawned enemy: 毒キノコ at (26, 25)
 Spawned enemy: いたずら小僧 at (26, 25)
 Spawned enemy: 赤鬼 at (26, 25)
+Spawned enemy: 根食い at (26, 25)
 Spawned enemy: 影法師 at (26, 25)
 Spawned enemy: 骸骨兵 at (26, 25)
 Spawned enemy: 骸骨弓兵 at (26, 25)

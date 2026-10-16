@@ -35,6 +35,8 @@ var resistances: Array = []
 var fire_immune: bool = false
 var grass_ignition_chance: float = 0.0
 var grass_heal: int = 0
+var is_gravekeeper: bool = false
+var _death_processed: bool = false
 
 var enemy_id: String = "zakomushi" # For save/load to pick the right scene
 var turns_since_damage: int = 0
@@ -82,6 +84,7 @@ func apply_behavior_definition(data: Dictionary):
 	fire_immune = bool(data.get("fire_immune", false))
 	grass_ignition_chance = float(data.get("grass_ignition_chance", 0.0))
 	grass_heal = int(data.get("grass_heal", 0))
+	is_gravekeeper = bool(data.get("gravekeeper", false))
 
 func _ready():
 	z_index = 5 # Ensure enemy is above floor/stairs but below UI/Flying text
@@ -393,6 +396,7 @@ func _get_ascii_char() -> String:
 		"spark_slime": "P",
 		"forest_zakomushi": "F",
 		"root_eater": "r",
+		"gravekeeper": "G",
 		"flame_scatterer": "L",
 		"trent": "t",
 		"baby_jellyfish": "B",
@@ -595,6 +599,11 @@ func take_damage(amount: int, attacker = null, elements = ["normal"], is_crit: b
 		die()
 
 func die():
+	if _death_processed: return
+	_death_processed = true
+	var main = get_parent()
+	if main and "corpse_manager" in main and main.corpse_manager:
+		main.corpse_manager.add_corpse(enemy_id, enemy_name, position)
 	print("Enemy defeated!")
 	
 	if get_node_or_null("/root/LogUI"):

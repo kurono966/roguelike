@@ -74,6 +74,7 @@ func save_game(player: CharacterBody2D, main: Node2D) -> bool:
 	config.set_value("world", "dungeon_village_pos_y", main._dungeon_village_pos.y if "_dungeon_village_pos" in main else 0)
 	config.set_value("world", "map_data", main._map_data if "_map_data" in main else [])
 	config.set_value("world", "height_data", main._height_data)
+	config.set_value("world", "corpses", main.corpse_manager.serialize() if main.corpse_manager else [])
 	var liquid_entries: Array = []
 	for pos in main._liquid_state:
 		var entry = main._liquid_state[pos].duplicate(true)
@@ -236,6 +237,7 @@ func _serialize_enemy(enemy: CharacterBody2D) -> Dictionary:
 		
 	return {
 		"enemy_id": enemy.enemy_id if "enemy_id" in enemy else "",
+		"attack": enemy.attack_power if "attack_power" in enemy else 1,
 		"enemy_name": enemy.enemy_name if "enemy_name" in enemy else "",
 		"position_x": enemy.position.x,
 		"position_y": enemy.position.y,

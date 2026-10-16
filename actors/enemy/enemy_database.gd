@@ -6,6 +6,7 @@ static var _enemy_cache: Dictionary = {}
 
 # Master list of all enemies mapped by a string ID
 const ENEMIES = {
+	"gravekeeper": {"name": "墓守", "hp": 30, "atk": 6, "def": 2, "color": Color(0.65, 0.45, 0.85), "gravekeeper": true, "exp": 10},
 	"root_eater": {"name": "根食い", "hp": 20, "atk": 4, "def": 1, "color": Color(0.65, 0.8, 0.25), "grass_heal": 5, "exp": 5, "weak": ["fire"]},
 	"zakomushi": {"name": "雑魚虫", "hp": 10, "atk": 4, "def": 1, "color": Color.GREEN, "swim": false, "sprite": "res://assets/zakomushi.png", "loot": {"potion": 0.1, "gummy": 0.4, "zakomushi_shell": 0.15}, "penetration": 0.1, "exp": 2, "weak": ["fire"]},
 	"bat": {"name": "ワイルド・コウモリ", "hp": 8, "atk": 2, "def": 0, "color": Color.PURPLE, "swim": true, "fly": true, "loot": {"scroll_teleport": 0.05}, "sprite": "res://assets/bat.png", "penetration": 1, "exp": 2, "weak": ["ice", "electric"]},
@@ -55,9 +56,9 @@ const SPAWN_TABLES = {
 	# 0: Normal Branch
 	0: [
 		{"floor_max": 1, "pool": ["zakomushi", "bat", "hitodama"]},
-		{"floor_max": 3, "pool": ["zakomushi", "bat", "hitodama", "goblin", "orc", "poison_mushroom"]},
-		{"floor_max": 6, "pool": ["goblin", "orc", "poison_mushroom", "skeleton", "skeleton_archer", "slime_giant", "spider"]},
-		{"floor_max": 9, "pool": ["skeleton", "skeleton_archer", "slime_giant", "spider", "red_orc", "shadow", "armored_skeleton"]},
+		{"floor_max": 3, "pool": ["gravekeeper", "zakomushi", "bat", "hitodama", "goblin", "orc", "poison_mushroom"]},
+		{"floor_max": 6, "pool": ["gravekeeper", "goblin", "orc", "poison_mushroom", "skeleton", "skeleton_archer", "slime_giant", "spider"]},
+		{"floor_max": 9, "pool": ["gravekeeper", "skeleton", "skeleton_archer", "slime_giant", "spider", "red_orc", "shadow", "armored_skeleton"]},
 		{"floor_max": 999, "pool": ["dragon", "red_orc", "shadow", "armored_skeleton", "kuragen_giant", "grim_reaper", "crystal_golem"]}
 	],
 	# 2: Blue Branch (Water Area)

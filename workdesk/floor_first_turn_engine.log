@@ -38,17 +38,22 @@ Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:244)
+       [0] _ready (res://world/main.gd:252)
        [1] _run (res://workdesk/floor_first_turn_test.gd:33)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:244)
+       [0] _ready (res://world/main.gd:252)
        [1] _run (res://workdesk/floor_first_turn_test.gd:33)
-Dungeon placed at: (25, 12)
-NPC Spawned: はぐれ魔道士 at (192.0, 512.0)
-NPC Spawned: 放浪の剣士 at (736.0, 224.0)
-NPC Spawned: はぐれ魔道士 at (736.0, 288.0)
+Dungeon placed at: (1, 9)
+NPC Spawned: 放浪の剣士 at (160.0, 1216.0)
+NPC Spawned: 商人 at (1280.0, 1248.0)
+NPC Spawned: 村の長老 at (704.0, 1024.0)
+NPC Spawned: 村の守備隊 at (1152.0, 1344.0)
+NPC Spawned: 商人 at (1152.0, 960.0)
+NPC Spawned: 村人 at (704.0, 1120.0)
+NPC Spawned: 放浪の剣士 at (864.0, 768.0)
+NPC Spawned: 村の長老 at (1088.0, 1344.0)
 Log added: 平穏な里に辿り着いた。
 下り階段を下りた！ Floor: 2
 Log added: 下り階段を下りた！ 階層 2 へ (Branch 0)
@@ -56,35 +61,44 @@ Ammo replenished. Current Reserve: 20
 Log added: 弾薬を補充した (予備: 20)
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
-Spawned enemy: 雑魚虫 at (27, 37)
-Spawned enemy: オーク at (26, 14)
-Spawned enemy: ワイルド・コウモリ at (27, 15)
-Spawned enemy: オーク at (35, 43)
-Spawned enemy: 雑魚虫 at (17, 3)
-Spawned enemy: 人魂 at (42, 23)
-Spawned enemy: 雑魚虫 at (43, 23)
-Spawned enemy: 小鬼 at (14, 35)
-Spawned enemy: 人魂 at (38, 12)
-Spawned enemy: 人魂 at (3, 20)
-Spawned enemy: ワイルド・コウモリ at (33, 32)
-Spawned enemy: オーク at (22, 44)
-Spawned enemy: 人魂 at (5, 32)
-Spawned enemy: 毒キノコ at (8, 9)
+Spawned enemy: オーク at (11, 6)
+Spawned enemy: 雑魚虫 at (21, 10)
+Spawned enemy: 小鬼 at (43, 42)
+Spawned enemy: オーク at (42, 41)
+Spawned enemy: 人魂 at (32, 44)
+Spawned enemy: ワイルド・コウモリ at (28, 31)
+Spawned enemy: オーク at (44, 23)
+Spawned enemy: 人魂 at (44, 22)
+Spawned enemy: 小鬼 at (23, 20)
+Spawned enemy: 毒キノコ at (24, 19)
+Spawned enemy: 毒キノコ at (12, 23)
+Spawned enemy: 毒キノコ at (6, 37)
+Spawned enemy: オーク at (35, 8)
+Spawned enemy: オーク at (35, 7)
+Spawned enemy: 毒キノコ at (34, 38)
+Spawned enemy: 小鬼 at (25, 46)
+Spawned enemy: ワイルド・コウモリ at (15, 43)
+Spawned enemy: 雑魚虫 at (15, 42)
+Spawned enemy: オーク at (35, 23)
+Spawned enemy: 小鬼 at (41, 3)
+Spawned enemy: 雑魚虫 at (37, 17)
+Spawned enemy: ワイルド・コウモリ at (37, 15)
+Spawned enemy: 墓守 at (8, 28)
 Spawning items...
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (864.0, 544.0)
+Item spawned at: (896.0, 320.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1056.0, 160.0)
+Item spawned at: (1024.0, 1024.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1312.0, 512.0)
+Item spawned at: (224.0, 1248.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (96.0, 608.0)
+Item spawned at: (1024.0, 1216.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1216.0, 224.0)
+Item spawned at: (448.0, 1408.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (192.0, 960.0)
+Item spawned at: (1344.0, 64.0)
 Total items spawned: 6
-Total traps spawned: 5
+Total traps spawned: 3
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]
