@@ -1,0 +1,165 @@
+ERROR: Could not create directory: 'user://D:'.
+   at: make_dir_recursive (core/io/dir_access.cpp:178)
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+InputManager: _ready() called
+Setting up numpad inputs...
+Inventory toggle key (I/ESC) has been set up
+Log toggle key (L) has been set up
+Skill toggle key (K) has been set up
+  - Mapped TAB and S to target_enemy
+  - Mapped Kp 7 to ui_up_left
+  - Mapped Home to ui_up_left
+  - Mapped Kp 9 to ui_up_right
+  - Mapped PageUp to ui_up_right
+  - Mapped Kp 1 to ui_down_left
+  - Mapped End to ui_down_left
+  - Mapped Kp 3 to ui_down_right
+  - Mapped PageDown to ui_down_right
+InputMap actions: [&"ui_accept", &"ui_select", &"ui_cancel", &"ui_close_dialog", &"ui_close_dialog.macos", &"ui_focus_next", &"ui_focus_prev", &"ui_left", &"ui_right", &"ui_up", &"ui_down", &"ui_page_up", &"ui_page_down", &"ui_home", &"ui_end", &"ui_accessibility_drag_and_drop", &"ui_cut", &"ui_copy", &"ui_focus_mode", &"ui_paste", &"ui_undo", &"ui_redo", &"ui_text_completion_query", &"ui_text_completion_accept", &"ui_text_completion_replace", &"ui_text_newline", &"ui_text_newline_blank", &"ui_text_newline_above", &"ui_text_indent", &"ui_text_dedent", &"ui_text_backspace", &"ui_text_backspace_word", &"ui_text_backspace_word.macos", &"ui_text_backspace_all_to_left", &"ui_text_backspace_all_to_left.macos", &"ui_text_delete", &"ui_text_delete_word", &"ui_text_delete_word.macos", &"ui_text_delete_all_to_right", &"ui_text_delete_all_to_right.macos", &"ui_text_caret_left", &"ui_text_caret_word_left", &"ui_text_caret_word_left.macos", &"ui_text_caret_right", &"ui_text_caret_word_right", &"ui_text_caret_word_right.macos", &"ui_text_caret_up", &"ui_text_caret_down", &"ui_text_caret_line_start", &"ui_text_caret_line_start.macos", &"ui_text_caret_line_end", &"ui_text_caret_line_end.macos", &"ui_text_caret_page_up", &"ui_text_caret_page_down", &"ui_text_caret_document_start", &"ui_text_caret_document_start.macos", &"ui_text_caret_document_end", &"ui_text_caret_document_end.macos", &"ui_text_caret_add_below", &"ui_text_caret_add_below.macos", &"ui_text_caret_add_above", &"ui_text_caret_add_above.macos", &"ui_text_scroll_up", &"ui_text_scroll_up.macos", &"ui_text_scroll_down", &"ui_text_scroll_down.macos", &"ui_text_select_all", &"ui_text_select_word_under_caret", &"ui_text_select_word_under_caret.macos", &"ui_text_add_selection_for_next_occurrence", &"ui_text_skip_selection_for_next_occurrence", &"ui_text_clear_carets_and_selection", &"ui_text_toggle_insert_mode", &"ui_menu", &"ui_text_submit", &"ui_unicode_start", &"ui_graph_duplicate", &"ui_graph_delete", &"ui_graph_follow_left", &"ui_graph_follow_left.macos", &"ui_graph_follow_right", &"ui_graph_follow_right.macos", &"ui_filedialog_delete", &"ui_filedialog_up_one_level", &"ui_filedialog_refresh", &"ui_filedialog_show_hidden", &"ui_filedialog_find", &"ui_filedialog_focus_path", &"ui_filedialog_focus_path.macos", &"ui_swap_input_direction", &"ui_colorpicker_delete_preset", &"ui_up_left", &"ui_up_right", &"ui_down_left", &"ui_down_right", &"target_enemy", &"toggle_inventory", &"toggle_log", &"toggle_skills", &"toggle_fullscreen"]
+Log added: ローグライクへようこそ！
+Log added: 'H' キーでヘルプを表示
+Log added: 'L'キーでログ：通常 → 拡大 → 非表示
+Enhanced LogUI initialized!
+GameUI loaded successfully
+Log added: 重要な結果
+Log added: MP回復 +1
+Log added: 重要な結果2
+Log added: 重要な結果2
+Log added: 非表示中の記録
+WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpinan8qo8qn - using text path instead: res://icon.svg
+   at: load (scene/resources/resource_format_text.cpp:500)
+   GDScript backtrace (most recent call first):
+       [0] run_test (res://workdesk/log_cleanup_test.gd:30)
+Current Skills: []
+[ItemDatabase] Loaded 40 items from resources
+Equipment grid changed!
+Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
+Current Skills: []
+Equipment grid changed!
+Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
+Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
+Current Skills: []
+Current Skills: ["heal"]
+ERROR: Cannot open file 'res://default_environment.tres'.
+   at: load (scene/resources/resource_format_text.cpp:1430)
+   GDScript backtrace (most recent call first):
+       [0] _ready (res://world/main.gd:253)
+       [1] run_test (res://workdesk/log_cleanup_test.gd:31)
+ERROR: Failed loading resource: res://default_environment.tres.
+   at: _load (core/io/resource_loader.cpp:343)
+   GDScript backtrace (most recent call first):
+       [0] _ready (res://world/main.gd:253)
+       [1] run_test (res://workdesk/log_cleanup_test.gd:31)
+Dungeon placed at: (30, 26)
+NPC Spawned: 村人 at (1088.0, 128.0)
+NPC Spawned: 村の守備隊 at (1248.0, 480.0)
+NPC Spawned: 商人 at (800.0, 768.0)
+NPC Spawned: はぐれ魔道士 at (128.0, 672.0)
+NPC Spawned: 村人 at (128.0, 896.0)
+Log added: 平穏な里に辿り着いた。
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Crit Rate Debug - base:0.05dex_bonus:0.01equip_dex_bonus:0.0item_crit_bonus:0.0adj_bonus:0.05organization_bonus:0.15grass_bonus:0.0total:0.26
+Crit Rate Debug - base:0.05dex_bonus:0.01equip_dex_bonus:0.0item_crit_bonus:0.0adj_bonus:0.05organization_bonus:0.15grass_bonus:0.0total:0.26
+Critical Hit! (Rate: 0.26)
+Player attacks 雑魚虫 for 3 damage!
+Log added: Player → 雑魚虫：3ダメージ (会心!)
+Enemy took 3 damage. HP: -2
+Enemy defeated!
+Log added: 雑魚虫 を倒した！
+* Player gained 2 EXP! Total: 2/100000
+Log added: 2 EXP獲得！
+Log added: 履歴 0
+Log added: 履歴 1
+Log added: 履歴 2
+Log added: 履歴 3
+Log added: 履歴 4
+Log added: 履歴 5
+Log added: 履歴 6
+Log added: 履歴 7
+Log added: 履歴 8
+Log added: 履歴 9
+Log added: 履歴 10
+Log added: 履歴 11
+Log added: 履歴 12
+Log added: 履歴 13
+Log added: 履歴 14
+Log added: 履歴 15
+Log added: 履歴 16
+Log added: 履歴 17
+Log added: 履歴 18
+Log added: 履歴 19
+Log added: 履歴 20
+Log added: 履歴 21
+Log added: 履歴 22
+Log added: 履歴 23
+Log added: 履歴 24
+Log added: 履歴 25
+Log added: 履歴 26
+Log added: 履歴 27
+Log added: 履歴 28
+Log added: 履歴 29
+Log added: 履歴 30
+Log added: 履歴 31
+Log added: 履歴 32
+Log added: 履歴 33
+Log added: 履歴 34
+Log added: 履歴 35
+Log added: 履歴 36
+Log added: 履歴 37
+Log added: 履歴 38
+Log added: 履歴 39
+Log added: 履歴 40
+Log added: 履歴 41
+Log added: 履歴 42
+Log added: 履歴 43
+Log added: 履歴 44
+Log added: 履歴 45
+Log added: 履歴 46
+Log added: 履歴 47
+Log added: 履歴 48
+Log added: 履歴 49
+Log added: 履歴 50
+Log added: 履歴 51
+Log added: 履歴 52
+Log added: 履歴 53
+Log added: 履歴 54
+Log added: 履歴 55
+Log added: 履歴 56
+Log added: 履歴 57
+Log added: 履歴 58
+Log added: 履歴 59
+Log added: 履歴 60
+Log added: 履歴 61
+Log added: 履歴 62
+Log added: 履歴 63
+Log added: 履歴 64
+Log added: 履歴 65
+Log added: 履歴 66
+Log added: 履歴 67
+Log added: 履歴 68
+Log added: 履歴 69
+Log added: 履歴 70
+Log added: 履歴 71
+Log added: 履歴 72
+Log added: 履歴 73
+Log added: 履歴 74
+Log added: 履歴 75
+Log added: 履歴 76
+Log added: 履歴 77
+Log added: 履歴 78
+Log added: 履歴 79
+Log added: 閲覧中に新しいログ
+LOG_CLEANUP_TEST failures=0
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 2 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)

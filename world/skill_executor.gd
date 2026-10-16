@@ -622,6 +622,8 @@ func _execute_point_skill(target_pos: Vector2, skill_data: Dictionary):
 	var target_grid = tile_map.local_to_map(target_pos)
 	
 	match skill_id:
+		"water_escape":
+			await main_node._execute_water_escape(target_grid, skill_data)
 		"explosion":
 			await _execute_explosion_skill(target_grid, skill_data)
 		"meteor":

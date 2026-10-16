@@ -8,6 +8,10 @@ var list_container: VBoxContainer
 var is_visible: bool = false
 
 const TILE_SIZE = 32
+const ELEMENT_NAMES = {
+	"normal": "通常", "fire": "炎", "ice": "氷", "electric": "雷",
+	"water": "水", "blunt": "打撃", "pierce": "刺突", "magic": "魔法",
+}
 
 func _ready():
 	process_mode = Node.PROCESS_MODE_ALWAYS
@@ -138,8 +142,11 @@ func _get_entity_name(entity) -> String:
 	return name_str
 
 func _create_entity_entry(ent_data: Dictionary, player_grid: Vector2i) -> Control:
+	var entry = VBoxContainer.new()
+	entry.add_theme_constant_override("separation", 1)
 	var hbox = HBoxContainer.new()
 	hbox.add_theme_constant_override("separation", 8)
+	entry.add_child(hbox)
 	
 	# Type icon/color
 	var type_label = Label.new()
@@ -172,11 +179,31 @@ func _create_entity_entry(ent_data: Dictionary, player_grid: Vector2i) -> Contro
 	var ent_grid = main_node.tile_map.local_to_map(ent_data.entity.position)
 	var dist = player_grid.distance_to(ent_grid)
 	var dist_label = Label.new()
-	dist_label.text = str(dist) + "m"
+	dist_label.text = "%.1fm" % (roundf(dist * 10.0) / 10.0)
 	dist_label.add_theme_color_override("font_color", Color(0.6, 0.6, 0.6))
 	hbox.add_child(dist_label)
 	
-	return hbox
+	var entity = ent_data.entity
+	if "weaknesses" in entity or "resistances" in entity:
+		var affinity_label = RichTextLabel.new()
+		affinity_label.bbcode_enabled = true
+		affinity_label.fit_content = true
+		affinity_label.scroll_active = false
+		affinity_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		affinity_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		affinity_label.add_theme_font_size_override("normal_font_size", 12)
+		var weak = _format_elements(entity.weaknesses if "weaknesses" in entity else [])
+		var resist = _format_elements(entity.resistances if "resistances" in entity else [])
+		affinity_label.text = "[color=#e6a078]弱:%s[/color]　[color=#89b9d9]耐:%s[/color]" % [weak, resist]
+		entry.add_child(affinity_label)
+	return entry
+
+func _format_elements(elements: Array) -> String:
+	var names = PackedStringArray()
+	for element in elements:
+		var element_name: String = ELEMENT_NAMES.get(element, str(element))
+		if not names.has(element_name): names.append(element_name)
+	return "・".join(names) if not names.is_empty() else "—"
 
 func _process(_delta):
 	refresh_list()

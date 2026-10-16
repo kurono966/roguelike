@@ -6843,9 +6843,56 @@ func _execute_wall_skill(target_grid: Vector2i, _targeting_skill: Dictionary):
 	target_manager.cancel_targeting()
 	await _end_player_turn(action_floor_epoch, "skill:wall")
 
+func _apply_water_escape(target_grid: Vector2i, skill: Dictionary) -> bool:
+	var player_grid = tile_map.local_to_map(player.position)
+	var failure = ""
+	if player.mp < skill.get("mp_cost", 5):
+		failure = "MPが足りない"
+	elif not _is_grid_in_bounds(target_grid):
+		failure = "そこには水遁を使えない"
+	elif player_grid.distance_to(target_grid) > skill.get("range", 5):
+		failure = "射程が足りない！"
+	elif not _visible_tiles[target_grid.x][target_grid.y] or not _has_line_of_sight(player_grid, target_grid):
+		failure = "そこは見えない！"
+	elif _map_data[target_grid.x][target_grid.y] not in [CellType.FLOOR, CellType.GRASS, CellType.ASH, CellType.VOLCANIC_ASH, CellType.WATER]:
+		failure = "水たまりを作れる地面を指定してください"
+	if failure != "":
+		if has_node("/root/LogUI"): get_node("/root/LogUI").add_log(failure, Color.GRAY)
+		return false
+
+	var damage = _calculate_skill_damage(skill, null)
+	var elements = _get_skill_elements(skill)
+	_spawn_skill_particles(tile_map.map_to_local(target_grid), "water", 0.6)
+	if has_node("/root/LogUI"):
+		get_node("/root/LogUI").add_log("水遁！ 水が噴き出し、水たまりができた。", Color(0.3, 0.7, 1.0))
+	for entity in get_tree().get_nodes_in_group("entities"):
+		if not is_instance_valid(entity) or entity.is_queued_for_deletion(): continue
+		if tile_map.local_to_map(entity.position) == target_grid and entity.has_method("take_damage"):
+			entity.take_damage(damage, player, elements)
+	_map_data[target_grid.x][target_grid.y] = CellType.WATER
+	_burning_grass.erase(target_grid)
+	_frozen_tiles.erase(target_grid)
+	_setup_pathfinding()
+	_calculate_fov()
+	_draw_map()
+	player.on_skill_executed(skill, false)
+	return true
+
+func _execute_water_escape(target_grid: Vector2i, skill: Dictionary):
+	var action_floor_epoch = _floor_epoch
+	if not _apply_water_escape(target_grid, skill):
+		_current_game_state = TurnPhase.PLAYER_TURN
+		if target_manager: target_manager._update_visuals()
+		return
+	target_manager.cancel_targeting()
+	await _end_player_turn(action_floor_epoch, "skill:water_escape")
+
 func _execute_point_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 	var action_floor_epoch = _floor_epoch
 	var target_grid = tile_map.local_to_map(target_pos)
+	if _targeting_skill.get("id", "") == "water_escape":
+		await _execute_water_escape(target_grid, _targeting_skill)
+		return
 	
 	# LOS Check (Optional, but good for balance)
 	var player_grid = tile_map.local_to_map(player.position)

@@ -291,6 +291,18 @@ static func get_all_skills() -> Array[Dictionary]:
 			"elements": ["water"],
 			"requires_water": true,
 			"description": "水を高圧で噴射する遠距離水属性攻撃。\n[color=pink]技量依存[/color]: 器用さ(DEX)の1.0倍の威力を加算する。\n[color=red]制約[/color]: [color=cyan]水中でのみ[/color]使用できる。"
+		},
+		{
+			"id": "water_escape",
+			"name": "水遁",
+			"mp_cost": 5,
+			"type": SKILL_TYPE_POINT,
+			"range": 5,
+			"radius": 0,
+			"damage": 8,
+			"is_magic": true,
+			"elements": ["water", "magic"],
+			"description": "指定した座標に水を噴出し、水属性ダメージを与える。\nその場所に水たまりを生成する。\n[color=cyan]魔法[/color]: 威力は知力によって増加する。"
 		}
 	]
 
