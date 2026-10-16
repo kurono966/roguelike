@@ -36,21 +36,22 @@ Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:239)
+       [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/enemy_spawn_behavior_test.gd:34)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:239)
+       [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/enemy_spawn_behavior_test.gd:34)
-Dungeon placed at: (27, 16)
-NPC Spawned: 商人 at (1024.0, 736.0)
-NPC Spawned: 放浪の剣士 at (512.0, 224.0)
-NPC Spawned: 商人 at (544.0, 832.0)
-NPC Spawned: 村の守備隊 at (1216.0, 352.0)
-NPC Spawned: 放浪の剣士 at (192.0, 192.0)
-NPC Spawned: はぐれ魔道士 at (768.0, 416.0)
-NPC Spawned: 村の守備隊 at (928.0, 1152.0)
+Dungeon placed at: (23, 30)
+NPC Spawned: 放浪の剣士 at (672.0, 1216.0)
+NPC Spawned: 村人 at (1024.0, 1120.0)
+NPC Spawned: はぐれ魔道士 at (672.0, 320.0)
+NPC Spawned: 放浪の剣士 at (1184.0, 768.0)
+NPC Spawned: はぐれ魔道士 at (1056.0, 1088.0)
+NPC Spawned: 村人 at (1152.0, 1440.0)
+NPC Spawned: 村の長老 at (832.0, 192.0)
+NPC Spawned: はぐれ魔道士 at (864.0, 544.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
@@ -61,22 +62,30 @@ PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 Spawned enemy: フレイムスキャッター at (28, 25)
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
 Log added: フレイムスキャッター は小さな火球を放った！
 Player took 3 damage. HP: 9997/10000
 Log added: Player に命中！ (3)
 Applied status: burn Params: { "duration": 3, "damage": 1 }
 Log added: 炎上 状態になった！
 Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
 Log added: [炎] 草むらが燃え始めた！
 Log added: 💨 蒸気が立ち込めた！
 Log added: フレイムスキャッター は炎の種をまき散らした！
 Enemy turns processing complete. Starting player turn.
 Spawned enemy: 毒キノコ at (26, 25)
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
 Player took 2 damage. HP: 9995/10000
 Paralyze check: Risk 0.40 vs Roll 0.79
 毒キノコ attacks Player for 2 damage!
 Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
 Player took 2 damage. HP: 9993/10000
 Paralyze check: Risk 0.40 vs Roll 0.84
 毒キノコ attacks Player for 2 damage!

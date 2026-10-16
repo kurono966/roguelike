@@ -84,7 +84,7 @@ func _setup_minimap():
 	_current_height_label.add_theme_font_size_override("font_size", 13)
 	vbox.add_child(_current_height_label)
 	_height_legend = Label.new()
-	_height_legend.text = "▲ 高地　・通常　▼ 低地\n縞の崖：直接移動不可"
+	_height_legend.text = "▲ 高地　・通常　▼ 低地\n勾配：黄 → 緑 → 青\n縞の崖：直接移動不可"
 	_height_legend.add_theme_font_size_override("font_size", 12)
 	_height_legend.add_theme_color_override("font_color", Color(0.78, 0.77, 0.72))
 	vbox.add_child(_height_legend)

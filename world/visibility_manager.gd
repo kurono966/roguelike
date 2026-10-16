@@ -63,20 +63,15 @@ func calculate_fov(is_preview: bool = false):
 		return
 
 
-	# Scan all 8 octants
-	for i in range(8):
-		_cast_light_octant(player_grid_pos, 1, 1.0, 0.0,
-			_get_transform(i).x.x, _get_transform(i).x.y,
-			_get_transform(i).y.x, _get_transform(i).y.y)
-
-	# Ensure minimum 2-tile radius visibility (for hallways)
-	var hall_vis_range = 2
-	for x in range(player_grid_pos.x - hall_vis_range, player_grid_pos.x + hall_vis_range + 1):
-		for y in range(player_grid_pos.y - hall_vis_range, player_grid_pos.y + hall_vis_range + 1):
-			if x >= 0 and x < MAP_WIDTH and y >= 0 and y < MAP_HEIGHT:
-				if main_node._has_line_of_sight(player_grid_pos, Vector2i(x, y)):
-					visible_tiles[x][y] = true
-					explored_tiles[x][y] = true
+	# Shared ray tests keep terrain, height, AI sight, and player FOV consistent.
+	# A hidden low tile must not shadow a farther, visible high tile.
+	for x in range(maxi(0, player_grid_pos.x - current_fov_radius), mini(MAP_WIDTH, player_grid_pos.x + current_fov_radius + 1)):
+		for y in range(maxi(0, player_grid_pos.y - current_fov_radius), mini(MAP_HEIGHT, player_grid_pos.y + current_fov_radius + 1)):
+			var target = Vector2i(x, y)
+			if player_grid_pos.distance_to(target) > current_fov_radius: continue
+			if main_node._has_line_of_sight(player_grid_pos, target):
+				visible_tiles[x][y] = true
+				explored_tiles[x][y] = true
 
 	update_entity_visibility()
 
@@ -159,12 +154,13 @@ func _cast_light_octant(origin: Vector2i, row: int, start_slope: float, end_slop
 			# Check bounds and set visibility
 			if current_x >= 0 and current_x < MAP_WIDTH and current_y >= 0 and current_y < MAP_HEIGHT:
 				if (Vector2i(current_x, current_y) - origin).length() <= current_fov_radius:
-					visible_tiles[current_x][current_y] = true
-					explored_tiles[current_x][current_y] = true
+					if main_node._has_height_line_of_sight(origin, Vector2i(current_x, current_y)):
+						visible_tiles[current_x][current_y] = true
+						explored_tiles[current_x][current_y] = true
 
 					if blocked: # Previous cell was blocked
 						var is_opaque = map_data[current_x][current_y] in [CellType.WALL, CellType.WOOD_WALL] or \
-										map_data[current_x][current_y] == CellType.DOOR_CLOSED or \
+										map_data[current_x][current_y] in [CellType.DOOR_CLOSED, CellType.DOOR_LOCKED] or \
 										map_data[current_x][current_y] == CellType.TREE or \
 										map_data[current_x][current_y] == CellType.TREE_FRUIT or \
 										map_data[current_x][current_y] == CellType.ROCK or \
@@ -177,7 +173,7 @@ func _cast_light_octant(origin: Vector2i, row: int, start_slope: float, end_slop
 							new_start_slope = right_slope
 					else:
 						var is_blocking = map_data[current_x][current_y] in [CellType.WALL, CellType.WOOD_WALL] or \
-										map_data[current_x][current_y] == CellType.DOOR_CLOSED or \
+										map_data[current_x][current_y] in [CellType.DOOR_CLOSED, CellType.DOOR_LOCKED] or \
 										map_data[current_x][current_y] == CellType.TREE or \
 										map_data[current_x][current_y] == CellType.TREE_FRUIT or \
 										map_data[current_x][current_y] == CellType.ROCK or \

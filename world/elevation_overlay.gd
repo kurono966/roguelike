@@ -105,12 +105,19 @@ func _draw_ledge(origin: Vector2, dir: Vector2i, difference: int, opacity: float
 	# Tight contact shadow establishes the height of the edge; its broad tail
 	# fades over the lower neighbor without covering the terrain's crisp markings.
 	_draw_gradient_band(start, end, normal * fade_width,
-		Color(0.015, 0.025, 0.045, cast_strength * opacity), Color(0.015, 0.025, 0.045, 0.0))
+		Color(0.03, 0.12, 0.20, cast_strength * 0.7 * opacity), Color(0.03, 0.12, 0.20, 0.0))
+	# A consistent warm-to-cool color ramp makes the downhill direction readable.
+	var gold = Color(0.95, 0.70, 0.24, 0.52 * opacity)
+	var green = Color(0.28, 0.66, 0.46, 0.44 * opacity)
+	var blue = Color(0.12, 0.43, 0.69, 0.32 * opacity)
+	_draw_gradient_band(start, end, normal * (size * 0.45), gold, green)
+	_draw_gradient_band(start + normal * size * 0.45, end + normal * size * 0.45, normal * size * 0.40, green, blue)
+	_draw_gradient_band(start + normal * size * 0.85, end + normal * size * 0.85, normal * size * 0.15, blue, Color(blue, 0.0))
 	_draw_gradient_band(start, end, normal * (5.0 + difference * 2),
 		Color(0.005, 0.01, 0.02, (0.58 + difference * 0.08) * opacity), Color(0.005, 0.01, 0.02, 0.0))
 	_draw_lower_approach(start, tangent, normal, difference, opacity, size)
 	_draw_gradient_band(start - normal * depth, end - normal * depth, -normal * (fade_width - depth),
-		Color(0.95, 0.87, 0.67, (0.12 + illumination * 0.16) * opacity), Color(0.95, 0.87, 0.67, 0.0))
+		Color(1.0, 0.77, 0.32, (0.32 + illumination * 0.14) * opacity), Color(1.0, 0.77, 0.32, 0.0))
 	# Exposed earth is deeper on south/east edges, with a bright top lip.
 	var face_color = Color(0.14, 0.12, 0.095).lerp(Color(0.36, 0.32, 0.24), illumination)
 	_draw_gradient_band(start, end, -normal * depth,
@@ -140,7 +147,7 @@ func _draw_lower_approach(edge: Vector2, tangent: Vector2, normal: Vector2, diff
 		var far_center = center + normal * (size - 3.0)
 		draw_polygon(
 			PackedVector2Array([near_center - tangent * 6, near_center + tangent * 6, far_center + tangent * 12, far_center - tangent * 12]),
-			PackedColorArray([Color(0.92, 0.77, 0.43, 0.30 * opacity), Color(0.92, 0.77, 0.43, 0.30 * opacity), Color(0.55, 0.63, 0.45, 0.02 * opacity), Color(0.55, 0.63, 0.45, 0.02 * opacity)])
+			PackedColorArray([Color(1.0, 0.82, 0.40, 0.22 * opacity), Color(1.0, 0.82, 0.40, 0.22 * opacity), Color(0.16, 0.48, 0.66, 0.04 * opacity), Color(0.16, 0.48, 0.66, 0.04 * opacity)])
 		)
 		# Widening contour lines lead the eye from the low floor up to the rim.
 		for i in range(3):

@@ -39,3 +39,4 @@ res://world/elevation_blur.gdshader
 res://world/liquid_manager.gd
 res://workdesk/liquid_flow_test.gd
 res://world/elevation_blur.gd
+res://workdesk/height_visibility_test.gd

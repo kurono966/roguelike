@@ -2536,7 +2536,8 @@ func _get_overworld_preview_map(chunk_pos: Vector2i) -> Dictionary:
 		return {
 			"map_data": _floor_caches[cache_key]["map_data"],
 			"rooms": _floor_caches[cache_key]["rooms"],
-			"height_data": _floor_caches[cache_key].get("height_data", [])
+			"height_data": _floor_caches[cache_key].get("height_data", []),
+			"liquid_state": _floor_caches[cache_key].get("liquid_state", {})
 		}
 	if _overworld_preview_maps.has(cache_key):
 		return _overworld_preview_maps[cache_key]
@@ -2579,6 +2580,7 @@ func _get_overworld_preview_cell(display_pos: Vector2i) -> int:
 	return preview_map[local_pos.x][local_pos.y]
 
 func _has_overworld_preview_line_of_sight(from_grid: Vector2i, to_grid: Vector2i) -> bool:
+	if not _has_height_line_of_sight(from_grid, to_grid, _get_preview_surface_height): return false
 	var line_points = _get_line_points(from_grid, to_grid)
 	for p in line_points:
 		if p == from_grid or p == to_grid:
@@ -3922,6 +3924,7 @@ func _execute_ranged_attack(target_pos: Vector2):
 		hit_sound_player.play()
 		
 	var line_points = _get_line_points(player_grid, target_grid)
+	var height_obstacle = _get_height_occluder(player_grid, target_grid)
 	
 	var hit_pos = target_grid
 	var hit_entity = null
@@ -3934,6 +3937,10 @@ func _execute_ranged_attack(target_pos: Vector2):
 			hit_pos = line_points[i-1]
 			break
 			
+		if p == height_obstacle:
+			hit_pos = p
+			break
+
 		# Check Wall or Door
 		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
 			hit_pos = line_points[i-1]
@@ -5289,10 +5296,12 @@ func report_player_crime(crime_type: String, victim, perpetrator):
 		)
 
 func _has_line_of_sight(from_grid: Vector2i, to_grid: Vector2i) -> bool:
+	if not _is_grid_in_bounds(from_grid) or not _is_grid_in_bounds(to_grid): return false
+	if not _has_height_line_of_sight(from_grid, to_grid): return false
 	var line_points = _get_line_points(from_grid, to_grid)
 	for p in line_points:
 		if p == from_grid or p == to_grid: continue
-		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
+		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED or _map_data[p.x][p.y] in [CellType.TREE, CellType.TREE_FRUIT, CellType.ROCK] or _steam_tiles.has(p):
 			return false
 	return true
 
@@ -6337,10 +6346,11 @@ func _apply_chain_lightning(source, current_target, damage: int, chain_left: int
 func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: String, is_reflected_depth: int = 0):
 	# Stop at solid walls, including walls which are currently burning.
 	var shot_start = tile_map.local_to_map(attacker.position)
+	var height_obstacle = _get_height_occluder(shot_start, target_grid)
 	for point in _get_line_points(shot_start, target_grid).slice(1):
 		if not _is_grid_in_bounds(point):
 			return
-		if _map_data[point.x][point.y] in [CellType.WALL, CellType.WOOD_WALL]:
+		if point == height_obstacle or _map_data[point.x][point.y] in [CellType.WALL, CellType.WOOD_WALL]:
 			target_grid = point
 			break
 	# 影の行動記録（遠距離攻撃）
@@ -7350,6 +7360,7 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 	var player_grid = tile_map.local_to_map(player.position)
 	var target_grid = tile_map.local_to_map(target_pos)
 	var line_points = _get_line_points(player_grid, target_grid)
+	var height_obstacle = _get_height_occluder(player_grid, target_grid)
 	
 	var hit_pos = target_grid
 	var hit_entity = null
@@ -7369,6 +7380,10 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 			hit_pos = line_points[i-1]
 			break
 		
+		if p == height_obstacle:
+			hit_pos = p
+			break
+
 		# Check Walls or Doors
 		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
 			hit_pos = p if _map_data[p.x][p.y] == CellType.WOOD_WALL else line_points[i-1]
@@ -8052,6 +8067,7 @@ func set_tile_height(pos: Vector2i, value: int):
 	var navigation_heights = [] if _is_on_world_map else get_navigation_heights()
 	for grid in [_astar_grid, _astar_grid_swim, _astar_grid_fly]:
 		grid.heights = navigation_heights
+	if visibility_manager: _calculate_fov()
 	_draw_height_overlay()
 
 func _draw_height_overlay():
@@ -8107,3 +8123,32 @@ func _update_height_camera(delta: float):
 		zoom_value += (clampf(get_surface_height(pos), 0.0, 2.0) - 1.0) * CAMERA_HEIGHT_ZOOM_STEP
 	var target_zoom = Vector2.ONE * zoom_value
 	camera.zoom = camera.zoom.lerp(target_zoom, 1.0 - exp(-5.0 * maxf(0.0, delta)))
+
+# Eyes stand above the surface, so a ridge can hide a valley but a high
+# observer can see over lower ground. Solid walls remain opaque at every height.
+func _has_height_line_of_sight(from: Vector2i, to: Vector2i, height_at: Callable = Callable()) -> bool:
+	return _get_height_occluder(from, to, height_at) == Vector2i(-1, -1)
+
+func _get_height_occluder(from: Vector2i, to: Vector2i, height_at: Callable = Callable()) -> Vector2i:
+	if _is_on_world_map: return Vector2i(-1, -1)
+	if not height_at.is_valid(): height_at = get_surface_height
+	var points = _get_line_points(from, to)
+	if points.size() <= 2: return Vector2i(-1, -1)
+	var eye_start = float(height_at.call(from)) + 0.75
+	var eye_end = float(height_at.call(to)) + 0.75
+	for i in range(1, points.size() - 1):
+		var ray_height = lerpf(eye_start, eye_end, float(i) / float(points.size() - 1))
+		if float(height_at.call(points[i])) >= ray_height - 0.001: return points[i]
+	return Vector2i(-1, -1)
+
+func _get_preview_surface_height(pos: Vector2i) -> float:
+	var chunk = Vector2i(floori(float(pos.x) / MAP_WIDTH), floori(float(pos.y) / MAP_HEIGHT))
+	var local = pos - chunk * Vector2i(MAP_WIDTH, MAP_HEIGHT)
+	if chunk == Vector2i.ZERO: return get_surface_height(local)
+	var preview = _get_overworld_preview_map(_world_player_pos + chunk)
+	if preview.is_empty(): return 1.0
+	var height = float(ElevationMap.get_height(preview.get("height_data", []), local))
+	if preview.map_data[local.x][local.y] in [CellType.WATER, CellType.ICE]:
+		var default_volume = maxi(1, (1 - int(height)) * 4)
+		height += float(preview.get("liquid_state", {}).get(local, {}).get("volume", default_volume)) / 4.0
+	return height

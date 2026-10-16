@@ -42,7 +42,7 @@ func _run():
 	var before_fov = main._visible_tiles.duplicate(true)
 	main.set_tile_height(goal, 1)
 	main._calculate_fov()
-	check(main._visible_tiles == before_fov, "Height changed existing FOV rules")
+	check(main._visible_tiles != before_fov, "Height edits did not recalculate terrain occlusion")
 	main.set_tile_height(goal, 2)
 	check(not await main._try_move_character(main.player, Vector2.RIGHT), "Player climbed a two-level cliff")
 	for grid in [main._astar_grid, main._astar_grid_swim, main._astar_grid_fly]:
