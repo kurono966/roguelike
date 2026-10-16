@@ -30,3 +30,11 @@ res://world/target_manager.gd
 res://world/tileset_manager.gd
 res://world/visibility_manager.gd
 res://world/world_map_manager.gd
+res://workdesk/wood_wall_test.gd
+res://save_manager.gd
+res://world/elevation_overlay.gd
+res://workdesk/elevation_test.gd
+res://world/elevation_map.gd
+res://world/elevation_blur.gdshader
+res://world/liquid_manager.gd
+res://workdesk/liquid_flow_test.gd
