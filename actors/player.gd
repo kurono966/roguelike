@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+const PlayerStats = preload("res://actors/player_stats.gd")
+
 const GridVisualMotion = preload("res://actors/grid_visual_motion.gd")
 
 const TILE_SIZE = 32  # 1タイルのサイズ（ピクセル）
@@ -113,65 +115,25 @@ var ammo_inventory: int = 20 # Ammo available for the current floor
 
 
 func _get_equipment_stats() -> Dictionary:
-	if equipment_component and equipment_component.has_method("get_total_stats"):
-		return equipment_component.get_total_stats()
-	return {
-		"attack": 0,
-		"defense": 0,
-		"max_hp": 0,
-		"max_mp": 0,
-		"strength": 0,
-		"dexterity": 0,
-		"intelligence": 0,
-		"crit_bonus": 0.0,
-		"hit_bonus": 0.0,
-		"penetration_bonus": 0.0
-	}
+	return PlayerStats._get_equipment_stats(self)
 
 func _get_hunger_attack_multiplier() -> float:
-	var ratio = float(hunger) / max(1, max_hunger)
-	if ratio >= 0.8:
-		return 1.1
-	elif ratio >= 0.5:
-		return 1.0
-	elif ratio >= 0.3:
-		return 0.9
-	else:
-		return 0.8
+	return PlayerStats._get_hunger_attack_multiplier(self)
 
 func _get_hunger_defense_multiplier() -> float:
-	var ratio = float(hunger) / max(1, max_hunger)
-	if ratio >= 0.8:
-		return 1.05
-	elif ratio >= 0.5:
-		return 1.0
-	elif ratio >= 0.3:
-		return 0.95
-	else:
-		return 0.9
+	return PlayerStats._get_hunger_defense_multiplier(self)
 
 # 攻撃力と防御力を計算するプロパティ
 var attack_power: int:
 	get:
-		var equipment_stats = _get_equipment_stats()
-		# 攻撃力 = (力 * 2) + 装備の攻撃力
-		var total_str = strength + equipment_stats.strength
-		var base_value = (total_str * 2) + equipment_stats.attack 
-		var mult = _get_hunger_attack_multiplier() * _get_warrior_instinct_multiplier()
-		return int(round(base_value * mult))
+		return PlayerStats.get_attack_power(self)
 
 # ウォリアーパッシブ: 闘争本能 (隣接敵1体につき攻撃+40%、最大+120%)
 func _get_warrior_instinct_multiplier() -> float:
-	var st = get_battle_instinct_state()
-	return 1.0 + float(st.get("bonus", 0.0))
+	return PlayerStats._get_warrior_instinct_multiplier(self)
 
 func get_battle_instinct_state() -> Dictionary:
-	var gs = get_node_or_null("/root/GameState")
-	if gs == null or gs.player_class != 1:
-		return {"count": 0, "bonus": 0.0}
-	var count = _count_adjacent_hostiles()
-	var capped = mini(count, 3)
-	return {"count": count, "bonus": capped * 0.4}
+	return PlayerStats.get_battle_instinct_state(self)
 
 func _count_adjacent_hostiles() -> int:
 	if not is_inside_tree():
@@ -202,77 +164,32 @@ func _count_adjacent_hostiles() -> int:
 
 var defense_power: int:
 	get:
-		var equipment_stats = _get_equipment_stats()
-		# 防御力 = 装備の防御力 + 合計器用さの半分
-		var total_dex = dexterity + equipment_stats.dexterity
-		var base_value = equipment_stats.defense + (total_dex / 2)
-		return int(round(base_value * _get_hunger_defense_multiplier()))
+		return PlayerStats.get_defense_power(self)
 
 var crit_rate: float:
 	get:
-		# Base 5% + 1% per Dexterity point + Equipment Bonuses
-		var base = 0.05
-		var dex_bonus = float(dexterity) * 0.01
-
-		var equipment_stats = _get_equipment_stats()
-		# Add equipment dexterity to bonus? Or is it already in 'dexterity'?
-		# 'dexterity' is base stat. Equipment adds separately usually.
-		# But wait, equipment_stats.dexterity is added to DEF above.
-		# Let's add equipment dex to crit too.
-		var equip_dex_bonus = float(equipment_stats.dexterity) * 0.01
-		var item_crit_bonus = float(equipment_stats.get("crit_bonus", 0.0))
-
-		# Inventory Adjacency Bonuses
-		var adj_bonus = 0.0
-		if equipment_component and equipment_component.bag_data:
-			adj_bonus = equipment_component.bag_data.get_total_crit_bonus()
-
-		var organization_bonus = 0.0
-		if equipment_component and equipment_component.equipment_data:
-			organization_bonus = float(get_inventory_bonus_state().get("crit_bonus", 0.0))
-
-		# Grass Critical Bonus
-		var grass_bonus = 0.0
-		if is_in_grass and _check_equipment_effect("crit_in_grass"):
-			grass_bonus = 0.3 # +30% Crit in grass!
-
-		var total = base + dex_bonus + equip_dex_bonus + item_crit_bonus + adj_bonus + organization_bonus + grass_bonus
-		print("Crit Rate Debug - base:", base, "dex_bonus:", dex_bonus, "equip_dex_bonus:", equip_dex_bonus, "item_crit_bonus:", item_crit_bonus, "adj_bonus:", adj_bonus, "organization_bonus:", organization_bonus, "grass_bonus:", grass_bonus, "total:", total)
-		return clamp(total, 0.0, 1.0)
+		return PlayerStats.get_crit_rate(self)
 
 var penetration_rate: float:
 	get:
-		var equipment_stats = _get_equipment_stats()
-		var base_pen = clamp(float(equipment_stats.get("penetration_bonus", 0.0)), 0.0, 0.9)
-		# 命中率の超過分(100%を超えた分)の半分を貫通率に加算する
-		# 例: 命中110% → 超過10% → 貫通+5%
-		var overflow = maxf(0.0, get_raw_hit_rate() - 1.0)
-		return clamp(base_pen + overflow * 0.5, 0.0, 0.9)
+		return PlayerStats.get_penetration_rate(self)
 
 # 命中率の素値(上限クランプ前)。装備・整頓ボーナス込み。
 func get_raw_hit_rate() -> float:
-	var equipment_stats = _get_equipment_stats()
-	var org_bonus = 0.0
-	if equipment_component and equipment_component.equipment_data:
-		org_bonus = float(get_inventory_bonus_state().get("hit_bonus", 0.0))
-	return 0.85 + org_bonus + float(equipment_stats.get("hit_bonus", 0.0))
+	return PlayerStats.get_raw_hit_rate(self)
 
 # 命中超過から変換された貫通ボーナス分(表示用)
 func get_overflow_penetration_bonus() -> float:
-	return maxf(0.0, get_raw_hit_rate() - 1.0) * 0.5
+	return PlayerStats.get_overflow_penetration_bonus(self)
 
 func get_total_strength() -> int:
-	var eq = _get_equipment_stats()
-	return strength + eq.strength
+	return PlayerStats.get_total_strength(self)
 
 func get_total_dexterity() -> int:
-	var eq = _get_equipment_stats()
-	return dexterity + eq.dexterity
+	return PlayerStats.get_total_dexterity(self)
 
 func get_total_intelligence() -> int:
-	var eq = _get_equipment_stats()
-	return intelligence + eq.intelligence
-
+	return PlayerStats.get_total_intelligence(self)
 
 func _ready():
 	z_index = 10 # Ensure player is drawn above floor/stairs overlays
@@ -459,50 +376,7 @@ func _on_equipment_grid_changed():
 	_update_ui_weapon()
 
 func get_inventory_bonus_state() -> Dictionary:
-	var cluster_count = equipment_component.equipment_data.get_cluster_count()
-	var is_packed = equipment_component.equipment_data.is_tightly_packed()
-	var density = equipment_component.equipment_data.get_packing_density()
-	
-	var result = {
-		"state": "average",
-		"message": "",
-		"color": Color.WHITE,
-		"crit_bonus": 0.0,
-		"hit_bonus": 0.0
-	}
-	
-	if cluster_count <= 1 and cluster_count > 0:
-		if is_packed:
-			# ◎ Excellent (Density 1.0)
-			result.state = "perfect"
-			result.message = " [◎完璧]: 会心+25% 命中+10%"
-			result.color = Color(1.0, 0.84, 0.0) # Gold
-			result.crit_bonus = 0.25
-			result.hit_bonus = 0.1
-		elif density >= 0.75:
-			# 〇 Good (High Density)
-			result.state = "good"
-			result.message = " [〇良好]: 会心+15%"
-			result.color = Color(0.3, 1.0, 0.3) # Green
-			result.crit_bonus = 0.15
-		else:
-			# △ Average (Low Density, messy shape)
-			result.state = "average"
-			result.message = " [△整頓不足]: ボーナスなし"
-			result.color = Color(0.8, 0.8, 0.8) # Gray
-	elif cluster_count == 2:
-		# △ Average (Split clusters)
-		result.state = "average"
-		result.message = " [△普通]: ボーナスなし"
-		result.color = Color(0.8, 0.8, 0.8) # Gray
-	elif cluster_count >= 3:
-		# ✕ Bad
-		result.state = "bad"
-		result.message = " [✕散乱]: 命中-20%"
-		result.color = Color(1.0, 0.3, 0.3) # Red
-		result.hit_bonus = -0.2
-		
-	return result
+	return PlayerStats.get_inventory_bonus_state(self)
 
 const SKILL_LEARNING_REQUIREMENTS = {
 	"fireball": {"level": 2, "str": 0, "dex": 0, "int": 8},
