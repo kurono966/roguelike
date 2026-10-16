@@ -54,3 +54,7 @@ res://ui/help_ui.gd
 res://ui/log_ui.gd
 res://autoloads/game_state.gd
 res://ui/character_creation.gd
+res://ui/level_growth_selection.gd
+res://workdesk/level_growth_test.gd
+res://skills/skill_database.gd
+res://ui/skill_menu.gd

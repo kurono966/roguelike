@@ -1525,6 +1525,13 @@ func use_skill(skill_id: String):
 			get_node("/root/LogUI").add_log("これ以上HPがない！御衰えだ。", Color.RED)
 		return
 
+	# Water-only skill gate (e.g. みずでっぽう)
+	if skill.get("requires_water", false) and not is_on_water:
+		print("Skill requires water: ", skill_id)
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("水中でないと使えない！", Color.CYAN)
+		return
+
 	print("Player preparing skill: ", skill.name)
 	
 	match skill.type:

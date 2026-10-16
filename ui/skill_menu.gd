@@ -129,6 +129,12 @@ func _on_skill_selected(index: int):
 		can_use = false
 		var turns = player_ref.skill_cooldowns[selected_skill_id]
 		status_msg += "[color=gray]クールダウン中 (あと%dターン)[/color]\n" % turns
+
+	if skill.get("requires_water", false):
+		var on_water: bool = player_ref.get("is_on_water") == true
+		if not on_water:
+			can_use = false
+			status_msg += "[color=cyan]水中でのみ使用可能[/color]\n"
 		
 	cd_label.text = status_msg
 	use_button.disabled = !can_use

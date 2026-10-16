@@ -60,7 +60,7 @@ func set_class_stats(class_id: int):
 		1: initial_skills = [] # Warrior
 		2: initial_skills = ["teleport"] # Rogue
 		3: initial_skills = ["fireball", "lightning"] # Mage
-		4: initial_skills = [] # Swimmer
+		4: initial_skills = ["water_gun"] # Swimmer
 		99: # Debug
 			initial_skills = []
 			for s in SkillDatabase.get_all_skills():

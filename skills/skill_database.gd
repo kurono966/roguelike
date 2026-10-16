@@ -278,6 +278,19 @@ static func get_all_skills() -> Array[Dictionary]:
 			"dex_scaling": 1.5,
 			"elements": ["pierce"],
 			"description": "草むらから敵を射抜く遠距離物理攻撃。\n[color=pink]技量依存[/color]: 器用さ(DEX)の1.5倍の威力を加算する。\n[color=green]隠密[/color]: 自分が草むらにいる時に使用するとダメージが[color=yellow]2倍[/color]になる。\n[color=red]制約[/color]: 隣接する敵(1マス先)には当たらない。"
+		},
+		{
+			"id": "water_gun",
+			"name": "みずでっぽう",
+			"mp_cost": 4,
+			"type": SKILL_TYPE_DIRECTION,
+			"range": 6,
+			"damage": 1.3,
+			"is_magic": false,
+			"dex_scaling": 1.0,
+			"elements": ["water"],
+			"requires_water": true,
+			"description": "水を高圧で噴射する遠距離水属性攻撃。\n[color=pink]技量依存[/color]: 器用さ(DEX)の1.0倍の威力を加算する。\n[color=red]制約[/color]: [color=cyan]水中でのみ[/color]使用できる。"
 		}
 	]
 

@@ -4840,6 +4840,20 @@ func _spawn_skill_particles(pos: Vector2, particle_type: String, duration: float
 			particles.angle_max = 180.0
 			particles.angular_velocity_min = -100.0
 			particles.angular_velocity_max = 100.0
+		"water":
+			particles.color = Color(0.2, 0.6, 1.0, 1) # Water blue
+			particles.texture = _create_diamond_texture(8)
+			particles.amount = 25
+			particles.spread = 150.0
+			particles.gravity = Vector2(0, 60)
+			particles.initial_velocity_min = 60.0
+			particles.initial_velocity_max = 120.0
+			particles.scale_amount_min = 0.8
+			particles.scale_amount_max = 2.0
+			particles.angle_min = -180.0
+			particles.angle_max = 180.0
+			particles.angular_velocity_min = -150.0
+			particles.angular_velocity_max = 150.0
 		"web":
 			particles.color = Color(0.9, 0.9, 0.9, 0.7) # Web white
 			particles.texture = _create_diamond_texture(6)
@@ -7351,6 +7365,13 @@ func _can_throw_target_to(target_entity, grid_pos: Vector2i) -> bool:
 
 func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 	var current_skill_id = _targeting_skill.get("id", "")
+	# Water-only gate (double-check in case terrain changed after targeting started)
+	if _targeting_skill.get("requires_water", false) and player and not player.is_on_water:
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("水中でないと使えない！", Color.CYAN)
+		target_manager.cancel_targeting()
+		_current_game_state = TurnPhase.PLAYER_TURN
+		return
 	if current_skill_id == "collapse":
 		await _execute_collapse_skill(target_pos, _targeting_skill)
 		return
@@ -7418,6 +7439,7 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 	elif _targeting_skill.get("id", "") == "web_shot": projectile_color = Color.WHITE
 	elif _targeting_skill.get("id", "") == "blood_beam": projectile_color = Color(0.7, 0.0, 0.1)
 	elif _targeting_skill.get("id", "") == "grass_snipe": projectile_color = Color(0.1, 0.8, 0.3)
+	elif _targeting_skill.get("id", "") == "water_gun": projectile_color = Color(0.2, 0.6, 1.0)
 	
 	var projectile_sprite = Sprite2D.new()
 	var img = Image.create(16, 16, false, Image.FORMAT_RGBA8)
@@ -7445,6 +7467,7 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 	elif current_skill_id == "web_shot": projectile_particle_type = "web"
 	elif current_skill_id == "blood_beam": projectile_particle_type = "blood"
 	elif current_skill_id == "grass_snipe": projectile_particle_type = "leaf"
+	elif current_skill_id == "water_gun": projectile_particle_type = "water"
 	
 	_spawn_skill_particles(target_world_pos, projectile_particle_type, 0.4)
 	
