@@ -457,7 +457,7 @@ func create_tileset():
 	_draw_stairs(stairs_purple_image, Color(0.58, 0.34, 0.92, 1.0), Color(0.18, 0.08, 0.32, 1.0))
 
 	# 83 standard tiles, 7 world tiles, and a wooden wall tile.
-	var combined_image = Image.create(TILE_SIZE * 91, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	var combined_image = Image.create(TILE_SIZE * MapDefinitions.TILE_ATLAS_COUNT, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	
 	# Blit Walls
 	for i in range(16):
@@ -535,7 +535,7 @@ func create_tileset():
 		pit_variations.append(img)
 
 	for i in range(16):
-		combined_image.blit_rect(pit_variations[i], Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i((61 + i) * TILE_SIZE, 0))
+		combined_image.blit_rect(pit_variations[i], Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i((MapDefinitions.PIT_ATLAS_START + i) * TILE_SIZE, 0))
 	
 	# Generate STAIRS_UP tile (silver stairs leading up)
 	var stairs_up_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
@@ -601,7 +601,7 @@ func create_tileset():
 	# occluder付与前にソース登録(登録前にset_occluderするとout of boundsエラー)
 	tileset.add_source(source, 0)
 
-	for i in range(91):
+	for i in range(MapDefinitions.TILE_ATLAS_COUNT):
 		source.create_tile(Vector2i(i, 0))
 		if i < 16:
 			# Assign dynamic occluder to walls only
@@ -1102,7 +1102,7 @@ func _apply_ascii_dungeon_tiles(combined_image: Image):
 	for i in range(16):
 		_blit_ascii_tile(combined_image, 46 + i, specs["crystal"])
 	for i in range(16):
-		_blit_ascii_tile(combined_image, 62 + i, specs["pit"])
+		_blit_ascii_tile(combined_image, MapDefinitions.PIT_ATLAS_START + i, specs["pit"])
 	_blit_ascii_tile(combined_image, 77, specs["stairs_up"])
 	_blit_ascii_tile(combined_image, 78, specs["door_closed"])
 	_blit_ascii_tile(combined_image, 79, specs["stairs_down"])

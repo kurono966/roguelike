@@ -5,6 +5,10 @@ const TILE_SIZE = 32
 const MAP_WIDTH = 50
 const MAP_HEIGHT = 50
 
+# Pit variations must not overlap crystal animation (46..61) or stairs (77).
+const PIT_ATLAS_START = 91
+const TILE_ATLAS_COUNT = PIT_ATLAS_START + 16
+
 # 50x50のマップ密度を従来の50x30に近づける。
 const ROOM_MAX_COUNT = 30
 const ROOM_MIN_SIZE = 3

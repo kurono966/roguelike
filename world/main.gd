@@ -2490,7 +2490,7 @@ func _get_map_cell_atlas_coords(map_data: Array, x: int, y: int) -> Vector2i:
 			if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.PIT: mask |= 2
 			if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.PIT: mask |= 4
 			if x > 0 and map_data[x-1][y] == CellType.PIT: mask |= 8
-			atlas_coords.x = 61 + mask
+			atlas_coords.x = MapDefinitions.PIT_ATLAS_START + mask
 		CellType.STAIRS_UP:
 			atlas_coords.x = 77
 		CellType.TREE:
@@ -2673,7 +2673,7 @@ func _draw_map():
 						if x < MAP_WIDTH - 1 and _map_data[x+1][y] == CellType.PIT: mask |= 2
 						if y < MAP_HEIGHT - 1 and _map_data[x][y+1] == CellType.PIT: mask |= 4
 						if x > 0 and _map_data[x-1][y] == CellType.PIT: mask |= 8
-						atlas_coords.x = 61 + mask
+						atlas_coords.x = MapDefinitions.PIT_ATLAS_START + mask
 					CellType.STAIRS_UP:
 						atlas_coords.x = 77
 					CellType.TREE:

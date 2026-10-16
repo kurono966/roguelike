@@ -234,6 +234,8 @@ func draw_map():
 						atlas_coords.x = mask
 					CellType.WOOD_WALL:
 						atlas_coords.x = 90
+					CellType.PIT, CellType.STAIRS_UP:
+						atlas_coords = main_node._get_map_cell_atlas_coords(map_data, x, y)
 					CellType.FLOOR:
 						atlas_coords.x = 16
 					CellType.STAIRS:
