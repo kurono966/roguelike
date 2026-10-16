@@ -1,0 +1,132 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+InputManager: _ready() called
+Setting up numpad inputs...
+Inventory toggle key (I/ESC) has been set up
+Log toggle key (L) has been set up
+Skill toggle key (K) has been set up
+  - Mapped TAB and S to target_enemy
+  - Mapped Kp 7 to ui_up_left
+  - Mapped Home to ui_up_left
+  - Mapped Kp 9 to ui_up_right
+  - Mapped PageUp to ui_up_right
+  - Mapped Kp 1 to ui_down_left
+  - Mapped End to ui_down_left
+  - Mapped Kp 3 to ui_down_right
+  - Mapped PageDown to ui_down_right
+InputMap actions: [&"ui_accept", &"ui_select", &"ui_cancel", &"ui_close_dialog", &"ui_close_dialog.macos", &"ui_focus_next", &"ui_focus_prev", &"ui_left", &"ui_right", &"ui_up", &"ui_down", &"ui_page_up", &"ui_page_down", &"ui_home", &"ui_end", &"ui_accessibility_drag_and_drop", &"ui_cut", &"ui_copy", &"ui_focus_mode", &"ui_paste", &"ui_undo", &"ui_redo", &"ui_text_completion_query", &"ui_text_completion_accept", &"ui_text_completion_replace", &"ui_text_newline", &"ui_text_newline_blank", &"ui_text_newline_above", &"ui_text_indent", &"ui_text_dedent", &"ui_text_backspace", &"ui_text_backspace_word", &"ui_text_backspace_word.macos", &"ui_text_backspace_all_to_left", &"ui_text_backspace_all_to_left.macos", &"ui_text_delete", &"ui_text_delete_word", &"ui_text_delete_word.macos", &"ui_text_delete_all_to_right", &"ui_text_delete_all_to_right.macos", &"ui_text_caret_left", &"ui_text_caret_word_left", &"ui_text_caret_word_left.macos", &"ui_text_caret_right", &"ui_text_caret_word_right", &"ui_text_caret_word_right.macos", &"ui_text_caret_up", &"ui_text_caret_down", &"ui_text_caret_line_start", &"ui_text_caret_line_start.macos", &"ui_text_caret_line_end", &"ui_text_caret_line_end.macos", &"ui_text_caret_page_up", &"ui_text_caret_page_down", &"ui_text_caret_document_start", &"ui_text_caret_document_start.macos", &"ui_text_caret_document_end", &"ui_text_caret_document_end.macos", &"ui_text_caret_add_below", &"ui_text_caret_add_below.macos", &"ui_text_caret_add_above", &"ui_text_caret_add_above.macos", &"ui_text_scroll_up", &"ui_text_scroll_up.macos", &"ui_text_scroll_down", &"ui_text_scroll_down.macos", &"ui_text_select_all", &"ui_text_select_word_under_caret", &"ui_text_select_word_under_caret.macos", &"ui_text_add_selection_for_next_occurrence", &"ui_text_skip_selection_for_next_occurrence", &"ui_text_clear_carets_and_selection", &"ui_text_toggle_insert_mode", &"ui_menu", &"ui_text_submit", &"ui_unicode_start", &"ui_graph_duplicate", &"ui_graph_delete", &"ui_graph_follow_left", &"ui_graph_follow_left.macos", &"ui_graph_follow_right", &"ui_graph_follow_right.macos", &"ui_filedialog_delete", &"ui_filedialog_up_one_level", &"ui_filedialog_refresh", &"ui_filedialog_show_hidden", &"ui_filedialog_find", &"ui_filedialog_focus_path", &"ui_filedialog_focus_path.macos", &"ui_swap_input_direction", &"ui_colorpicker_delete_preset", &"ui_up_left", &"ui_up_right", &"ui_down_left", &"ui_down_right", &"target_enemy", &"toggle_inventory", &"toggle_log", &"toggle_skills", &"toggle_fullscreen"]
+Log added: ローグライクへようこそ！
+Log added: 'H' キーでヘルプを表示
+Log added: 'L'キーでログ：通常 → 拡大 → 非表示
+Enhanced LogUI initialized!
+GameUI loaded successfully
+WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpinan8qo8qn - using text path instead: res://icon.svg
+   at: load (scene/resources/resource_format_text.cpp:500)
+   GDScript backtrace (most recent call first):
+       [0] run_test (res://workdesk/gravekeeper_test.gd:36)
+Current Skills: []
+[ItemDatabase] Loaded 41 items from resources
+Equipment grid changed!
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
+Current Skills: []
+Equipment grid changed!
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
+Current Skills: []
+Current Skills: ["heal"]
+ERROR: Cannot open file 'res://default_environment.tres'.
+   at: load (scene/resources/resource_format_text.cpp:1430)
+   GDScript backtrace (most recent call first):
+       [0] _ready (res://world/main.gd:241)
+       [1] run_test (res://workdesk/gravekeeper_test.gd:37)
+ERROR: Failed loading resource: res://default_environment.tres.
+   at: _load (core/io/resource_loader.cpp:343)
+   GDScript backtrace (most recent call first):
+       [0] _ready (res://world/main.gd:241)
+       [1] run_test (res://workdesk/gravekeeper_test.gd:37)
+Dungeon placed at: (25, 21)
+NPC Spawned: 村の長老 at (1344.0, 672.0)
+NPC Spawned: 商人 at (1280.0, 1088.0)
+NPC Spawned: 村の守備隊 at (992.0, 800.0)
+NPC Spawned: はぐれ魔道士 at (608.0, 384.0)
+NPC Spawned: 放浪の剣士 at (1152.0, 1344.0)
+NPC Spawned: はぐれ魔道士 at (992.0, 288.0)
+NPC Spawned: 村人 at (640.0, 576.0)
+NPC Spawned: 村の長老 at (960.0, 1312.0)
+Log added: 平穏な里に辿り着いた。
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy defeated!
+Log added: 根食い を倒した！
+* Player gained 5 EXP! Total: 5/10
+Log added: 5 EXP獲得！
+Enemy turns processing complete. Starting player turn.
+Log added: 墓守 は 根食い の残骸を取り込み、攻撃力が2上がった！
+Enemy turns processing complete. Starting player turn.
+Log added: 墓守 は 復活コウモリ を蘇生した！
+Enemy turns processing complete. Starting player turn.
+Enemy turns processing complete. Starting player turn.
+Log added: ここではワールドマップを開けない！
+下り階段を下りた！ Floor: 3
+Log added: 下り階段を下りた！ 階層 3 へ (Branch 0)
+Ammo replenished. Current Reserve: 20
+Log added: 弾薬を補充した (予備: 20)
+DungeonGenerator: Unlocked a door on main path at (20, 33)
+DungeonGenerator: Unlocked a door on main path at (18, 37)
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Spawned enemy: 墓守 at (22, 35)
+Spawned enemy: 小鬼 at (22, 31)
+Spawned enemy: オーク at (22, 32)
+Spawned enemy: ワイルド・コウモリ at (18, 39)
+Spawned enemy: 毒キノコ at (18, 40)
+Spawned enemy: 毒キノコ at (38, 8)
+Spawned enemy: フレイムスキャッター at (38, 6)
+Spawned enemy: 毒キノコ at (39, 7)
+Spawned enemy: 大カマキリ at (11, 41)
+Spawned enemy: オーク at (44, 39)
+Spawned enemy: 墓守 at (47, 40)
+Spawned enemy: 毒キノコ at (47, 39)
+Spawned enemy: 毒キノコ at (36, 19)
+Spawned enemy: 人魂 at (34, 19)
+Spawned enemy: 小鬼 at (35, 21)
+Spawned enemy: フレイムスキャッター at (28, 44)
+Spawned enemy: オーク at (28, 45)
+Spawned enemy: 雑魚虫 at (27, 47)
+Spawned enemy: 雑魚虫 at (40, 23)
+Spawned enemy: 墓守 at (19, 25)
+Spawned enemy: 大カマキリ at (20, 26)
+Spawned enemy: 小鬼 at (19, 27)
+Spawned enemy: フレイムスキャッター at (20, 21)
+Spawned enemy: 雑魚虫 at (18, 20)
+Spawned enemy: 毒キノコ at (18, 19)
+Spawned enemy: 大カマキリ at (10, 26)
+Spawned enemy: フレイムスキャッター at (46, 34)
+Spawned enemy: 毒キノコ at (41, 34)
+Spawning items...
+[ItemDatabase] Loaded 41 items from resources
+Item spawned at: (320.0, 1280.0)
+[ItemDatabase] Loaded 41 items from resources
+Item spawned at: (1504.0, 1280.0)
+[ItemDatabase] Loaded 41 items from resources
+Item spawned at: (1056.0, 704.0)
+[ItemDatabase] Loaded 41 items from resources
+Item spawned at: (1248.0, 736.0)
+[ItemDatabase] Loaded 41 items from resources
+Item spawned at: (672.0, 864.0)
+Total items spawned: 5
+Total traps spawned: 3
+上り階段を上った！ Floor: 2
+Log added: 上り階段を上った！ 階層 2 へ
+Ammo replenished. Current Reserve: 20
+Log added: 弾薬を補充した (予備: 20)
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+GRAVEKEEPER_TEST failures=0

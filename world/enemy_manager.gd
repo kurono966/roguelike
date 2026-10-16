@@ -30,6 +30,9 @@ func setup(main: Node2D):
 func spawn_enemies_for_floor(floor: int, branch: int, rooms: Array):
 	current_floor = floor
 	current_branch = branch
+	if floor == 6:
+		main_node._spawn_village_npcs()
+		return
 	
 	if floor == 0:
 		_spawn_village_npcs()
@@ -46,6 +49,7 @@ func spawn_enemies_for_floor(floor: int, branch: int, rooms: Array):
 			_spawn_enemy_in_room(room)
 
 func _spawn_enemy_in_room(room: Rect2i):
+	if current_floor == 6: return
 	var enemy_data = _get_random_enemy_data()
 	if enemy_data.is_empty():
 		return

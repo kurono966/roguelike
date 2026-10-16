@@ -7,6 +7,7 @@ const ITEM_DATA_DIR = "res://items/data"
 # IMPORTANT: DirAccess.open() does NOT work in exported builds (PCK files don't support
 # directory listing), so we must enumerate .tres files explicitly here.
 const ITEM_RESOURCE_FILES = [
+	"butchered_meat.tres",
 	"berry.tres",
 	"cross_shield.tres",
 	"ether.tres",
@@ -389,7 +390,7 @@ static func get_random_item(floor_depth: int = 1) -> BaseItem:
 	var items = get_all_items()
 	
 	# Monster part IDs that should only drop from enemies
-	var monster_parts = ["slime_leg", "minotaur_horn", "goblin_arm", "spider_leg", "spark_core"]
+	var monster_parts = ["slime_leg", "minotaur_horn", "goblin_arm", "spider_leg", "spark_core", "butchered_meat"]
 	
 	# Filter based on floor and type
 	var spawnable_items = []

@@ -216,8 +216,6 @@ func spawn_ally_near_player(data: Dictionary):
 
 # Dialog and recruitment system
 var _talk_choice_npc = null
-var _current_trade_npc = null
-var _is_trading = false
 
 func handle_talk():
 	if not main_node or not main_node.get_tree():
@@ -305,9 +303,6 @@ func execute_talk_at(target_grid: Vector2i):
 		else:
 			options.append("仲間にする")
 		
-		# Check if NPC has trade items
-		if "trade_items" in target_entity and not target_entity.trade_items.is_empty():
-			options.append("取引する")
 			
 		options.append("キャンセル")
 		
@@ -334,14 +329,7 @@ func handle_dialog_choice(option: String):
 	
 	var entity_name = npc.enemy_name if "enemy_name" in npc else "誰か"
 	
-	if option == "取引する":
-		if "trade_items" in npc and not npc.trade_items.is_empty():
-			open_trade_menu(npc)
-		else:
-			if main_node.has_node("/root/LogUI"):
-				main_node.get_node("/root/LogUI").add_log("%s: 「取引できるものはないよ」" % entity_name, Color(0.8, 0.8, 0.8))
-			await main_node._end_player_turn()
-	elif option == "仲間にする":
+	if option == "仲間にする":
 		_show_recruitment_demand(npc)
 	elif option == "助ける":
 		_help_npc(npc)
@@ -527,70 +515,4 @@ func _recruit_npc(npc):
 	if main_node.has_node("/root/LogUI"):
 		main_node.get_node("/root/LogUI").add_log("%s を仲間にした！" % entity_name, Color(0.0, 1.0, 0.5))
 	
-	await main_node._end_player_turn()
-
-func open_trade_menu(npc):
-	_current_trade_npc = npc
-	_is_trading = true
-	var npc_name = npc.enemy_name if "enemy_name" in npc else "商人"
-	
-	if main_node.has_node("/root/LogUI"):
-		main_node.get_node("/root/LogUI").add_log("%s と取引を開始した", Color(1.0, 0.85, 0.0))
-	
-	# Open trade UI via GameUI
-	if main_node.GameUI and main_node.GameUI.has_method("open_trade_menu"):
-		main_node.GameUI.open_trade_menu(npc)
-	
-	# Don't end turn - trade menu is modal
-	# Turn will end after trade is completed
-
-func cancel_trade():
-	if _is_trading:
-		_is_trading = false
-		_current_trade_npc = null
-		if main_node.has_node("/root/LogUI"):
-			main_node.get_node("/root/LogUI").add_log("取引をキャンセルしました", Color.GRAY)
-
-func handle_shop_purchase():
-	if not player: return
-	if main_node._shop_uses_this_floor >= main_node.SHOP_MAX_USES_PER_FLOOR:
-		if main_node.has_node("/root/LogUI"):
-			main_node.get_node("/root/LogUI").add_log("No more trades on this floor.", Color.GRAY)
-		return
-	# Shop only available at stairs tiles
-	var p_grid = tile_map.local_to_map(player.position)
-	if p_grid.x < 0 or p_grid.x >= MAP_WIDTH or p_grid.y < 0 or p_grid.y >= MAP_HEIGHT:
-		return
-	var cell = main_node._map_data[p_grid.x][p_grid.y]
-	var on_stairs = main_node._is_stairs_cell(cell)
-	if not on_stairs:
-		if main_node.has_node("/root/LogUI"):
-			main_node.get_node("/root/LogUI").add_log("A trader only appears at the stairs.", Color.GRAY)
-		return
-	if main_node.SHOP_OFFERS.is_empty():
-		return
-
-	var offer = main_node.SHOP_OFFERS.pick_random()
-	var price = int(offer["price"])
-	var item_id = str(offer["id"])
-	if player.gold < price:
-		if main_node.has_node("/root/LogUI"):
-			main_node.get_node("/root/LogUI").add_log("Not enough gold. Need %dG." % price, Color.RED)
-		return
-
-	var item = main_node.ItemDatabase.get_item_by_id(item_id)
-	if item == null:
-		if main_node.has_node("/root/LogUI"):
-			main_node.get_node("/root/LogUI").add_log("Trade failed. (Unknown item)", Color.RED)
-		return
-
-	if not player.pickup_item(item):
-		if main_node.has_node("/root/LogUI"):
-			main_node.get_node("/root/LogUI").add_log("Inventory full. Trade canceled.", Color.RED)
-		return
-
-	player.gold -= price
-	main_node._shop_uses_this_floor += 1
-	if main_node.has_node("/root/LogUI"):
-		main_node.get_node("/root/LogUI").add_log("Traded %dG for %s." % [price, item.name], Color(1.0, 0.85, 0.0))
 	await main_node._end_player_turn()

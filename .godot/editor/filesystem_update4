@@ -63,3 +63,5 @@ res://workdesk/floor_first_turn_test.gd
 res://workdesk/nearby_skill_test.gd
 res://workdesk/log_cleanup_test.gd
 res://ui/entity_list_ui.gd
+res://ui/dialog_menu.tscn
+res://ui/game_ui.gd

@@ -2,12 +2,10 @@
 
 const UnifiedInventoryUIScene = preload("res://ui/unified_inventory_ui.tscn")
 const SkillMenuScene = preload("res://ui/skill_menu.tscn")
-const TradeUIScene = preload("res://ui/trade_ui.tscn")
 const DialogMenuScene = preload("res://ui/dialog_menu.tscn")
 
 var unified_ui
 var skill_menu_ui
-var trade_ui
 var dialog_menu
 var help_ui
 var status_ui
@@ -15,7 +13,6 @@ var entity_list_ui
 var settings_ui
 var is_visible = false # Inventory visibility
 var is_skill_visible = false
-var is_trade_visible = false
 var is_status_visible = false
 var is_settings_visible = false
 
@@ -32,10 +29,6 @@ func _ready() -> void:
 	skill_menu_ui.visible = false
 	skill_menu_ui.visibility_changed.connect(_on_skill_menu_visibility_changed)
 	
-	trade_ui = TradeUIScene.instantiate()
-	add_child(trade_ui)
-	trade_ui.visible = false
-	trade_ui.visibility_changed.connect(_on_trade_visibility_changed)
 	
 	dialog_menu = DialogMenuScene.instantiate()
 	add_child(dialog_menu)
@@ -154,9 +147,6 @@ func _on_inventory_visibility_changed():
 func _on_skill_menu_visibility_changed():
 	is_skill_visible = skill_menu_ui.visible
 
-func _on_trade_visibility_changed():
-	is_trade_visible = trade_ui.visible
-
 func _on_status_visibility_changed():
 	is_status_visible = status_ui.visible
 
@@ -192,21 +182,6 @@ func open_throw_selection():
 	unified_ui.visible = true
 	unified_ui.set_throw_mode(true)
 	var player = get_tree().get_first_node_in_group("player")
-
-func open_trade_menu(npc):
-	# Close other UIs
-	if is_visible:
-		unified_ui.visible = false
-	if is_skill_visible:
-		skill_menu_ui.visible = false
-	if is_status_visible:
-		status_ui.close()
-	
-	# Open trade UI
-	var player = get_tree().get_first_node_in_group("player")
-	if player:
-		trade_ui.initialize(player, npc)
-	trade_ui.visible = true
 
 func toggle_skills():
 	# Close status if open

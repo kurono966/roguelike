@@ -38,6 +38,29 @@ func remove_corpse(corpse):
 func clear_all():
 	for corpse in corpses.duplicate(): remove_corpse(corpse)
 
+func butcher_near_player() -> bool:
+	if main._is_on_world_map: return false
+	var origin = main.tile_map.local_to_map(main.player.position)
+	var target = null
+	var best_distance = INF
+	for corpse in corpses:
+		var offset = corpse.death_grid - origin
+		if absi(offset.x) > 1 or absi(offset.y) > 1: continue
+		if not main._visible_tiles[corpse.death_grid.x][corpse.death_grid.y]: continue
+		if not main._has_line_of_sight(origin, corpse.death_grid): continue
+		var distance = offset.length_squared()
+		if distance < best_distance:
+			target = corpse
+			best_distance = distance
+	if target == null: return false
+	var meat = ItemDatabase.get_item_by_id("butchered_meat")
+	if meat == null: return false
+	main.spawn_world_item(meat, Vector2(target.death_grid) * MapDefinitions.TILE_SIZE)
+	var log_ui = main.get_node_or_null("/root/LogUI")
+	if log_ui: log_ui.add_log("%s の死体を解体し、肉を取り出した。" % target.enemy_name, Color(0.8, 0.65, 0.45))
+	remove_corpse(target)
+	return true
+
 func refresh_visibility():
 	for corpse in corpses:
 		var pos = corpse.death_grid

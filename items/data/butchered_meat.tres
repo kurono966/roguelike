@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="BaseItem" format=3]
+
+[ext_resource type="Script" path="res://items/base_item.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "butchered_meat"
+display_name = "肉"
+description = "死体を解体して取り出した肉。食べると満腹度が20回復する。"
+shape = Array[Vector2i]([Vector2i(0, 0)])
+restore_hunger = 20

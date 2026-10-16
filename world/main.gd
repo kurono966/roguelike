@@ -36,16 +36,6 @@ const VISION_LIGHT_ENERGY = 1.22
 const VISION_AMBIENT_COLOR = Color(0.22, 0.22, 0.28, 1.0)
 
 const MAX_ENEMIES_PER_ROOM = 2
-const SHOP_MAX_USES_PER_FLOOR = 2
-const SHOP_OFFERS = [
-	{"id": "potion", "price": 15},
-	{"id": "gummy", "price": 12},
-	{"id": "ether", "price": 18},
-	{"id": "scroll_teleport", "price": 25},
-	{"id": "high_potion", "price": 40},
-	{"id": "high_ether", "price": 40},
-	{"id": "potion_str", "price": 60}
-]
 
 # Enemy Stats Table (ID -> Stats)
 # Used to configure spawned enemies
@@ -135,7 +125,6 @@ var _world_map_move_turn_cost_pending: bool = false
 var _swimmer_cooldown: bool = false # Tracks swimmer bonus action state
 const SPAWN_INTERVAL: int = 50
 const MAX_ACTIVE_ENEMIES: int = 105
-var _shop_uses_this_floor: int = 0
 
 var minimap_controller: MinimapController
 
@@ -153,7 +142,6 @@ var save_manager_extended: SaveManagerExtended
 func _ready():
 	RenderingServer.set_default_clear_color(Color(0.02, 0.02, 0.03, 1.0))
 	randomize()
-	_shop_uses_this_floor = 0
 	add_to_group("main")
 	player = get_node_or_null("Player")
 	if not is_instance_valid(player):
@@ -441,9 +429,6 @@ func _is_local_spawn_tile(pos: Vector2i) -> bool:
 
 
 func _try_attack_adjacent_enemy() -> bool:
-	# Cancel trade if player attacks
-	if _is_trading:
-		cancel_trade()
 	
 	var player_grid = tile_map.local_to_map(player.position)
 	
@@ -803,9 +788,6 @@ func _is_rooted(character) -> bool:
 
 func _try_move_character(character, direction: Vector2):
 	if character == player: player.set_pending_action("")
-	# Cancel trade if player moves
-	if character == player and _is_trading:
-		cancel_trade()
 		
 	# World map movement
 	if _is_on_world_map and character == player:
@@ -2249,6 +2231,18 @@ func _handle_attack(attacker, defender):
 func _spawn_enemies():
 	enemy_manager.spawn_enemies_for_floor(current_floor, _current_branch, _rooms)
 
+func _handle_butcher():
+	if _is_processing_action or _current_game_state != TurnPhase.PLAYER_TURN: return
+	var action_floor_epoch = _floor_epoch
+	if not corpse_manager or not corpse_manager.butcher_near_player():
+		if has_node("/root/LogUI"):
+			get_node("/root/LogUI").add_log("足元や隣に解体できる死体がない。", Color.GRAY)
+		return
+	_is_processing_action = true
+	_current_game_state = TurnPhase.ENEMY_TURN
+	await _end_player_turn(action_floor_epoch, "butcher")
+	_is_processing_action = false
+
 func _spawn_ally_near_player(data: Dictionary):
 	if not player or not is_instance_valid(player):
 		return
@@ -3480,7 +3474,6 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 	
 	current_floor = target_floor
 	_current_branch = target_branch
-	_shop_uses_this_floor = 0
 	
 	var msg = ""
 	if is_pit:
@@ -4389,9 +4382,6 @@ func _execute_talk_at(target_grid: Vector2i):
 		else:
 			options.append("仲間にする")
 			
-		# Check if NPC has trade items
-		if "trade_items" in target_entity and not target_entity.trade_items.is_empty():
-			options.append("取引する")
 			
 		options.append("キャンセル")
 		
@@ -4421,14 +4411,7 @@ func _handle_dialog_choice(option: String):
 	
 	var entity_name = npc.enemy_name if "enemy_name" in npc else "誰か"
 	
-	if option == "取引する":
-		if "trade_items" in npc and not npc.trade_items.is_empty():
-			_open_trade_menu(npc)
-		else:
-			if has_node("/root/LogUI"):
-				get_node("/root/LogUI").add_log("%s: 「取引できるものはないよ」" % entity_name, Color(0.8, 0.8, 0.8))
-			await _end_player_turn(action_floor_epoch, "talk")
-	elif option == "仲間にする":
+	if option == "仲間にする":
 		_show_recruitment_demand(npc)
 	elif option == "助ける":
 		_help_npc(npc)
@@ -4619,75 +4602,6 @@ func _recruit_npc(npc):
 	
 	await _end_player_turn(action_floor_epoch, "talk")
 
-var _current_trade_npc = null
-var _is_trading = false
-
-func _open_trade_menu(npc):
-	_current_trade_npc = npc
-	_is_trading = true
-	var npc_name = npc.enemy_name if "enemy_name" in npc else "商人"
-	
-	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("%s と取引を開始した", Color(1.0, 0.85, 0.0))
-	
-	# Open trade UI via GameUI
-	if GameUI and GameUI.has_method("open_trade_menu"):
-		GameUI.open_trade_menu(npc)
-	
-	# Don't end turn - trade menu is modal
-	# Turn will end after trade is completed
-
-func cancel_trade():
-	if _is_trading:
-		_is_trading = false
-		_current_trade_npc = null
-		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("取引をキャンセルしました", Color.GRAY)
-
-func _handle_shop_purchase():
-	var action_floor_epoch = _floor_epoch
-	if not player: return
-	if _shop_uses_this_floor >= SHOP_MAX_USES_PER_FLOOR:
-		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("No more trades on this floor.", Color.GRAY)
-		return
-	# Shop only available at stairs tiles
-	var p_grid = tile_map.local_to_map(player.position)
-	if p_grid.x < 0 or p_grid.x >= MAP_WIDTH or p_grid.y < 0 or p_grid.y >= MAP_HEIGHT:
-		return
-	var cell = _map_data[p_grid.x][p_grid.y]
-	var on_stairs = _is_stairs_cell(cell)
-	if not on_stairs:
-		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("A trader only appears at the stairs.", Color.GRAY)
-		return
-	if SHOP_OFFERS.is_empty():
-		return
-
-	var offer = SHOP_OFFERS.pick_random()
-	var price = int(offer["price"])
-	var item_id = str(offer["id"])
-	if player.gold < price:
-		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("Not enough gold. Need %dG." % price, Color.RED)
-		return
-
-	var item = ItemDatabase.get_item_by_id(item_id)
-	if item == null:
-		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("Trade failed. (Unknown item)", Color.RED)
-		return
-
-	if not player.pickup_item(item):
-		if has_node("/root/LogUI"):
-			get_node("/root/LogUI").add_log("Inventory full. Trade canceled.", Color.RED)
-		return
-
-	player.gold -= price
-	_shop_uses_this_floor += 1
-	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("Traded %dG for %s." % [price, item.name], Color(1.0, 0.85, 0.0))
-	await _end_player_turn(action_floor_epoch, "trade")
 
 func _execute_skill(target_pos: Vector2):
 	if not target_manager.targeting_skill: return

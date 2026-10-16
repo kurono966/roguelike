@@ -7,7 +7,6 @@ signal item_clicked(item: BaseItem, button_index: int)
 signal item_activated(item: BaseItem) # Double click (or Context Use)
 signal item_throw_request(item: BaseItem) # Shift+Right Click
 signal item_drop_to_floor(item: BaseItem, origin_grid)
-signal item_trade_request(item: BaseItem, from_grid: GridInventoryView, to_grid: GridInventoryView) # For trading between grids
 
 const CELL_SIZE = 32
 
@@ -25,7 +24,6 @@ func on_item_activated(item: BaseItem):
 
 var grid_data: InventoryGridData
 var is_equipment_view: bool = false
-var trade_mode: bool = false  # If true, emit trade_request instead of handling drops directly
 
 @onready var background_rect = $Background
 @onready var item_container = $ItemContainer
@@ -611,7 +609,7 @@ func _can_drop_data(at_position, data):
 	return can_place
 
 func _drop_data(at_position, data):
-	print("GridView: _drop_data called at ", at_position, " trade_mode: ", trade_mode)
+	print("GridView: _drop_data called at ", at_position)
 	preview_container.visible = false
 	var item = data["item"]
 	var origin_grid = data["origin_grid"]
@@ -639,20 +637,13 @@ func _drop_data(at_position, data):
 			item_dropped.emit(item)
 			
 	else:
-		print("GridView: Moving from different grid, trade_mode: ", trade_mode)
-		if trade_mode:
-			# In trade mode, emit signal instead of handling drop directly
-			print("GridView: Trade mode, emitting trade_request")
-			item_trade_request.emit(item, origin_grid, self)
+		if grid_data.can_place_item(item, grid_pos.x, grid_pos.y):
+			origin_grid.grid_data.remove_item(item)
+			grid_data.place_item(item, grid_pos.x, grid_pos.y)
+			print("GridView: Successfully transferred item")
+			item_dropped.emit(item)
 		else:
-			# Normal behavior: move item between grids
-			if grid_data.can_place_item(item, grid_pos.x, grid_pos.y):
-				origin_grid.grid_data.remove_item(item)
-				grid_data.place_item(item, grid_pos.x, grid_pos.y)
-				print("GridView: Successfully transferred item")
-				item_dropped.emit(item)
-			else:
-				print("GridView: Cannot place item")
+			print("GridView: Cannot place item")
 
 func _notification(what):
 	if what == NOTIFICATION_DRAG_END:

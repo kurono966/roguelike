@@ -91,7 +91,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Block input if major UI is open
 	var game_ui = get_node_or_null("/root/GameUI")
 	if game_ui:
-		if game_ui.is_visible or game_ui.is_skill_visible or game_ui.is_trade_visible or game_ui.is_status_visible or game_ui.help_ui.visible or game_ui.dialog_menu.visible:
+		if game_ui.is_visible or game_ui.is_skill_visible or game_ui.is_status_visible or game_ui.help_ui.visible or game_ui.dialog_menu.visible:
 			return
 
 	# キーボード操作時は保留中のクリック移動を取り消す
@@ -362,11 +362,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Handle talk choice input (must be before V key to prevent repeats)
 	if main_node.has_method("_waiting_for_talk_choice") and main_node._waiting_for_talk_choice:
 		if event is InputEventKey and event.pressed and not event.is_echo():
-			if event.keycode == KEY_T:
-				main_node._handle_talk_choice("trade")
-				get_viewport().set_input_as_handled()
-				return
-			elif event.keycode == KEY_R:
+			if event.keycode == KEY_R:
 				main_node._handle_talk_choice("recruit")
 				get_viewport().set_input_as_handled()
 				return
@@ -383,11 +379,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Handle talk choice input (must be before V key to prevent repeats)
 	if main_node.has_method("_waiting_for_talk_choice") and main_node._waiting_for_talk_choice:
 		if event is InputEventKey and event.pressed and not event.is_echo():
-			if event.keycode == KEY_T:
-				main_node._handle_talk_choice("trade")
-				get_viewport().set_input_as_handled()
-				return
-			elif event.keycode == KEY_R:
+			if event.keycode == KEY_R:
 				main_node._handle_talk_choice("recruit")
 				get_viewport().set_input_as_handled()
 				return
@@ -404,11 +396,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Handle talk choice input (must be before V key to prevent repeats)
 	if main_node.has_method("_waiting_for_talk_choice") and main_node._waiting_for_talk_choice:
 		if event is InputEventKey and event.pressed and not event.is_echo():
-			if event.keycode == KEY_T:
-				main_node._handle_talk_choice("trade")
-				get_viewport().set_input_as_handled()
-				return
-			elif event.keycode == KEY_R:
+			if event.keycode == KEY_R:
 				main_node._handle_talk_choice("recruit")
 				get_viewport().set_input_as_handled()
 				return
@@ -425,11 +413,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# Handle talk choice input (must be before V key to prevent repeats)
 	if main_node.has_method("_waiting_for_talk_choice") and main_node._waiting_for_talk_choice:
 		if event is InputEventKey and event.pressed and not event.is_echo():
-			if event.keycode == KEY_T:
-				main_node._handle_talk_choice("trade")
-				get_viewport().set_input_as_handled()
-				return
-			elif event.keycode == KEY_R:
+			if event.keycode == KEY_R:
 				main_node._handle_talk_choice("recruit")
 				get_viewport().set_input_as_handled()
 				return
@@ -546,7 +530,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 			
 		if event.keycode == KEY_B:
-			main_node._handle_shop_purchase()
+			await main_node._handle_butcher()
 			return
 			
 		if event.keycode == KEY_C:
