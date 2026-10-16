@@ -748,32 +748,7 @@ func _try_spawn_periodic_enemy():
 	if success:
 		var type = enemy_types.pick_random()
 		var enemy = EnemyScene.instantiate()
-		enemy.enemy_name = type.name
-		enemy.enemy_id = type.get("id", type.name)
-		enemy.hp = int(type.hp)
-		enemy.max_hp = int(type.hp)
-		enemy.attack_power = int(type.atk)
-		enemy.exp_reward = type.get("exp", 2)
-		if "weak" in type: enemy.weaknesses = type.weak
-		if "resist" in type: enemy.resistances = type.resist
-		if "fire_immune" in type: enemy.fire_immune = type.fire_immune
-		if "grass_ignition_chance" in type: enemy.grass_ignition_chance = type.grass_ignition_chance
-		if "color" in type: enemy.base_color = type.color
-		if "can_swim" in enemy: enemy.can_swim = type.get("swim", false)
-		if "knockback" in type: enemy.has_knockback = type.knockback
-		if "loot" in type: enemy.loot_table = type.loot
-		if "sprite" in type: enemy.sprite_path = type.sprite
-		else: enemy.sprite_path = ""
-		
-		if "skill" in type:
-			enemy.skill_id = type.skill
-			enemy.attack_range = type.get("range", 1)
-			enemy.max_skill_cooldown = type.get("cooldown", 5)
-			enemy.skill_cooldown = randi_range(0, enemy.max_skill_cooldown)
-		if "on_hit" in type: enemy.on_hit_effects = type.on_hit
-		if "penetration" in type: enemy.penetration_rate = type.penetration
-		if "intelligence" in type: enemy.intelligence = type.intelligence
-		if "ai" in type: enemy.ai_type = type.ai
+		enemy.apply_definition(type)
 
 		enemy.position = spawn_pos
 		
@@ -1811,10 +1786,10 @@ func _continue_auto_explore():
 
 func _auto_pickup_items_at_feet():
 	if not player: return
-	var p_pos = player.position
+	var player_grid = tile_map.local_to_map(player.position)
 	for wi in get_tree().get_nodes_in_group("items"):
 		if is_instance_valid(wi) and not wi.is_queued_for_deletion() and wi is Node2D:
-			if wi.position.distance_to(p_pos) < 16.0:
+			if tile_map.local_to_map(wi.position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)) == player_grid:
 				if "item_data" in wi and wi.item_data:
 					if player.pickup_item(wi.item_data):
 						wi.queue_free()
@@ -1859,7 +1834,10 @@ func _find_path_to_nearest_visible_item(start_grid: Vector2i) -> Array:
 			continue
 		if not (item is Node2D):
 			continue
-		var item_grid = tile_map.local_to_map(item.position)
+		# Match movement pickup: older placements include a -4px visual offset.
+		var item_grid = tile_map.local_to_map(item.position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
+		if not _is_grid_in_bounds(item_grid):
+			continue
 		if visibility_manager and not visibility_manager.explored_tiles[item_grid.x][item_grid.y]:
 			continue
 		if not _is_auto_explore_walkable(item_grid):
@@ -2388,7 +2366,7 @@ func _spawn_single_npc(type: Dictionary, pos: Vector2):
 		npc.skill_id = type.skill
 		npc.attack_range = type.get("range", 1)
 		npc.max_skill_cooldown = type.get("cooldown", 5)
-		npc.skill_cooldown = randi_range(0, npc.max_skill_cooldown)
+		npc.skill_cooldown = 0
 	if "trade_items" in type:
 		npc.trade_items = type.trade_items.duplicate()
 	npc.is_npc = true
@@ -3334,6 +3312,9 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 			enemy_node.level = edata["level"]
 		if "exp_reward" in enemy_node:
 			enemy_node.exp_reward = edata["xp_value"]
+		var definition = EnemyDatabase.get_enemy_def(enemy_node.enemy_id)
+		if not definition.is_empty():
+			enemy_node.apply_behavior_definition(definition)
 		enemy_node.position = Vector2(edata["grid_pos"]) * TILE_SIZE
 		enemy_node.add_to_group("enemies")
 		enemy_node.add_to_group("entities")
@@ -3645,7 +3626,7 @@ func _spawn_items():
 				var y = randi_range(room.position.y, room.position.y + room.size.y - 1)				
 				if _map_data[x][y] == CellType.FLOOR or _map_data[x][y] == CellType.GRASS:
 					var item = WorldItemScene.instantiate()
-					item.position = Vector2(x, y) * TILE_SIZE - Vector2(0, 4)
+					item.position = Vector2(x, y) * TILE_SIZE
 					
 					var item_data
 					if _current_branch == 10:
@@ -5750,35 +5731,7 @@ func _deserialize_enemy(enemy_data: Dictionary):
 	# Restore Static Data from Database first (Sprites, Colors, etc.)
 	var def = EnemyDatabase.get_enemy_def(enemy_id)
 	if not def.is_empty():
-		enemy.enemy_name = def.name
-		enemy.enemy_id = def.name
-		
-		# Base Stats (Overwritten by save data later if present)
-		enemy.max_hp = int(def.hp)
-		enemy.attack_power = int(def.atk)
-		enemy.defense = int(def.get("def", 0))
-		enemy.exp_reward = def.get("exp", 2)
-		if "weak" in def: enemy.weaknesses = def.weak
-		if "resist" in def: enemy.resistances = def.resist
-		if "fire_immune" in def: enemy.fire_immune = def.fire_immune
-		if "grass_ignition_chance" in def: enemy.grass_ignition_chance = def.grass_ignition_chance
-		
-		if "color" in def: enemy.base_color = def.color
-		if "swim" in def: enemy.can_swim = def.swim
-		if "knockback" in def: enemy.has_knockback = def.knockback
-		if "loot" in def: enemy.loot_table = def.loot
-		if "sprite" in def: enemy.sprite_path = def.sprite
-		else: enemy.sprite_path = ""
-		
-		if "skill" in def:
-			enemy.skill_id = def.skill
-			enemy.attack_range = def.get("range", 1)
-			enemy.max_skill_cooldown = def.get("cooldown", 5)
-			
-		if "on_hit" in def: enemy.on_hit_effects = def.on_hit
-		if "penetration" in def: enemy.penetration_rate = def.penetration
-		if "intelligence" in def: enemy.intelligence = def.intelligence
-		if "ai" in def: enemy.ai_type = def.ai
+		enemy.apply_definition(def)
 	else:
 		enemy.enemy_name = str(enemy_data.get("enemy_name", "NPC" if saved_is_npc else "雑魚虫"))
 		enemy.enemy_id = enemy_id
@@ -5805,6 +5758,10 @@ func _deserialize_enemy(enemy_data: Dictionary):
 	if "max_skill_cooldown" in enemy_data:
 		enemy.max_skill_cooldown = int(enemy_data["max_skill_cooldown"])
 	
+	if not def.is_empty():
+		enemy.apply_behavior_definition(def)
+		enemy.enemy_id = str(def.get("id", enemy_id))
+
 	enemy.is_npc = saved_is_npc
 	if saved_is_npc:
 		enemy.add_to_group("npcs")
@@ -5992,6 +5949,7 @@ func _execute_enemy_skill_v2(enemy, target_grid_pos: Vector2i):
 		await _handle_ranged_attack(enemy, target_grid_pos, damage, "web")
 		
 	elif skill_id == "paralyze_touch":
+		if log_ui: log_ui.add_log("%s は麻痺攻撃を繰り出した！" % enemy.enemy_name, Color.VIOLET)
 		await _handle_ranged_attack(enemy, target_grid_pos, damage, "paralyze")
 
 	elif skill_id == "freeze":
@@ -6442,9 +6400,9 @@ func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: S
 				elif target == player: t_name = "Player"
 				get_node("/root/LogUI").add_log("%s に命中！ (%d)" % [t_name, damage], Color.WHITE)
 		if type == "web" and target.has_method("apply_effect"):
-			target.apply_effect("paralysis", {"duration": 3})
+			target.apply_effect("paralysis" if target == player else "paralyze", {"duration": 3})
 		if type == "paralyze" and target.has_method("apply_effect"):
-			target.apply_effect("paralysis", {"duration": 2})
+			target.apply_effect("paralysis" if target == player else "paralyze", {"duration": 2})
 		if type == "fire" and target.has_method("apply_effect") and not _is_fire_immune(target):
 			target.apply_effect("burn", {"duration": 3, "damage": 1})
 	if type == "fire" and target_grid.x >= 0 and target_grid.x < MAP_WIDTH and target_grid.y >= 0 and target_grid.y < MAP_HEIGHT:

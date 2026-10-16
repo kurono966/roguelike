@@ -110,6 +110,10 @@ func process_enemy_turns():
 		# Skip allies - they will be processed separately
 		if child.is_in_group("allies"):
 			continue
+
+		# Recovery advances every world turn, even without a visible target.
+		if child.skill_cooldown > 0:
+			child.skill_cooldown -= 1
 		
 		# Process status effects (DOT)
 		if child.has_method("process_turn_effects"):
@@ -160,11 +164,7 @@ func process_enemy_turns():
 		
 		# Skip attack if target is hidden
 		if not is_terrified and target_visible_to_enemy and is_instance_valid(target_node):
-			# Cooldown tick
-			if enemy.skill_cooldown > 0:
-				enemy.skill_cooldown -= 1
-			
-			if enemy.skill_id == "flame_scatter" and is_enemy_in_fov:
+			if enemy.skill_id == "flame_scatter":
 				var can_fireball = dist_to_target <= enemy.attack_range and main_node._has_line_of_sight(enemy_grid_pos, target_grid_pos)
 				if enemy.skill_cooldown <= 0 and main_node._flame_scatter_has_grass(enemy):
 					await main_node._execute_flame_scatter(enemy)
@@ -175,7 +175,7 @@ func process_enemy_turns():
 					acted = true
 			
 			# Check Attack Range
-			if not acted and is_enemy_in_fov and dist_to_target <= enemy.attack_range:
+			if not acted and dist_to_target <= maxf(1.5, enemy.attack_range):
 				var has_skill = enemy.skill_id != ""
 				var skill_ready = enemy.skill_cooldown <= 0
 				var can_attack_now = true

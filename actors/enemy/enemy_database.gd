@@ -139,6 +139,8 @@ static func get_npc_definitions(_current_floor: int) -> Array:
 
 static func get_enemy_def(enemy_id: String) -> Dictionary:
 	var enemies = _get_enemy_map()
+	if enemies.has(enemy_id):
+		return enemies[enemy_id]
 	# Search by name property for backward compatibility
 	for id in enemies:
 		if enemies[id].name == enemy_id:

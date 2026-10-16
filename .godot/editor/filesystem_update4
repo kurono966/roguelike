@@ -15,3 +15,6 @@ res://world/map_controller.gd
 res://world/dungeon_generator.gd
 res://ui/PlayerUI.gd
 res://actors/enemy/enemy_ai.gd
+res://world/npc_manager.gd
+res://actors/enemy/enemy_database.gd
+res://world/enemy_manager.gd

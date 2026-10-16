@@ -57,35 +57,7 @@ func _spawn_enemy_in_room(room: Rect2i):
 	var enemy = EnemyScene.instantiate()
 	enemy.position = Vector2(spawn_pos) * TILE_SIZE
 	
-	# Apply enemy data
-	enemy.enemy_id = enemy_data.get("id", "zakomushi")
-	enemy.enemy_name = enemy_data.get("name", "Enemy")
-	enemy.sprite_path = enemy_data.get("sprite_path", "")
-	enemy.hp = enemy_data.get("hp", 5)
-	enemy.max_hp = enemy.hp
-	enemy.attack_power = enemy_data.get("attack", 1)
-	enemy.defense = enemy_data.get("defense", 0)
-	enemy.exp_reward = enemy_data.get("exp_reward", 2)
-	
-	# Apply special properties
-	if enemy_data.has("can_swim"):
-		enemy.can_swim = enemy_data["can_swim"]
-	if enemy_data.has("is_flying"):
-		enemy.is_flying = enemy_data["is_flying"]
-	if enemy_data.has("attack_range"):
-		enemy.attack_range = enemy_data["attack_range"]
-	if enemy_data.has("skill_id"):
-		enemy.skill_id = enemy_data["skill_id"]
-	if enemy_data.has("loot_table"):
-		enemy.loot_table = enemy_data["loot_table"]
-	if enemy_data.has("on_hit_effects"):
-		enemy.on_hit_effects = enemy_data["on_hit_effects"]
-	if enemy_data.has("weaknesses"):
-		enemy.weaknesses = enemy_data["weaknesses"]
-	if enemy_data.has("resistances"):
-		enemy.resistances = enemy_data["resistances"]
-	if enemy_data.has("fire_immune"):
-		enemy.fire_immune = enemy_data["fire_immune"]
+	enemy.apply_definition(enemy_data)
 	
 	enemy.add_to_group("enemies")
 	enemy.add_to_group("entities")
@@ -216,12 +188,7 @@ func try_spawn_periodic_enemy():
 		var enemy = EnemyScene.instantiate()
 		enemy.position = Vector2(spawn_pos) * TILE_SIZE
 		
-		enemy.enemy_id = enemy_data.get("id", "zakomushi")
-		enemy.enemy_name = enemy_data.get("name", "Enemy")
-		enemy.hp = enemy_data.get("hp", 5)
-		enemy.max_hp = enemy.hp
-		enemy.attack_power = enemy_data.get("attack", 1)
-		enemy.defense = enemy_data.get("defense", 0)
+		enemy.apply_definition(enemy_data)
 		
 		enemy.add_to_group("enemies")
 		enemy.add_to_group("entities")

@@ -74,7 +74,7 @@ func _spawn_single_npc(type: Dictionary, pos: Vector2):
 		npc.skill_id = type.skill
 		npc.attack_range = type.get("range", 1)
 		npc.max_skill_cooldown = type.get("cooldown", 5)
-		npc.skill_cooldown = randi_range(0, npc.max_skill_cooldown)
+		npc.skill_cooldown = 0
 	if "trade_items" in type:
 		npc.trade_items = type.trade_items.duplicate()
 	npc.is_npc = true

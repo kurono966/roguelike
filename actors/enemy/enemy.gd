@@ -50,6 +50,37 @@ var last_attacker = null # Tracks who dealt the killing blow
 enum AiType { AGGRESSIVE, COWARD, SNIPER, IMMOBILE, RANDOM, GRASS_SCATTER, ALLY_FOLLOW }
 var ai_type: AiType = AiType.AGGRESSIVE
 
+func apply_definition(data: Dictionary):
+	enemy_id = str(data.get("id", enemy_id))
+	enemy_name = str(data.get("name", enemy_name))
+	hp = int(data.get("hp", 5))
+	max_hp = hp
+	attack_power = int(data.get("atk", 1))
+	defense = int(data.get("def", 0))
+	exp_reward = int(data.get("exp", 2))
+	base_color = data.get("color", base_color)
+	sprite_path = str(data.get("sprite", ""))
+	apply_behavior_definition(data)
+	skill_cooldown = 0
+
+func apply_behavior_definition(data: Dictionary):
+	# Database definitions use these keys in every spawn and restore path.
+	can_swim = bool(data.get("swim", false))
+	is_flying = bool(data.get("fly", false))
+	skill_id = str(data.get("skill", ""))
+	attack_range = maxi(1, int(data.get("range", 1)))
+	max_skill_cooldown = int(data.get("cooldown", 5))
+	ai_type = data.get("ai", 0)
+	has_knockback = bool(data.get("knockback", false))
+	on_hit_effects = data.get("on_hit", {}).duplicate(true)
+	loot_table = data.get("loot", {}).duplicate(true)
+	weaknesses = data.get("weak", []).duplicate()
+	resistances = data.get("resist", []).duplicate()
+	penetration_rate = float(data.get("penetration", 0.0))
+	intelligence = int(data.get("intelligence", 0))
+	fire_immune = bool(data.get("fire_immune", false))
+	grass_ignition_chance = float(data.get("grass_ignition_chance", 0.0))
+
 func _ready():
 	z_index = 5 # Ensure enemy is above floor/stairs but below UI/Flying text
 	# スプライトを読み込み
