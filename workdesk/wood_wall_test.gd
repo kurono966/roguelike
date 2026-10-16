@@ -87,6 +87,28 @@ func _run():
 	_check(main._burning_grass.has(Vector2i(26, 26)), "Fire did not spread to adjacent wood")
 	_check(main._burning_grass[Vector2i(26, 26)].turns_remaining == 5, "New fire ticked in its ignition turn")
 	_check(not main._burning_grass.has(Vector2i(26, 24)), "Stone wall caught fire")
+	# Existing grass fires and timber fires use the same spread pipeline.
+	for fuel_pair in [[MapDefinitions.CellType.GRASS, WOOD], [WOOD, MapDefinitions.CellType.GRASS]]:
+		main._burning_grass.clear()
+		main._map_data[26][25] = fuel_pair[0]
+		main._map_data[26][26] = fuel_pair[1]
+		main._setup_pathfinding()
+		main._ignite_grass(pos)
+		main._burning_grass[pos].spread_chance = 100
+		main._process_burning_grass()
+		var adjacent = Vector2i(26, 26)
+		_check(main._burning_grass.has(adjacent), "Cross-material spread failed: " + str(fuel_pair))
+		_check(main._map_data[26][26] == fuel_pair[1], "Ignition changed terrain before burnout")
+		_check(main._burning_grass[adjacent].turns_remaining == 5, "Cross-material ignition lost lifetime")
+		_check(main._burning_grass[adjacent].spread_chance == (30 if fuel_pair[1] == WOOD else 50), "New fire did not inherit its material's spread rate")
+		# The newly ignited material can carry the fire onward on a later turn.
+		main._map_data[26][27] = fuel_pair[0]
+		main._burning_grass[adjacent].spread_chance = 100
+		main._process_burning_grass()
+		_check(main._burning_grass.has(Vector2i(26, 27)), "Fire chain stopped after changing materials")
+		main._map_data[26][27] = WALL
+	main._map_data[26][25] = WOOD
+	main._map_data[26][26] = WOOD
 	main._burning_grass.clear()
 	main._ignite_grass(pos)
 	main._burning_grass[pos].spread_chance = 0

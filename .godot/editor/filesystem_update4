@@ -18,3 +18,15 @@ res://actors/enemy/enemy_ai.gd
 res://world/npc_manager.gd
 res://actors/enemy/enemy_database.gd
 res://world/enemy_manager.gd
+res://ui/minimap_controller.gd
+res://world/biome_definitions.gd
+res://world/item_manager.gd
+res://world/map_definitions.gd
+res://world/player_controller.gd
+res://world/save_manager_extended.gd
+res://world/shadow_manager.gd
+res://world/skill_executor.gd
+res://world/target_manager.gd
+res://world/tileset_manager.gd
+res://world/visibility_manager.gd
+res://world/world_map_manager.gd
