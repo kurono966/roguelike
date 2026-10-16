@@ -175,20 +175,25 @@ func electrify_water(start_pos: Vector2i, damage_val: int = -1):
 # ------------------------------------------------------------------------------
 
 func ignite_grass(pos: Vector2i):
-	"""Ignite a grass tile, starting a fire that can spread"""
+	# Grass and wooden walls share fire timers, visuals, and save/cache storage.
+	if not main._is_grid_in_bounds(pos):
+		return
+	var cell = main._map_data[pos.x][pos.y]
+	if cell not in [main.CellType.GRASS, main.CellType.WOOD_WALL]:
+		return
 	if main._burning_grass.has(pos):
 		return  # Already burning
 	
 	main._burning_grass[pos] = {
-		"turns_remaining": 5,  # Grass burns for 5 turns
-		"spread_chance": 50    # 50% chance to spread each turn
+		"turns_remaining": 5,
+		"spread_chance": 30 if cell == main.CellType.WOOD_WALL else 50
 	}
 	
 	# Visual effect for initial ignition
 	update_burning_grass_visual(pos)
 	
 	if main.has_node("/root/LogUI"):
-		main.get_node("/root/LogUI").add_log("[炎] 草むらが燃え始めた！", Color.ORANGE_RED)
+		main.get_node("/root/LogUI").add_log("[炎] 木製の壁が燃え始めた！" if cell == main.CellType.WOOD_WALL else "[炎] 草むらが燃え始めた！", Color.ORANGE_RED)
 
 func process_burning_grass():
 	"""Process burning grass each turn: spread fire and damage entities"""
@@ -245,8 +250,8 @@ func process_burning_grass():
 				if adj_pos.x < 0 or adj_pos.x >= main.MAP_WIDTH or adj_pos.y < 0 or adj_pos.y >= main.MAP_HEIGHT:
 					continue
 				
-				# Check if adjacent tile is grass and not already burning
-				if main._map_data[adj_pos.x][adj_pos.y] == main.CellType.GRASS and not main._burning_grass.has(adj_pos):
+				# Spread to adjacent fuel without ticking newly lit fires this turn.
+				if main._map_data[adj_pos.x][adj_pos.y] in [main.CellType.GRASS, main.CellType.WOOD_WALL] and not main._burning_grass.has(adj_pos):
 					if randi() % 100 < spread_chance:
 						new_fires.append(adj_pos)
 		
@@ -255,6 +260,7 @@ func process_burning_grass():
 			to_remove.append(pos)
 			# Convert to floor
 			main._map_data[pos.x][pos.y] = main.CellType.FLOOR
+			main._update_astar_tile(pos, false)
 	
 	# Remove burned out fires
 	for pos in to_remove:
@@ -265,6 +271,10 @@ func process_burning_grass():
 		ignite_grass(pos)
 	
 	# Update visuals
+	if not to_remove.is_empty():
+		# Rebuild wall occluders once for the entire batch of burned tiles.
+		main._update_shadow_cell(to_remove[0])
+		main._calculate_fov()
 	main._draw_map()
 
 func is_fire_immune(entity) -> bool:
@@ -285,7 +295,9 @@ func flame_scatter_has_grass(enemy, radius: int = 2) -> bool:
 			var pos = Vector2i(x, y)
 			if pos.x < 0 or pos.x >= main.MAP_WIDTH or pos.y < 0 or pos.y >= main.MAP_HEIGHT:
 				continue
-			if main._map_data[pos.x][pos.y] == main.CellType.GRASS and not main._burning_grass.has(pos):
+			if Vector2(origin).distance_to(Vector2(pos)) > radius:
+				continue
+			if main._map_data[pos.x][pos.y] in [main.CellType.GRASS, main.CellType.WOOD_WALL] and not main._burning_grass.has(pos):
 				return true
 	return false
 
@@ -329,9 +341,9 @@ func execute_flame_scatter(enemy):
 				continue
 			if Vector2(origin).distance_to(Vector2(pos)) > radius:
 				continue
-			if main._map_data[pos.x][pos.y] == main.CellType.GRASS and not main._burning_grass.has(pos):
+			if main._map_data[pos.x][pos.y] in [main.CellType.GRASS, main.CellType.WOOD_WALL] and not main._burning_grass.has(pos):
 				ignite_grass(pos)
-				if main._burning_grass.has(pos):
+				if main._burning_grass.has(pos) and main._map_data[pos.x][pos.y] == main.CellType.GRASS:
 					main._burning_grass[pos].spread_chance = 25
 				ignited += 1
 			# Melt ice
@@ -385,7 +397,7 @@ func create_steam(pos: Vector2i):
 				if visited.has(npos):
 					continue
 				# Cannot pass through walls
-				if main._map_data[npos.x][npos.y] == main.CellType.WALL:
+				if main._map_data[npos.x][npos.y] in [main.CellType.WALL, main.CellType.WOOD_WALL]:
 					continue
 				visited[npos] = true
 				# Spread probability decreases with distance
@@ -438,7 +450,7 @@ func process_steam():
 			if npos.x < 0 or npos.x >= main.MAP_WIDTH or npos.y < 0 or npos.y >= main.MAP_HEIGHT:
 				continue
 			# Steam cannot pass through walls
-			if main._map_data[npos.x][npos.y] == main.CellType.WALL:
+			if main._map_data[npos.x][npos.y] in [main.CellType.WALL, main.CellType.WOOD_WALL]:
 				continue
 			# Skip if already has strong steam
 			if main._steam_tiles.has(npos) and main._steam_tiles[npos].turns_remaining >= data.turns_remaining:
@@ -614,7 +626,7 @@ func create_poison_gas(pos: Vector2i):
 					continue
 				if visited.has(npos):
 					continue
-				if main._map_data[npos.x][npos.y] == main.CellType.WALL:
+				if main._map_data[npos.x][npos.y] in [main.CellType.WALL, main.CellType.WOOD_WALL]:
 					continue
 				visited[npos] = true
 				
@@ -663,7 +675,7 @@ func process_poison_gas():
 			var npos = pos + d
 			if npos.x < 0 or npos.x >= main.MAP_WIDTH or npos.y < 0 or npos.y >= main.MAP_HEIGHT:
 				continue
-			if main._map_data[npos.x][npos.y] == main.CellType.WALL:
+			if main._map_data[npos.x][npos.y] in [main.CellType.WALL, main.CellType.WOOD_WALL]:
 				continue
 			if main._poison_gas_tiles.has(npos) and main._poison_gas_tiles[npos].turns_remaining >= data.turns_remaining:
 				continue

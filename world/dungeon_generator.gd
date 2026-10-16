@@ -180,10 +180,19 @@ func generate_map(current_floor: int, current_branch: int, local_type: int = -1,
 	if not rooms.is_empty():
 		_prevent_locked_doors_on_main_path(map_data, rooms[0].get_center(), rooms.back().get_center())
 	
+	_generate_wood_walls(map_data, 0.65 if current_branch == 3 else 0.08)
+
 	return {
 		"map_data": map_data,
 		"rooms": rooms
 	}
+
+func _generate_wood_walls(map_data: Array, chance: float):
+	# Keep the outer boundary solid permanently; only replace existing interior walls.
+	for x in range(1, MAP_WIDTH - 1):
+		for y in range(1, MAP_HEIGHT - 1):
+			if map_data[x][y] == CellType.WALL and randf() < chance:
+				map_data[x][y] = CellType.WOOD_WALL
 
 func _generate_overworld(main_inst: Node2D = null, is_starting_village: bool = false, is_dungeon_village: bool = false) -> Dictionary:
 	var map_data = []

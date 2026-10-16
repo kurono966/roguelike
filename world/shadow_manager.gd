@@ -25,7 +25,7 @@ func rebuild(map_data: Array):
 	for y in range(height):
 		var run_start = -1
 		for x in range(width + 1):
-			var is_wall = x < width and map_data[x][y] == CellType.WALL
+			var is_wall = x < width and map_data[x][y] in [CellType.WALL, CellType.WOOD_WALL]
 			if is_wall and run_start < 0:
 				run_start = x
 			elif not is_wall and run_start >= 0:
@@ -34,7 +34,7 @@ func rebuild(map_data: Array):
 
 	for x in range(width):
 		for y in range(map_data[x].size()):
-			if map_data[x][y] != CellType.WALL:
+			if map_data[x][y] not in [CellType.WALL, CellType.WOOD_WALL]:
 				update_cell(Vector2i(x, y), map_data[x][y])
 
 func update_cell(cell: Vector2i, cell_type: int):
@@ -80,7 +80,7 @@ func _make_polygon(cell_type: int) -> PackedVector2Array:
 	var center = size * 0.5
 
 	match cell_type:
-		CellType.WALL:
+		CellType.WALL, CellType.WOOD_WALL:
 			return PackedVector2Array([
 				Vector2.ZERO,
 				Vector2(size, 0.0),

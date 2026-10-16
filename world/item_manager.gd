@@ -131,7 +131,7 @@ func _is_grid_valid_for_item(pos: Vector2i) -> bool:
 	
 	var cell = map_controller.map_data[pos.x][pos.y]
 	
-	return cell != CellType.WALL and \
+	return cell not in [CellType.WALL, CellType.WOOD_WALL] and \
 		   cell != CellType.WATER and \
 		   cell != CellType.LAVA and \
 		   cell != CellType.TREE and \

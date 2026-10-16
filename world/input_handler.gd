@@ -561,7 +561,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			for d in dirs:
 				var check = player_grid + d
 				if check.x > 0 and check.x < main_node.MAP_WIDTH - 1 and check.y > 0 and check.y < main_node.MAP_HEIGHT - 1:
-					if main_node._map_data[check.x][check.y] == main_node.CellType.WALL:
+					if main_node._map_data[check.x][check.y] in [main_node.CellType.WALL, main_node.CellType.WOOD_WALL]:
 						wall_count += 1
 						single_wall_pos = check
 						

@@ -459,7 +459,7 @@ func has_overworld_preview_line_of_sight(from_grid: Vector2i, to_grid: Vector2i)
 		if p == from_grid or p == to_grid:
 			continue
 		var cell = get_overworld_preview_cell(p)
-		if cell == CellType.WALL or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED or cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
+		if cell in [CellType.WALL, CellType.WOOD_WALL] or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED or cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
 			return false
 	return true
 

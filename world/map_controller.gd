@@ -34,7 +34,7 @@ const CellType = MapDefinitions.CellType
 const MAP_WIDTH = MapDefinitions.MAP_WIDTH
 const MAP_HEIGHT = MapDefinitions.MAP_HEIGHT
 const TILE_SIZE = MapDefinitions.TILE_SIZE
-const SWIM_PATH_BLOCKERS = [CellType.WALL, CellType.LAVA, CellType.PIT, CellType.TREE, CellType.TREE_FRUIT, CellType.ROCK]
+const SWIM_PATH_BLOCKERS = [CellType.WALL, CellType.WOOD_WALL, CellType.LAVA, CellType.PIT, CellType.TREE, CellType.TREE_FRUIT, CellType.ROCK]
 
 func setup(main: Node2D):
 	main_node = main
@@ -100,8 +100,10 @@ func _set_path_tile(pos: Vector2i, cell: int, frozen: bool, blocked: bool):
 
 static func _can_path_through(cell: int, frozen: bool, swim: bool, fly: bool) -> bool:
 	# Path planning includes doors actors can open; collision is checked on moving.
+	if cell in [CellType.WALL, CellType.WOOD_WALL]:
+		return false
 	if fly:
-		return cell != CellType.WALL
+		return cell not in [CellType.WALL, CellType.WOOD_WALL]
 	if swim:
 		return cell not in SWIM_PATH_BLOCKERS
 	if frozen:
@@ -136,7 +138,7 @@ func is_walkable(grid_pos: Vector2i, allow_swim: bool = false, allow_fly: bool =
 	
 	var cell = row[grid_pos.y]
 	
-	if cell == CellType.WALL or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED:
+	if cell in [CellType.WALL, CellType.WOOD_WALL] or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED:
 		return false
 	if cell == CellType.WATER and not allow_swim and not allow_fly:
 		return false
@@ -312,7 +314,7 @@ func find_path_to_nearest_unexplored(start_grid: Vector2i) -> Array:
 			if y >= map_data[x].size():
 				continue
 			
-			if not explored_tiles[x][y] and map_data[x][y] != CellType.WALL:
+			if not explored_tiles[x][y] and map_data[x][y] not in [CellType.WALL, CellType.WOOD_WALL]:
 				var pos = Vector2i(x, y)
 				var dist = start_grid.distance_to(pos)
 				if dist < nearest_dist:

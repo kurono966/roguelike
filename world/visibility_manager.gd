@@ -163,7 +163,7 @@ func _cast_light_octant(origin: Vector2i, row: int, start_slope: float, end_slop
 					explored_tiles[current_x][current_y] = true
 
 					if blocked: # Previous cell was blocked
-						var is_opaque = map_data[current_x][current_y] == CellType.WALL or \
+						var is_opaque = map_data[current_x][current_y] in [CellType.WALL, CellType.WOOD_WALL] or \
 										map_data[current_x][current_y] == CellType.DOOR_CLOSED or \
 										map_data[current_x][current_y] == CellType.TREE or \
 										map_data[current_x][current_y] == CellType.TREE_FRUIT or \
@@ -176,7 +176,7 @@ func _cast_light_octant(origin: Vector2i, row: int, start_slope: float, end_slop
 							blocked = false
 							new_start_slope = right_slope
 					else:
-						var is_blocking = map_data[current_x][current_y] == CellType.WALL or \
+						var is_blocking = map_data[current_x][current_y] in [CellType.WALL, CellType.WOOD_WALL] or \
 										map_data[current_x][current_y] == CellType.DOOR_CLOSED or \
 										map_data[current_x][current_y] == CellType.TREE or \
 										map_data[current_x][current_y] == CellType.TREE_FRUIT or \
@@ -227,11 +227,13 @@ func draw_map():
 						# Calculate neighbor bitmask for connecting walls
 						var mask = 0
 						# N=1, E=2, S=4, W=8
-						if y > 0 and map_data[x][y-1] == CellType.WALL: mask |= 1
-						if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.WALL: mask |= 2
-						if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.WALL: mask |= 4
-						if x > 0 and map_data[x-1][y] == CellType.WALL: mask |= 8
+						if y > 0 and map_data[x][y-1] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 1
+						if x < MAP_WIDTH - 1 and map_data[x+1][y] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 2
+						if y < MAP_HEIGHT - 1 and map_data[x][y+1] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 4
+						if x > 0 and map_data[x-1][y] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 8
 						atlas_coords.x = mask
+					CellType.WOOD_WALL:
+						atlas_coords.x = 90
 					CellType.FLOOR:
 						atlas_coords.x = 16
 					CellType.STAIRS:

@@ -196,7 +196,8 @@ func _execute_fireball_skill(direction: Vector2i, skill_data: Dictionary):
 			break
 		
 		var cell = map_controller.map_data[check_pos.x][check_pos.y]
-		if cell == CellType.WALL:
+		if cell in [CellType.WALL, CellType.WOOD_WALL]:
+			main_node._ignite_grass(check_pos)
 			break
 		
 		# Check for enemies
@@ -249,7 +250,7 @@ func _execute_iceball_skill(direction: Vector2i, skill_data: Dictionary):
 			break
 		
 		var cell = map_controller.map_data[check_pos.x][check_pos.y]
-		if cell == CellType.WALL:
+		if cell in [CellType.WALL, CellType.WOOD_WALL]:
 			break
 		
 		# Check for enemies
@@ -305,7 +306,7 @@ func _execute_lightning_skill(direction: Vector2i, skill_data: Dictionary):
 			break
 		
 		var cell = map_controller.map_data[check_pos.x][check_pos.y]
-		if cell == CellType.WALL:
+		if cell in [CellType.WALL, CellType.WOOD_WALL]:
 			break
 		
 		# Check for enemies
@@ -352,7 +353,7 @@ func _execute_blank_shot_skill(direction: Vector2i, skill_data: Dictionary):
 			break
 		
 		var cell = map_controller.map_data[check_pos.x][check_pos.y]
-		if cell == CellType.WALL:
+		if cell in [CellType.WALL, CellType.WOOD_WALL]:
 			break
 		
 		# Check for enemies
@@ -392,7 +393,7 @@ func _execute_web_shot_skill(direction: Vector2i, skill_data: Dictionary):
 			break
 		
 		var cell = map_controller.map_data[check_pos.x][check_pos.y]
-		if cell == CellType.WALL:
+		if cell in [CellType.WALL, CellType.WOOD_WALL]:
 			break
 		
 		# Check for enemies
@@ -655,6 +656,7 @@ func _execute_explosion_skill(target_grid: Vector2i, skill_data: Dictionary):
 			
 			var world_pos = Vector2(pos) * TILE_SIZE
 			main_node._spawn_skill_particles(world_pos + Vector2(16, 16), "explosion", 0.6)
+			main_node._ignite_grass(pos)
 			
 			# Check for enemies
 			for enemy in main_node.get_tree().get_nodes_in_group("enemies"):
@@ -694,6 +696,7 @@ func _execute_meteor_skill(target_grid: Vector2i, skill_data: Dictionary):
 			
 			var world_pos = Vector2(pos) * TILE_SIZE
 			main_node._spawn_skill_particles(world_pos + Vector2(16, 16), "meteor", 0.8)
+			main_node._ignite_grass(pos)
 			
 			# Check for enemies
 			for enemy in main_node.get_tree().get_nodes_in_group("enemies"):
@@ -948,7 +951,7 @@ func _execute_super_seoi_nage_skill(target_pos: Vector2, skill_data: Dictionary)
 					break
 				
 				var cell = map_controller.map_data[check_pos.x][check_pos.y]
-				if cell == CellType.WALL:
+				if cell in [CellType.WALL, CellType.WOOD_WALL]:
 					break
 				
 				landing_pos = check_pos

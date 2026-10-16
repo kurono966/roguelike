@@ -456,8 +456,8 @@ func create_tileset():
 	stairs_purple_image.blit_rect(floor_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i.ZERO)
 	_draw_stairs(stairs_purple_image, Color(0.58, 0.34, 0.92, 1.0), Color(0.18, 0.08, 0.32, 1.0))
 
-	# Combine all images (83 standard tiles + 7 ASCII world tiles = 90 total)
-	var combined_image = Image.create(TILE_SIZE * 90, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	# 83 standard tiles, 7 world tiles, and a wooden wall tile.
+	var combined_image = Image.create(TILE_SIZE * 91, TILE_SIZE, false, Image.FORMAT_RGBA8)
 	
 	# Blit Walls
 	for i in range(16):
@@ -587,6 +587,10 @@ func create_tileset():
 	# Create and Blit ASCII World tiles (indices 83..89)
 	_create_world_ascii_tiles(combined_image)
 	_apply_ascii_dungeon_tiles(combined_image)
+	var wood_image = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	wood_image.fill(Color(0.16, 0.08, 0.03))
+	_draw_ascii_char(wood_image, "#", Color(0.75, 0.46, 0.20))
+	combined_image.blit_rect(wood_image, Rect2i(0, 0, TILE_SIZE, TILE_SIZE), Vector2i(90 * TILE_SIZE, 0))
 	
 	# Store references for water animation
 	_combined_image = combined_image
@@ -597,12 +601,14 @@ func create_tileset():
 	# occluder付与前にソース登録(登録前にset_occluderするとout of boundsエラー)
 	tileset.add_source(source, 0)
 
-	for i in range(90):
+	for i in range(91):
 		source.create_tile(Vector2i(i, 0))
 		if i < 16:
 			# Assign dynamic occluder to walls only
 			var tile_data = source.get_tile_data(Vector2i(i, 0), 0)
 			tile_data.set_occluder(0, wall_occluders[i])
+		elif i == 90:
+			source.get_tile_data(Vector2i(i, 0), 0).set_occluder(0, wall_occluders[15])
 	
 	# --- Add occluders to opaque non-wall tiles ---
 	var s = float(TILE_SIZE)

@@ -86,6 +86,8 @@ func _get_minimap_tile_color(cell_type: int, is_visible: bool) -> Color:
 	match cell_type:
 		CellType.WALL:
 			base = Color(0.22, 0.22, 0.22, 1.0)
+		CellType.WOOD_WALL:
+			base = Color(0.48, 0.28, 0.12, 1.0)
 		CellType.FLOOR:
 			base = Color(0.48, 0.48, 0.48, 1.0)
 		CellType.WATER:

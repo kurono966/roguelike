@@ -174,7 +174,7 @@ func handle_attack(attacker, defender):
 				# Use dynamic access to main._map_data
 				var cell = main_node._map_data[next.x][next.y]
 				# Stop at Walls, closed doors, or locked doors
-				if cell == CellType.WALL or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED:
+				if cell in [CellType.WALL, CellType.WOOD_WALL] or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED:
 					print("Knockback hit wall/door at ", next)
 					break
 				

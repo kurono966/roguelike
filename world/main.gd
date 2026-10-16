@@ -1045,7 +1045,7 @@ func _try_move_character(character, direction: Vector2):
 		if not is_fly:
 			return false
 
-	if cell_type == CellType.WALL:
+	if cell_type in [CellType.WALL, CellType.WOOD_WALL]:
 		return false
 	if cell_type == CellType.LAVA:
 		var is_fly = character.is_flying if "is_flying" in character else false
@@ -1525,7 +1525,7 @@ func _is_walkable(grid_pos: Vector2i, can_swim: bool = false) -> bool:
 	# DOOR_CLOSED is now walkable for auto-move (will be opened automatically)
 	# DOOR_LOCKED is not walkable (requires lock picking)
 	# ICE is walkable (frozen water)
-	if cell == CellType.WALL or cell == CellType.DOOR_LOCKED or cell == CellType.LAVA or cell == CellType.PIT:
+	if cell in [CellType.WALL, CellType.WOOD_WALL] or cell == CellType.DOOR_LOCKED or cell == CellType.LAVA or cell == CellType.PIT:
 		return false
 	if cell == CellType.WATER and not _frozen_tiles.has(grid_pos) and not can_swim:
 		return false
@@ -1800,7 +1800,7 @@ func _is_auto_explore_walkable(grid_pos: Vector2i) -> bool:
 	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT:
 		return false
 	var cell = _map_data[grid_pos.x][grid_pos.y]
-	if cell == CellType.WALL or cell == CellType.DOOR_LOCKED or cell == CellType.LAVA or cell == CellType.PIT or cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
+	if cell in [CellType.WALL, CellType.WOOD_WALL] or cell == CellType.DOOR_LOCKED or cell == CellType.LAVA or cell == CellType.PIT or cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
 		return false
 	# DOOR_CLOSED is now walkable for auto-explore (will be opened automatically)
 	# ICE is walkable (frozen water)
@@ -1873,6 +1873,8 @@ func _get_stairs_tooltip(cell_type: int) -> String:
 
 func _get_terrain_tooltip(cell_type: int) -> String:
 	match cell_type:
+		CellType.WOOD_WALL:
+			return "木製の壁\n炎で燃え、5ターン後に床になります。"
 		CellType.WALL:
 			return "壁\n通過できません。"
 		CellType.FLOOR:
@@ -1957,7 +1959,7 @@ func _find_path_to_nearest_stairs(start_grid: Vector2i) -> Array:
 			if abs(dir.x) == 1 and abs(dir.y) == 1:
 				var neighbor_x = _map_data[current.x + dir.x][current.y]
 				var neighbor_y = _map_data[current.x][current.y + dir.y]
-				if neighbor_x == CellType.WALL or neighbor_y == CellType.WALL:
+				if neighbor_x in [CellType.WALL, CellType.WOOD_WALL] or neighbor_y in [CellType.WALL, CellType.WOOD_WALL]:
 					continue
 
 			visited[nxt] = true
@@ -2431,11 +2433,13 @@ func _get_map_cell_atlas_coords(map_data: Array, x: int, y: int) -> Vector2i:
 	match cell_type:
 		CellType.WALL:
 			var mask = 0
-			if y > 0 and map_data[x][y-1] == CellType.WALL: mask |= 1
-			if x < MAP_WIDTH - 1 and map_data[x+1][y] == CellType.WALL: mask |= 2
-			if y < MAP_HEIGHT - 1 and map_data[x][y+1] == CellType.WALL: mask |= 4
-			if x > 0 and map_data[x-1][y] == CellType.WALL: mask |= 8
+			if y > 0 and map_data[x][y-1] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 1
+			if x < MAP_WIDTH - 1 and map_data[x+1][y] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 2
+			if y < MAP_HEIGHT - 1 and map_data[x][y+1] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 4
+			if x > 0 and map_data[x-1][y] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 8
 			atlas_coords.x = mask
+		CellType.WOOD_WALL:
+			atlas_coords.x = 90
 		CellType.FLOOR:
 			atlas_coords.x = 16
 		CellType.STAIRS:
@@ -2551,7 +2555,7 @@ func _has_overworld_preview_line_of_sight(from_grid: Vector2i, to_grid: Vector2i
 		if p == from_grid or p == to_grid:
 			continue
 		var cell = _get_overworld_preview_cell(p)
-		if cell == CellType.WALL or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED or cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
+		if cell in [CellType.WALL, CellType.WOOD_WALL] or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_LOCKED or cell == CellType.TREE or cell == CellType.TREE_FRUIT or cell == CellType.ROCK:
 			return false
 	return true
 
@@ -2610,11 +2614,13 @@ func _draw_map():
 						# Calculate neighbor bitmask for connecting walls
 						var mask = 0
 						# N=1, E=2, S=4, W=8
-						if y > 0 and _map_data[x][y-1] == CellType.WALL: mask |= 1
-						if x < MAP_WIDTH - 1 and _map_data[x+1][y] == CellType.WALL: mask |= 2
-						if y < MAP_HEIGHT - 1 and _map_data[x][y+1] == CellType.WALL: mask |= 4
-						if x > 0 and _map_data[x-1][y] == CellType.WALL: mask |= 8
+						if y > 0 and _map_data[x][y-1] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 1
+						if x < MAP_WIDTH - 1 and _map_data[x+1][y] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 2
+						if y < MAP_HEIGHT - 1 and _map_data[x][y+1] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 4
+						if x > 0 and _map_data[x-1][y] in [CellType.WALL, CellType.WOOD_WALL]: mask |= 8
 						atlas_coords.x = mask
+					CellType.WOOD_WALL:
+						atlas_coords.x = 90
 					CellType.FLOOR:
 						atlas_coords.x = 16
 					CellType.STAIRS:
@@ -2829,7 +2835,7 @@ func _handle_dig(target_grid: Vector2i):
 			get_node("/root/LogUI").add_log("外周の硬い壁は掘れません。", Color(0.85, 0.3, 0.3))
 		return
 		
-	if _map_data[target_grid.x][target_grid.y] == CellType.WALL:
+	if _map_data[target_grid.x][target_grid.y] in [CellType.WALL, CellType.WOOD_WALL]:
 		# STRに応じた満腹度（hunger）の消費計算（STRが低いほど消費が多い）
 		var str_val = player.get_total_strength() if player.has_method("get_total_strength") else player.strength
 		var hunger_cost = int(max(1, ceil(15.0 / float(max(1, str_val)))))
@@ -2972,14 +2978,14 @@ func _cast_light_octant(origin: Vector2i, row: int, start_slope: float, end_slop
 					_explored_tiles[current_x][current_y] = true
 
 					if blocked: # Previous cell was blocked
-						if _map_data[current_x][current_y] == CellType.WALL or _steam_tiles.has(Vector2i(current_x, current_y)):
+						if _map_data[current_x][current_y] in [CellType.WALL, CellType.WOOD_WALL] or _steam_tiles.has(Vector2i(current_x, current_y)):
 							new_start_slope = right_slope
 							continue
 						else:
 							blocked = false
 							new_start_slope = right_slope
 					else:
-						var is_blocking = _map_data[current_x][current_y] == CellType.WALL or _steam_tiles.has(Vector2i(current_x, current_y))
+						var is_blocking = _map_data[current_x][current_y] in [CellType.WALL, CellType.WOOD_WALL] or _steam_tiles.has(Vector2i(current_x, current_y))
 						if is_blocking and col < FOV_RADIUS:
 							blocked = true
 							_cast_light_octant(origin, col + 1, new_start_slope, left_slope, xx, xy, yx, yy)
@@ -3561,7 +3567,7 @@ func _spawn_torches():
 	
 	for x in range(1, MAP_WIDTH - 1):
 		for y in range(1, MAP_HEIGHT - 1):
-			if _map_data[x][y] == CellType.WALL:
+			if _map_data[x][y] in [CellType.WALL, CellType.WOOD_WALL]:
 				# Check neighbors for floor
 				var has_floor_neighbor = false
 				if _map_data[x+1][y] == CellType.FLOOR or \
@@ -3767,7 +3773,7 @@ func _execute_directional_attack(direction: Vector2) -> bool:
 		get_node("/root/LogUI").add_log("空振りした。", Color(0.7, 0.7, 0.7))
 		
 	# Fire-Grass Synergy: Ignite if grass and player's weapon has fire/burn attribute
-	if cell_type == CellType.GRASS:
+	if cell_type in [CellType.GRASS, CellType.WOOD_WALL]:
 		var is_fire_attack = false
 		if player.has_method("get_on_hit_effects"):
 			for effects in player.get_on_hit_effects():
@@ -3895,7 +3901,7 @@ func _execute_ranged_attack(target_pos: Vector2):
 			break
 			
 		# Check Wall or Door
-		if _map_data[p.x][p.y] == CellType.WALL or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
+		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
 			hit_pos = line_points[i-1]
 			if has_node("/root/LogUI") and i < line_points.size()-1:
 				pass # Wall/Door hit
@@ -4025,7 +4031,7 @@ func _execute_throw(target_pos: Vector2):
 			hit_pos = line_points[i-1]
 			break
 			
-		if _map_data[p.x][p.y] == CellType.WALL or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
+		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
 			hit_pos = line_points[i-1] # Stop before obstacle
 			print("Hit wall or door at ", p)
 			break
@@ -5064,10 +5070,10 @@ func reshape_map() -> int:
 				# 70% chance to become floor, 30% chance to become wall
 				# This creates new terrain patterns
 				if randf() < 0.7:
-					if _map_data[x][y] == CellType.WALL:
+					if _map_data[x][y] in [CellType.WALL, CellType.WOOD_WALL]:
 						_map_data[x][y] = CellType.FLOOR
 				else:
-					if _map_data[x][y] != CellType.WALL:
+					if _map_data[x][y] not in [CellType.WALL, CellType.WOOD_WALL]:
 						_map_data[x][y] = CellType.WALL
 
 	# Check if any entities are now trapped in walls
@@ -5080,7 +5086,7 @@ func reshape_map() -> int:
 
 		# Check if this position is now a wall
 		if grid_pos.x >= 0 and grid_pos.x < MAP_WIDTH and grid_pos.y >= 0 and grid_pos.y < MAP_HEIGHT:
-			if _map_data[grid_pos.x][grid_pos.y] == CellType.WALL:
+			if _map_data[grid_pos.x][grid_pos.y] in [CellType.WALL, CellType.WOOD_WALL]:
 				# Entity is trapped in wall - kill it
 				if entity.has_method("take_damage"):
 					entity.take_damage(9999)  # Instant death
@@ -5136,7 +5142,7 @@ func _execute_charge_skill(target_pos: Vector2):
 		var p = line_points[i]
 		if p.x < 0 or p.x >= MAP_WIDTH or p.y < 0 or p.y >= MAP_HEIGHT: break
 		
-		if _map_data[p.x][p.y] == CellType.WALL or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
+		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
 			hit_wall = true
 			break
 			
@@ -5196,7 +5202,7 @@ func _execute_charge_skill(target_pos: Vector2):
 				var next = Vector2i(hit_entity.position/TILE_SIZE) + knock_dir * k
 				if not _is_grid_in_bounds(next):
 					break
-				if _map_data[next.x][next.y] != CellType.WALL and _map_data[next.x][next.y] != CellType.DOOR_CLOSED and _map_data[next.x][next.y] != CellType.DOOR_LOCKED:
+				if _map_data[next.x][next.y] not in [CellType.WALL, CellType.WOOD_WALL] and _map_data[next.x][next.y] != CellType.DOOR_CLOSED and _map_data[next.x][next.y] != CellType.DOOR_LOCKED:
 					final_push = next
 					if _map_data[next.x][next.y] == CellType.PIT:
 						break
@@ -5252,7 +5258,7 @@ func _has_line_of_sight(from_grid: Vector2i, to_grid: Vector2i) -> bool:
 	var line_points = _get_line_points(from_grid, to_grid)
 	for p in line_points:
 		if p == from_grid or p == to_grid: continue
-		if _map_data[p.x][p.y] == CellType.WALL or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
+		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
 			return false
 	return true
 
@@ -5336,7 +5342,7 @@ func _execute_enemy_skill(enemy, target_grid: Vector2i):
 						for dy in range(-1, 2):
 							var check_grid = p_grid + Vector2i(dx, dy)
 							if check_grid.x >= 0 and check_grid.x < MAP_WIDTH and check_grid.y >= 0 and check_grid.y < MAP_HEIGHT:
-								if _map_data[check_grid.x][check_grid.y] != CellType.WALL:
+								if _map_data[check_grid.x][check_grid.y] not in [CellType.WALL, CellType.WOOD_WALL]:
 									drop_pos = Vector2(check_grid) * TILE_SIZE
 									found = true
 									break
@@ -5837,7 +5843,7 @@ func _is_grid_valid_for_item(pos: Vector2i) -> bool:
 		return false
 	var cell = _map_data[pos.x][pos.y]
 	# Allow Floor, Grass, Stairs (though stairs might be annoying, better than losing item)
-	return cell != CellType.WALL and cell != CellType.WATER and cell != CellType.LAVA and cell != CellType.TREE and cell != CellType.TREE_FRUIT and cell != CellType.ROCK
+	return cell not in [CellType.WALL, CellType.WOOD_WALL] and cell != CellType.WATER and cell != CellType.LAVA and cell != CellType.TREE and cell != CellType.TREE_FRUIT and cell != CellType.ROCK
 
 func spawn_world_item(item: BaseItem, world_pos: Vector2):
 	var grid_pos = tile_map.local_to_map(world_pos)
@@ -6010,7 +6016,7 @@ func _execute_enemy_skill_v2(enemy, target_grid_pos: Vector2i):
 						for dy in range(-1, 2):
 							var neighbor = p_grid + Vector2i(dx, dy)
 							if neighbor.x >= 0 and neighbor.x < MAP_WIDTH and neighbor.y >= 0 and neighbor.y < MAP_HEIGHT:
-								if _map_data[neighbor.x][neighbor.y] != CellType.WALL:
+								if _map_data[neighbor.x][neighbor.y] not in [CellType.WALL, CellType.WOOD_WALL]:
 									drop_pos = Vector2(neighbor) * TILE_SIZE
 									placed = true
 									break 
@@ -6289,6 +6295,14 @@ func _apply_chain_lightning(source, current_target, damage: int, chain_left: int
 		await _apply_chain_lightning(current_target, n, damage, chain_left - 1, hit_list)
 
 func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: String, is_reflected_depth: int = 0):
+	# Stop at solid walls, including walls which are currently burning.
+	var shot_start = tile_map.local_to_map(attacker.position)
+	for point in _get_line_points(shot_start, target_grid).slice(1):
+		if not _is_grid_in_bounds(point):
+			return
+		if _map_data[point.x][point.y] in [CellType.WALL, CellType.WOOD_WALL]:
+			target_grid = point
+			break
 	# 影の行動記録（遠距離攻撃）
 	if shadow_clone_manager:
 		shadow_clone_manager.record(attacker, {"type": "ranged", "target_grid": target_grid, "damage": damage, "ptype": type})
@@ -6409,7 +6423,7 @@ func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: S
 		if type == "fire" and target.has_method("apply_effect") and not _is_fire_immune(target):
 			target.apply_effect("burn", {"duration": 3, "damage": 1})
 	if type == "fire" and target_grid.x >= 0 and target_grid.x < MAP_WIDTH and target_grid.y >= 0 and target_grid.y < MAP_HEIGHT:
-		if _map_data[target_grid.x][target_grid.y] == CellType.GRASS:
+		if _map_data[target_grid.x][target_grid.y] in [CellType.GRASS, CellType.WOOD_WALL]:
 			_ignite_grass(target_grid)
 	
 	# 着弾パーティクル
@@ -6799,6 +6813,10 @@ func _execute_point_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 	for x in range(target_grid.x - radius, target_grid.x + radius + 1):
 		for y in range(target_grid.y - radius, target_grid.y + radius + 1):
 			var check_pos = Vector2i(x, y)
+			if not _is_grid_in_bounds(check_pos):
+				continue
+			if "fire" in _get_skill_elements(_targeting_skill) or _targeting_skill.get("effect", "") == "burn" or _targeting_skill.get("id", "") in ["explosion", "meteor"]:
+				_ignite_grass(check_pos)
 			
 			# Melt ice if fire skill
 			if _map_data[check_pos.x][check_pos.y] == CellType.ICE and _frozen_tiles.has(check_pos):
@@ -6882,7 +6900,7 @@ func _execute_collapse_skill(target_pos: Vector2, _targeting_skill: Dictionary):
 		
 		# Terrain erase
 		var cell = _map_data[p.x][p.y]
-		if cell == CellType.WALL or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_OPEN or cell == CellType.DOOR_LOCKED:
+		if cell in [CellType.WALL, CellType.WOOD_WALL] or cell == CellType.DOOR_CLOSED or cell == CellType.DOOR_OPEN or cell == CellType.DOOR_LOCKED:
 			_map_data[p.x][p.y] = CellType.FLOOR
 			map_changed = true
 			
@@ -6946,7 +6964,7 @@ func _execute_gale_thrust_skill(target_pos: Vector2, skill: Dictionary):
 		var p = line_points[i]
 		if p.x < 0 or p.x >= MAP_WIDTH or p.y < 0 or p.y >= MAP_HEIGHT:
 			break
-		if _map_data[p.x][p.y] == CellType.WALL or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
+		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
 			break
 		affected_points.append(p)
 		
@@ -6990,7 +7008,7 @@ func _execute_gale_thrust_skill(target_pos: Vector2, skill: Dictionary):
 						var dest = p + Vector2i(direction)
 						if _is_grid_in_bounds(dest):
 							var cell = _map_data[dest.x][dest.y]
-							if cell != CellType.WALL and cell != CellType.DOOR_CLOSED and cell != CellType.DOOR_LOCKED and cell != CellType.LAVA:
+							if cell not in [CellType.WALL, CellType.WOOD_WALL] and cell != CellType.DOOR_CLOSED and cell != CellType.DOOR_LOCKED and cell != CellType.LAVA:
 								var occupied = false
 								for other in get_tree().get_nodes_in_group("entities"):
 									if is_instance_valid(other) and "hp" in other:
@@ -7230,6 +7248,7 @@ func _is_throw_wall(grid_pos: Vector2i) -> bool:
 	var cell = _map_data[grid_pos.x][grid_pos.y]
 	return cell in [
 		CellType.WALL,
+		CellType.WOOD_WALL,
 		CellType.DOOR_CLOSED,
 		CellType.DOOR_LOCKED,
 		CellType.TREE,
@@ -7254,6 +7273,7 @@ func _can_throw_target_to(target_entity, grid_pos: Vector2i) -> bool:
 	var cell = _map_data[grid_pos.x][grid_pos.y]
 	if cell in [
 		CellType.WALL,
+		CellType.WOOD_WALL,
 		CellType.DOOR_CLOSED,
 		CellType.DOOR_LOCKED,
 		CellType.TREE,
@@ -7310,8 +7330,8 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 			break
 		
 		# Check Walls or Doors
-		if _map_data[p.x][p.y] == CellType.WALL or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
-			hit_pos = line_points[i-1]
+		if _map_data[p.x][p.y] in [CellType.WALL, CellType.WOOD_WALL] or _map_data[p.x][p.y] == CellType.DOOR_CLOSED or _map_data[p.x][p.y] == CellType.DOOR_LOCKED:
+			hit_pos = p if _map_data[p.x][p.y] == CellType.WOOD_WALL else line_points[i-1]
 			break
 		
 		# Check Enemies
@@ -7473,9 +7493,9 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 	
 	# Fire-Grass Synergy: Ignite grass tiles
 	var effect = _targeting_skill.get("effect", "")
-	if effect == "burn":  # Fire-based skills
+	if effect == "burn" or "fire" in _get_skill_elements(_targeting_skill):
 		var hit_cell = _map_data[hit_pos.x][hit_pos.y]
-		if hit_cell == CellType.GRASS:
+		if hit_cell in [CellType.GRASS, CellType.WOOD_WALL]:
 			_ignite_grass(hit_pos)
 		elif hit_cell == CellType.WATER:
 			# Fire-Water Synergy: Create steam
@@ -7971,7 +7991,7 @@ func _update_shadow_cell(cell: Vector2i):
 	if cell.y < 0 or cell.y >= _map_data[cell.x].size():
 		return
 	var cell_type = _map_data[cell.x][cell.y]
-	if cell_type == CellType.WALL or cell_type == CellType.FLOOR:
+	if cell_type in [CellType.WALL, CellType.WOOD_WALL] or cell_type == CellType.FLOOR:
 		shadow_manager.rebuild(_map_data)
 	else:
 		shadow_manager.update_cell(cell, cell_type)
