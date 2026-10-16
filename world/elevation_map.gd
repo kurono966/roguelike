@@ -41,8 +41,9 @@ static func generate(terrain: Array) -> Array:
 		for y in range(depth):
 			var value = noise.get_noise_2d(x, y)
 			result[x][y] = LOW if value < -0.42 else (HIGH if value > 0.42 else NORMAL)
-			# Water remains a continuous surface; flow rules can later replace this.
-			if terrain[x][y] in [MapDefinitions.CellType.WATER, MapDefinitions.CellType.ASH]: result[x][y] = NORMAL
+			# Height stores the basin BED. One height unit of water fills it to normal.
+			if terrain[x][y] == MapDefinitions.CellType.WATER: result[x][y] = LOW
+			elif terrain[x][y] == MapDefinitions.CellType.ASH: result[x][y] = NORMAL
 	# Build ramps along a spanning tree of each existing land component.
 	# Every previously connected land tile remains reachable, while other edges
 	# may retain cliffs with a two-level difference and require a detour.

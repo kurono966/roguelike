@@ -8,6 +8,8 @@ const LAYER_MEMORY = 1
 const LAYER_DEBUG = 2
 
 enum TurnPhase { PLAYER_TURN, ENEMY_TURN, TARGETING }
+const BASE_CAMERA_ZOOM = 0.66
+const CAMERA_HEIGHT_ZOOM_STEP = 0.06
 var _current_game_state = TurnPhase.PLAYER_TURN
 var _current_target_enemy = null  # 現在ターゲット中の敵
 
@@ -54,6 +56,7 @@ var _liquid_state: Dictionary = {}
 var liquid_manager
 var _elevation_overlay: Node2D
 var _elevation_blur: Node2D
+var _terrain_foreground: Node2D
 var _current_branch = 0 # 0: Normal, 1: Dangerous/Alternative
 var _previous_branch = 0 # Track the branch we came from for upstairs
 var _descended_stair_type = 0 # Track the stair type we descended from
@@ -314,7 +317,7 @@ func _ready():
 		# カメラを設定
 		camera.position = player.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
 		camera.make_current()
-		camera.zoom = Vector2(0.6, 0.6)
+		camera.zoom = Vector2.ONE * BASE_CAMERA_ZOOM
 		camera.position_smoothing_speed = 5.0
 	
 	if current_floor == 0:
@@ -1310,6 +1313,7 @@ func _try_move_character(character, direction: Vector2):
 	return true
 
 func _process(delta):
+	_update_height_camera(delta)
 	# Tooltip Logic
 	_update_tooltip()
 
@@ -1445,7 +1449,10 @@ func _update_tooltip():
 				# Show terrain info for non-stairs tiles
 				tooltip_text = _get_terrain_tooltip(cell_type)
 			if tooltip_text != "" and not _is_on_world_map:
-				tooltip_text += "\n高さ: %s" % ["低地 (0)", "通常 (1)", "高地 (2)"][get_tile_height(grid_pos)]
+				if cell_type in [CellType.WATER, CellType.ICE]:
+					tooltip_text += "\n底の高さ: %d / 水面: %.2f" % [get_tile_height(grid_pos), get_surface_height(grid_pos)]
+				else:
+					tooltip_text += "\n高さ: %s" % ["低地 (0)", "通常 (1)", "高地 (2)"][get_tile_height(grid_pos)]
 	
 	if tooltip_text != "":
 		GameUI.show_tooltip(tooltip_text)
@@ -8036,14 +8043,15 @@ func get_tile_height(pos: Vector2i) -> int:
 	return ElevationMap.get_height(_height_data, pos)
 
 func can_step_height(from: Vector2i, to: Vector2i) -> bool:
-	return _is_on_world_map or ElevationMap.can_step(_height_data, from, to)
+	return _is_on_world_map or absi(get_movement_height(from) - get_movement_height(to)) <= 1
 
 func set_tile_height(pos: Vector2i, value: int):
 	if not _is_grid_in_bounds(pos): return
 	_height_data[pos.x][pos.y] = ElevationMap.NORMAL if _map_data[pos.x][pos.y] == CellType.ASH else clampi(value, ElevationMap.LOW, ElevationMap.HIGH)
 	# Rebind grids after load/normalization without changing terrain obstacles.
+	var navigation_heights = [] if _is_on_world_map else get_navigation_heights()
 	for grid in [_astar_grid, _astar_grid_swim, _astar_grid_fly]:
-		grid.heights = [] if _is_on_world_map else _height_data
+		grid.heights = navigation_heights
 	_draw_height_overlay()
 
 func _draw_height_overlay():
@@ -8057,6 +8065,45 @@ func _draw_height_overlay():
 		_elevation_blur.main = self
 		# Same layer, after the terrain overlay; fire/items/actors stay sharp above it.
 		_elevation_overlay.add_child(_elevation_blur)
+	if not is_instance_valid(_terrain_foreground):
+		_terrain_foreground = preload("res://world/terrain_foreground.gd").new()
+		_terrain_foreground.main = self
+		# Crisp terrain markings render after height shading and its blur.
+		_elevation_overlay.add_child(_terrain_foreground)
 	_elevation_overlay.visible = not _is_on_world_map
 	_elevation_overlay.queue_redraw()
 	_elevation_blur.queue_redraw()
+	_terrain_foreground.queue_redraw()
+
+# Liquid beds and water surfaces are separate; volume is in quarter-height units.
+func get_default_liquid_volume(pos: Vector2i) -> int:
+	if _map_data[pos.x][pos.y] in [CellType.WATER, CellType.ICE]:
+		return maxi(1, (ElevationMap.NORMAL - get_tile_height(pos)) * 4)
+	return 1
+
+func get_surface_height(pos: Vector2i) -> float:
+	var bed = float(get_tile_height(pos))
+	if not _is_grid_in_bounds(pos): return bed
+	if _map_data[pos.x][pos.y] in [CellType.WATER, CellType.ICE]:
+		var volume = int(_liquid_state.get(pos, {}).get("volume", get_default_liquid_volume(pos)))
+		return bed + float(volume) / 4.0
+	return bed
+
+func get_movement_height(pos: Vector2i) -> int:
+	return clampi(roundi(get_surface_height(pos)), ElevationMap.LOW, ElevationMap.HIGH)
+
+func get_navigation_heights() -> Array:
+	var result = _height_data.duplicate(true)
+	for x in range(result.size()):
+		for y in range(result[x].size()):
+			result[x][y] = get_movement_height(Vector2i(x, y))
+	return result
+
+func _update_height_camera(delta: float):
+	if not is_instance_valid(camera) or not is_instance_valid(player): return
+	var zoom_value = BASE_CAMERA_ZOOM
+	if not _is_on_world_map:
+		var pos = tile_map.local_to_map(player.position)
+		zoom_value += (clampf(get_surface_height(pos), 0.0, 2.0) - 1.0) * CAMERA_HEIGHT_ZOOM_STEP
+	var target_zoom = Vector2.ONE * zoom_value
+	camera.zoom = camera.zoom.lerp(target_zoom, 1.0 - exp(-5.0 * maxf(0.0, delta)))

@@ -110,6 +110,7 @@ func _run():
 	check(is_instance_valid(main._elevation_overlay), "Height overlay was not created")
 	check(is_instance_valid(main._elevation_blur) and main._elevation_blur.material is ShaderMaterial, "Missing off-height blur")
 	check(main._elevation_blur.get_parent() == main._elevation_overlay, "Blur must render over height shading and below fire/actors")
+	check(is_instance_valid(main._terrain_foreground) and main._terrain_foreground.get_index() > main._elevation_blur.get_index(), "Floor markings must render after height blur")
 	# Roads remain flat even when loading older elevation data.
 	main._map_data[25][25] = main.CellType.ASH
 	main._map_data[26][25] = main.CellType.ASH
@@ -119,6 +120,34 @@ func _run():
 	check(main.get_tile_height(Vector2i(25, 25)) == 1 and main.get_tile_height(Vector2i(26, 25)) == 1, "Existing roads were not flattened")
 	main.set_tile_height(Vector2i(25, 25), 2)
 	check(main.get_tile_height(Vector2i(25, 25)) == 1, "Road accepted a non-flat height")
+	# Generated water has a low bed but a normal-height water/ice surface.
+	main._map_data[26][25] = main.CellType.WATER
+	var basin_heights = ElevationMap.generate(main._map_data)
+	check(basin_heights[26][25] == 0, "Generated water bed is not low")
+	main._height_data[26][25] = 0
+	main._liquid_state.clear()
+	main._setup_pathfinding()
+	check(is_equal_approx(main.get_surface_height(Vector2i(26, 25)), 1.0), "Generated water surface is not normal height")
+	check(main._astar_grid_swim.heights[26][25] == 1, "Swimming paths used the bed instead of the surface")
+	main.liquid_manager._sync_liquids()
+	check(main._liquid_state[Vector2i(26, 25)].volume == 4, "Generated basin lost its initial water depth")
+	main._map_data[26][25] = main.CellType.ICE
+	check(main.get_movement_height(Vector2i(26, 25)) == 1, "Ice surface fell to the basin bed")
+	# Camera zoom approaches each target smoothly rather than jumping.
+	main.player.position = Vector2(25, 25) * 32
+	main._map_data[25][25] = main.CellType.FLOOR
+	main._height_data[25][25] = 0
+	main.camera.zoom = Vector2.ONE * 0.66
+	main._update_height_camera(0.05)
+	check(main.camera.zoom.x < 0.66 and main.camera.zoom.x > 0.60, "Low-ground zoom did not ease toward a wider view")
+	for frame in range(20): main._update_height_camera(0.1)
+	check(absf(main.camera.zoom.x - 0.60) < 0.001, "Low-ground camera target is wrong")
+	main._height_data[25][25] = 2
+	for frame in range(20): main._update_height_camera(0.1)
+	check(absf(main.camera.zoom.x - 0.72) < 0.001, "High-ground camera target is wrong")
+	main.player.position = Vector2(26, 25) * 32
+	for frame in range(20): main._update_height_camera(0.1)
+	check(absf(main.camera.zoom.x - 0.66) < 0.001, "Water/ice camera used bed height instead of surface")
 	print("ELEVATION_TEST failures=", failures)
 	main.queue_free()
 	await get_tree().process_frame

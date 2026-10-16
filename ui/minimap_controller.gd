@@ -171,7 +171,7 @@ func update_minimap():
 		var p = main_scene.tile_map.local_to_map(main_scene.player.position)
 		if p.x >= 0 and p.x < map_w and p.y >= 0 and p.y < map_h:
 			_minimap_image.set_pixel(p.x, p.y, Color(1.0, 0.2, 0.2, 1.0))
-			_current_height_label.text = "現在：%s" % ["▼ 低地", "・通常", "▲ 高地"][main_scene.get_tile_height(p)]
+			_current_height_label.text = "現在：%s" % ["▼ 低地", "・通常", "▲ 高地"][main_scene.get_movement_height(p)]
 
 	_minimap_texture.update(_minimap_image)
 

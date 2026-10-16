@@ -80,7 +80,7 @@ func _sync_liquids():
 			var cell = main._map_data[x][y]
 			var pos = Vector2i(x, y)
 			if cell in [C.WATER, C.LAVA] and not main._liquid_state.has(pos):
-				main._liquid_state[pos] = {"kind": cell, "volume": 1, "ground": C.FLOOR}
+				main._liquid_state[pos] = {"kind": cell, "volume": main.get_default_liquid_volume(pos), "ground": C.FLOOR}
 
 func _choose_target(pos: Vector2i, kind: int) -> Vector2i:
 	var best = pos

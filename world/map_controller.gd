@@ -69,11 +69,12 @@ func setup_pathfinding():
 		astar_grid = ElevationPathGrid.new()
 		astar_grid_swim = ElevationPathGrid.new()
 		astar_grid_fly = ElevationPathGrid.new()
+	var navigation_heights = [] if main_node._is_on_world_map else main_node.get_navigation_heights()
 	for grid in [astar_grid, astar_grid_swim, astar_grid_fly]:
 		grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
 		grid.cell_size = Vector2.ONE
 		grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-		grid.heights = [] if main_node._is_on_world_map else main_node._height_data
+		grid.heights = navigation_heights
 		grid.jumping_enabled = false
 		if grid.is_dirty():
 			grid.update()
@@ -121,6 +122,9 @@ func update_pathfinding_tile(pos: Vector2i, make_solid: bool = false):
 		return
 	var blocked = make_solid or main_node._is_revealed_trap(pos)
 	_set_path_tile(pos, main_node._map_data[pos.x][pos.y], main_node._frozen_tiles.has(pos), blocked)
+	if not main_node._is_on_world_map:
+		for grid in [astar_grid, astar_grid_swim, astar_grid_fly]:
+			grid.heights[pos.x][pos.y] = main_node.get_movement_height(pos)
 
 func is_walkable(grid_pos: Vector2i, allow_swim: bool = false, allow_fly: bool = false) -> bool:
 	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT:

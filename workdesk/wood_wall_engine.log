@@ -38,18 +38,21 @@ Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:244)
+       [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/wood_wall_test.gd:28)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:244)
+       [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/wood_wall_test.gd:28)
-Dungeon placed at: (36, 6)
-NPC Spawned: 村人 at (352.0, 128.0)
-NPC Spawned: 商人 at (1312.0, 192.0)
-NPC Spawned: 放浪の剣士 at (1344.0, 1248.0)
-NPC Spawned: 村人 at (576.0, 1216.0)
+Dungeon placed at: (43, 8)
+NPC Spawned: 村の守備隊 at (1440.0, 288.0)
+NPC Spawned: 放浪の剣士 at (1440.0, 1152.0)
+NPC Spawned: はぐれ魔道士 at (928.0, 1184.0)
+NPC Spawned: 村の長老 at (544.0, 640.0)
+NPC Spawned: 村の守備隊 at (192.0, 352.0)
+NPC Spawned: 放浪の剣士 at (288.0, 864.0)
+NPC Spawned: はぐれ魔道士 at (512.0, 448.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar

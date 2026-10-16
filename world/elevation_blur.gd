@@ -10,7 +10,7 @@ func _init():
 func _draw():
 	if not is_instance_valid(main) or main._is_on_world_map or not is_instance_valid(main.player): return
 	var player_grid = main.tile_map.local_to_map(main.player.position)
-	var player_height = main.get_tile_height(player_grid)
+	var player_height = main.get_movement_height(player_grid)
 	var size = float(MapDefinitions.TILE_SIZE)
 	for x in range(main._map_data.size()):
 		for y in range(main._map_data[x].size()):

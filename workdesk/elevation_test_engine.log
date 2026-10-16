@@ -27,32 +27,28 @@ WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpin
 Current Skills: []
 [ItemDatabase] Loaded 40 items from resources
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
 Current Skills: []
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
 Current Skills: []
 Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:244)
+       [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/elevation_test.gd:19)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:244)
+       [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/elevation_test.gd:19)
-Warning: Failed to place dungeon on the world map. Placing fallback.
-NPC Spawned: 村人 at (512.0, 192.0)
-NPC Spawned: 村人 at (1312.0, 1216.0)
-NPC Spawned: 村の長老 at (960.0, 416.0)
-NPC Spawned: 商人 at (896.0, 1440.0)
-NPC Spawned: はぐれ魔道士 at (1120.0, 1312.0)
-NPC Spawned: 村人 at (160.0, 1056.0)
-NPC Spawned: 放浪の剣士 at (1376.0, 864.0)
+Dungeon placed at: (14, 12)
+NPC Spawned: はぐれ魔道士 at (512.0, 608.0)
+NPC Spawned: 放浪の剣士 at (1280.0, 736.0)
+NPC Spawned: はぐれ魔道士 at (1376.0, 192.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
@@ -71,7 +67,7 @@ PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 DungeonGenerator: Unlocked a door on main path at (5, 22)
-ELEVATION_DENSITY branch=0 low/normal/high=[117, 2292, 91]
+ELEVATION_DENSITY branch=0 low/normal/high=[125, 2284, 91]
 ELEVATION_DENSITY branch=3 low/normal/high=[282, 2082, 136]
 ELEVATION_DENSITY branch=10 low/normal/high=[263, 1940, 297]
 ELEVATION_TEST failures=0

@@ -6,10 +6,13 @@ func _draw():
 	if not is_instance_valid(main) or main._is_on_world_map: return
 	var size = float(MapDefinitions.TILE_SIZE)
 	var ledges: Array = []
-	var grass_tiles: Array = []
 	for x in range(main._map_data.size()):
 		for y in range(main._map_data[x].size()):
-			if not main._explored_tiles[x][y] or not ElevationMap.is_land(main._map_data[x][y]): continue
+			if not main._explored_tiles[x][y]: continue
+			if main._map_data[x][y] == MapDefinitions.CellType.WATER:
+				_draw_water_depth(Vector2i(x, y), size)
+				continue
+			if not ElevationMap.is_land(main._map_data[x][y]): continue
 			var pos = Vector2i(x, y)
 			var height = main.get_tile_height(pos)
 			var opacity = 1.0 if main._visible_tiles[x][y] else 0.35
@@ -18,7 +21,6 @@ func _draw():
 				# Replace the flat grass glyph with a tuft rooted in this surface.
 				# Opaque ground also removes the old glyph in remembered tiles.
 				draw_rect(Rect2(origin, Vector2.ONE * size), Color(0.02, 0.05, 0.025).darkened(1.0 - opacity))
-				grass_tiles.append([origin, height, opacity])
 			if height == ElevationMap.LOW:
 				draw_rect(Rect2(origin, Vector2.ONE * size), Color(0.03, 0.12, 0.28, 0.48 * opacity))
 			elif height == ElevationMap.HIGH:
@@ -41,9 +43,27 @@ func _draw():
 	# Paint boundaries after all surfaces so shading is independent of map traversal.
 	for ledge in ledges:
 		_draw_ledge(ledge[0], ledge[1], ledge[2], ledge[3], size)
-	# Draw vegetation over terrain shading, with the roots sharing its elevation.
-	for grass in grass_tiles:
-		_draw_grounded_grass(grass[0], grass[1], grass[2])
+	# Vegetation and floor markings are painted by terrain_foreground after blur.
+
+func _draw_water_depth(pos: Vector2i, size: float):
+	var origin = Vector2(pos) * size
+	var opacity = 1.0 if main._visible_tiles[pos.x][pos.y] else 0.35
+	var depth = clampf(main.get_surface_height(pos) - main.get_tile_height(pos), 0.0, 1.0)
+	draw_rect(Rect2(origin, Vector2.ONE * size), Color(0.0, 0.05, 0.16, depth * 0.23 * opacity))
+	# A submerged bank fades into the basin while the animated surface stays level.
+	for dir in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+		var adjacent = pos + dir
+		if not main._is_grid_in_bounds(adjacent) or not main._explored_tiles[adjacent.x][adjacent.y]: continue
+		if not ElevationMap.is_land(main._map_data[adjacent.x][adjacent.y]): continue
+		var start = origin
+		var tangent = Vector2.RIGHT
+		if dir == Vector2i.RIGHT:
+			start += Vector2(size, 0)
+			tangent = Vector2.DOWN
+		elif dir == Vector2i.DOWN: start += Vector2(0, size)
+		elif dir == Vector2i.LEFT: tangent = Vector2.DOWN
+		_draw_gradient_band(start, start + tangent * size, -Vector2(dir) * 10,
+			Color(0.16, 0.40, 0.44, 0.4 * opacity), Color(0.01, 0.08, 0.18, 0.0))
 
 func _draw_grounded_grass(origin: Vector2, height: int, opacity: float):
 	var root = origin + Vector2(16, 19 + (1 - height) * 3)

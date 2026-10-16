@@ -73,6 +73,8 @@ func _run():
 	main._height_data[24][25] = 2
 	main._height_data[26][25] = 2
 	main._height_data[25][25] = 0
+	# This fixture is a deliberately shallow pool, not a generated full basin.
+	main._liquid_state[source] = {"kind": C.WATER, "volume": 1, "ground": C.FLOOR}
 	main.liquid_manager.process_turn()
 	check(volume() == 3 and main._liquid_state[source].volume == 3, "Lower pool did not collect volume")
 	main._map_data[25][26] = C.FLOOR
