@@ -45,14 +45,10 @@ ERROR: Failed loading resource: res://default_environment.tres.
    GDScript backtrace (most recent call first):
        [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/elevation_test.gd:19)
-Dungeon placed at: (12, 45)
-NPC Spawned: 商人 at (928.0, 416.0)
-NPC Spawned: 商人 at (1216.0, 896.0)
-NPC Spawned: 村人 at (1248.0, 1408.0)
-NPC Spawned: はぐれ魔道士 at (320.0, 1056.0)
-NPC Spawned: 放浪の剣士 at (384.0, 512.0)
-NPC Spawned: 村の守備隊 at (1088.0, 544.0)
-NPC Spawned: 商人 at (992.0, 992.0)
+Dungeon placed at: (30, 16)
+NPC Spawned: 商人 at (384.0, 416.0)
+NPC Spawned: 村の守備隊 at (1280.0, 576.0)
+NPC Spawned: 商人 at (672.0, 1440.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
