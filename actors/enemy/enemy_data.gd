@@ -19,6 +19,7 @@ extends Resource
 @export var knockback: bool = false
 @export var fire_immune: bool = false
 @export var grass_ignition_chance: float = 0.0
+@export var grass_heal: int = 0
 @export var is_npc: bool = false
 @export var loot: Dictionary = {}
 @export var on_hit: Dictionary = {}
@@ -46,6 +47,7 @@ func to_definition() -> Dictionary:
 	if knockback: definition["knockback"] = true
 	if fire_immune: definition["fire_immune"] = true
 	if grass_ignition_chance != 0.0: definition["grass_ignition_chance"] = grass_ignition_chance
+	if grass_heal > 0: definition["grass_heal"] = grass_heal
 	if is_npc: definition["is_npc"] = true
 	if not loot.is_empty(): definition["loot"] = loot.duplicate(true)
 	if not on_hit.is_empty(): definition["on_hit"] = on_hit.duplicate(true)

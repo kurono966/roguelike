@@ -6,6 +6,7 @@ static var _enemy_cache: Dictionary = {}
 
 # Master list of all enemies mapped by a string ID
 const ENEMIES = {
+	"root_eater": {"name": "根食い", "hp": 20, "atk": 4, "def": 1, "color": Color(0.65, 0.8, 0.25), "grass_heal": 5, "exp": 5, "weak": ["fire"]},
 	"zakomushi": {"name": "雑魚虫", "hp": 10, "atk": 4, "def": 1, "color": Color.GREEN, "swim": false, "sprite": "res://assets/zakomushi.png", "loot": {"potion": 0.1, "gummy": 0.4, "zakomushi_shell": 0.15}, "penetration": 0.1, "exp": 2, "weak": ["fire"]},
 	"bat": {"name": "ワイルド・コウモリ", "hp": 8, "atk": 2, "def": 0, "color": Color.PURPLE, "swim": true, "fly": true, "loot": {"scroll_teleport": 0.05}, "sprite": "res://assets/bat.png", "penetration": 1, "exp": 2, "weak": ["ice", "electric"]},
 	"hitodama": {"name": "人魂", "hp": 6, "atk": 3, "def": 0, "color": Color.CYAN, "swim": true, "fly": true, "sprite": "res://assets/hitodama.png", "exp": 3, "weak": ["water"], "resist": ["fire", "ice", "magic"]},
@@ -67,9 +68,9 @@ const SPAWN_TABLES = {
 	],
 	# 3: Green Branch (Grass Area)
 	3: [
-		{"floor_max": 3, "pool": ["leaf_slime", "goblin", "orc", "poison_mushroom", "forest_zakomushi", "zakomushi", "bat", "hitodama"]},
-		{"floor_max": 6, "pool": ["leaf_slime", "goblin", "orc", "poison_mushroom", "forest_zakomushi", "giant_mantis", "flame_scatterer", "spider", "zakomushi", "bat", "hitodama", "skeleton", "skeleton_archer"]},
-		{"floor_max": 999, "pool": ["goblin", "orc", "poison_mushroom", "giant_mantis", "flame_scatterer", "spider", "trent", "skeleton", "skeleton_archer", "slime_giant"]}
+		{"floor_max": 3, "pool": ["root_eater", "leaf_slime", "goblin", "orc", "poison_mushroom", "forest_zakomushi", "zakomushi", "bat", "hitodama"]},
+		{"floor_max": 6, "pool": ["root_eater", "leaf_slime", "goblin", "orc", "poison_mushroom", "forest_zakomushi", "giant_mantis", "flame_scatterer", "spider", "zakomushi", "bat", "hitodama", "skeleton", "skeleton_archer"]},
+		{"floor_max": 999, "pool": ["root_eater", "goblin", "orc", "poison_mushroom", "giant_mantis", "flame_scatterer", "spider", "trent", "skeleton", "skeleton_archer", "slime_giant"]}
 	],
 	# 4: Volcanic Branch (Red Area)
 	4: [

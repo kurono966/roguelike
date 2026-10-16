@@ -47,3 +47,5 @@ res://items/inventory_grid_data.gd
 res://ui/unified_inventory_ui.gd
 res://ui/grid_inventory_view.gd
 res://workdesk/auto_pickup_test.gd
+res://workdesk/gas_visibility_test.gd
+res://actors/enemy/enemy_data.gd

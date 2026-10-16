@@ -1349,7 +1349,7 @@ func _update_tooltip():
 	if not GameUI: return
 	
 	var grid_pos: Vector2i
-	if target_manager and target_manager.targeting_look:
+	if target_manager and target_manager.is_active():
 		grid_pos = target_manager.keyboard_target_grid
 		
 		# Set GameUI tooltip position override
@@ -1456,6 +1456,12 @@ func _update_tooltip():
 				else:
 					tooltip_text += "\n高さ: %s" % ["低地 (0)", "通常 (1)", "高地 (2)"][get_tile_height(grid_pos)]
 	
+	if target_manager and target_manager.is_attack_targeting():
+		if tooltip_text == "": tooltip_text = "照準"
+		tooltip_text += "\n%s：距離 %.1f / 射程 %d" % [
+			"射程外・届きません" if target_manager.is_target_out_of_range() else "射程内",
+			target_manager.get_target_distance(), target_manager.targeting_range
+		]
 	if tooltip_text != "":
 		GameUI.show_tooltip(tooltip_text)
 	else:

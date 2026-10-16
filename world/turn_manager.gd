@@ -129,6 +129,8 @@ func process_enemy_turns():
 			continue
 			
 		var enemy = child
+		if _try_eat_grass(enemy):
+			continue
 		
 		# --- Target Selection ---
 		var target_node = _get_closest_hostile(enemy)
@@ -282,6 +284,8 @@ func process_enemy_turns():
 			continue
 		
 		# Get ally and player positions
+		if _try_eat_grass(ally):
+			continue
 		var ally_grid_pos = tile_map.local_to_map(ally.position)
 		var ally_player_grid_pos = tile_map.local_to_map(player.position)
 		var dist_to_player = ally_grid_pos.distance_to(ally_player_grid_pos)
@@ -402,3 +406,29 @@ func can_actor_see(actor: Node2D, target: Node2D) -> bool:
 	if target == player and main_node._map_data[destination.x][destination.y] == CellType.GRASS and distance > 1.5:
 		return false
 	return true
+
+# Eating uses one action, even when HP is already above its normal maximum.
+func _try_eat_grass(actor) -> bool:
+	if main_node._is_on_world_map: return false
+	if not is_instance_valid(actor) or actor.is_queued_for_deletion() or actor.hp <= 0: return false
+	if actor.grass_heal <= 0 or actor.is_paralyzed(): return false
+	var origin = tile_map.local_to_map(actor.position)
+	for offset in [Vector2i.ZERO, Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+		var pos = origin + offset
+		if not main_node._is_grid_in_bounds(pos): continue
+		if main_node._map_data[pos.x][pos.y] != CellType.GRASS: continue
+		if main_node._burning_grass.has(pos) or main_node._frozen_tiles.has(pos): continue
+		if not main_node.can_step_height(origin, pos): continue
+		main_node._map_data[pos.x][pos.y] = CellType.FLOOR
+		main_node.map_controller.update_pathfinding_tile(pos)
+		actor.heal(actor.grass_heal, true)
+		if pos == tile_map.local_to_map(player.position):
+			player.update_terrain_info(false, false, false)
+		if main_node._visible_tiles[origin.x][origin.y] or main_node._visible_tiles[pos.x][pos.y]:
+			var log_ui = main_node.get_node_or_null("/root/LogUI")
+			if log_ui:
+				log_ui.add_log("%s は草を食べてHPを%d回復した！" % [actor.enemy_name, actor.grass_heal], Color(0.6, 0.95, 0.35))
+		main_node._calculate_fov()
+		main_node._draw_map()
+		return true
+	return false

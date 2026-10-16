@@ -34,6 +34,7 @@ var weaknesses: Array = []
 var resistances: Array = []
 var fire_immune: bool = false
 var grass_ignition_chance: float = 0.0
+var grass_heal: int = 0
 
 var enemy_id: String = "zakomushi" # For save/load to pick the right scene
 var turns_since_damage: int = 0
@@ -80,6 +81,7 @@ func apply_behavior_definition(data: Dictionary):
 	intelligence = int(data.get("intelligence", 0))
 	fire_immune = bool(data.get("fire_immune", false))
 	grass_ignition_chance = float(data.get("grass_ignition_chance", 0.0))
+	grass_heal = int(data.get("grass_heal", 0))
 
 func _ready():
 	z_index = 5 # Ensure enemy is above floor/stairs but below UI/Flying text
@@ -341,6 +343,7 @@ func _draw():
 		var fill_width = max(1.0, bar_width * hp_ratio) if hp > 0 else 0.0
 		
 		var hp_color = Color(0.2, 0.8, 0.2) # Green
+		if hp > max_hp: hp_color = Color(0.3, 0.95, 0.9)
 		if hp_ratio <= 0.25:
 			hp_color = Color(0.8, 0.2, 0.2) # Red
 		elif hp_ratio <= 0.5:
@@ -389,6 +392,7 @@ func _get_ascii_char() -> String:
 		"ice_spirit": "E",
 		"spark_slime": "P",
 		"forest_zakomushi": "F",
+		"root_eater": "r",
 		"flame_scatterer": "L",
 		"trent": "t",
 		"baby_jellyfish": "B",
@@ -685,8 +689,9 @@ func _make_hostile():
 	if get_node_or_null("/root/LogUI"):
 		get_node_or_null("/root/LogUI").add_log("%s は激怒した！" % enemy_name, Color.RED)
 
-func heal(amount: int):
-	hp = min(hp + amount, max_hp)
+func heal(amount: int, allow_overheal: bool = false):
+	if amount <= 0 or hp <= 0: return
+	hp = hp + amount if allow_overheal else maxi(hp, mini(hp + amount, max_hp))
 	queue_redraw()
 	print("Enemy healed ", amount, " HP. HP: ", hp)
 	

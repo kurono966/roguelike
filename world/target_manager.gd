@@ -23,6 +23,7 @@ var cursor_sprite: Sprite2D
 var path_line: Line2D
 var aoe_sprite: Sprite2D # Optional
 var pointer_polygon: Polygon2D
+var range_label: Label
 
 const TILE_SIZE = 32 # Assuming 32, or use MapDefinitions
 
@@ -84,7 +85,18 @@ func _create_visuals():
 	path_line.z_index = 99
 	add_child(path_line)
 
+	range_label = Label.new()
+	range_label.visible = false
+	range_label.z_index = 101
+	range_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	range_label.add_theme_font_size_override("font_size", 18)
+	range_label.add_theme_color_override("font_outline_color", Color.BLACK)
+	range_label.add_theme_constant_override("outline_size", 5)
+	add_child(range_label)
+
 func start_targeting(source_position: Vector2, range_val: int, item=null, skill_id=null, is_ranged=false, aoe=0, line=false):
+	targeting_look = false
+	targeting_talk = false
 	targeting_item = item
 	targeting_skill = skill_id
 	targeting_is_ranged_weapon = is_ranged
@@ -201,6 +213,8 @@ func cancel_targeting():
 	targeting_talk = false
 	cursor_sprite.visible = false
 	path_line.visible = false
+	range_label.visible = false
+	targeting_is_ranged_weapon = false
 	
 	# Restore Game State to PLAYER_TURN (0)
 	main_node.set("_current_game_state", 0) 
@@ -226,6 +240,12 @@ func _update_visuals():
 	cursor_sprite.visible = true
 	var target_pixel_pos = Vector2(keyboard_target_grid) * TILE_SIZE + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
 	cursor_sprite.position = target_pixel_pos
+	var out_of_range = is_target_out_of_range()
+	cursor_sprite.modulate = Color(1.0, 0.35, 0.35, 0.8) if out_of_range else Color.WHITE
+	range_label.visible = is_attack_targeting()
+	range_label.position = target_pixel_pos + Vector2(20, -38)
+	range_label.text = "%s  %.1f / %d" % ["射程外" if out_of_range else "射程内", get_target_distance(), targeting_range]
+	range_label.add_theme_color_override("font_color", Color(1.0, 0.3, 0.25) if out_of_range else Color(0.65, 1.0, 0.7))
 	
 	if line_mode:
 		path_line.visible = true
@@ -236,13 +256,10 @@ func _update_visuals():
 		path_line.add_point(target_pixel_pos)
 		
 		# Valid range color check
-		var dist = Vector2(tile_map.local_to_map(source_pos)).distance_to(Vector2(keyboard_target_grid))
-		if dist > targeting_range:
-			path_line.default_color = Color(0.5, 0.5, 0.5, 0.5) # Out of range
-			cursor_sprite.modulate = Color(0.5, 0.5, 0.5, 0.5)
+		if out_of_range:
+			path_line.default_color = Color(1.0, 0.25, 0.2, 0.9)
 		else:
 			path_line.default_color = Color(1, 0, 0, 0.5)
-			cursor_sprite.modulate = Color(1, 1, 0, 0.5)
 	else:
 		path_line.visible = false
 
@@ -283,14 +300,8 @@ func _update_visuals():
 		else:
 			# General skill/item/ranged weapon targeting
 			# Check if target is out of range
-			var out_of_range = false
-			if targeting_range > 0:
-				var dist = Vector2(tile_map.local_to_map(source_pos)).distance_to(Vector2(keyboard_target_grid))
-				if dist > targeting_range:
-					out_of_range = true
-			
 			if out_of_range:
-				pointer_polygon.color = Color(0.5, 0.5, 0.5) # Gray if out of range
+				pointer_polygon.color = Color(1.0, 0.25, 0.2)
 			else:
 				# Within range: check what kind of entity we are targeting
 				var target_entity = null
@@ -311,9 +322,18 @@ func _update_visuals():
 				else:
 					pointer_polygon.color = Color(1.0, 0.6, 0.1) # Orange/yellow for empty ground/AOE
 
-	# If look targeting is active, update tooltip immediately
-	if targeting_look and main_node and main_node.has_method("_update_tooltip"):
+	# Inspection and attack cursors share the same target information panel.
+	if is_active() and main_node and main_node.has_method("_update_tooltip"):
 		main_node._update_tooltip()
+
+func is_attack_targeting() -> bool:
+	return not targeting_look and not targeting_talk and (targeting_item != null or targeting_skill != null)
+
+func get_target_distance() -> float:
+	return Vector2(tile_map.local_to_map(source_pos)).distance_to(Vector2(keyboard_target_grid))
+
+func is_target_out_of_range() -> bool:
+	return is_attack_targeting() and get_target_distance() > targeting_range
 
 func _process(delta: float):
 	if is_instance_valid(pointer_polygon) and is_instance_valid(cursor_sprite) and cursor_sprite.visible:
