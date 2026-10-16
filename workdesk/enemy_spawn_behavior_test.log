@@ -25,12 +25,12 @@ GameUI loaded successfully
 Current Skills: []
 [ItemDatabase] Loaded 40 items from resources
 Equipment grid changed!
-Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
-Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
+Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
 Current Skills: []
 Equipment grid changed!
-Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
-Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
+Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
+Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
 Current Skills: []
 Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
@@ -43,10 +43,10 @@ ERROR: Failed loading resource: res://default_environment.tres.
    GDScript backtrace (most recent call first):
        [0] _ready (res://world/main.gd:253)
        [1] _run (res://workdesk/enemy_spawn_behavior_test.gd:34)
-Dungeon placed at: (16, 31)
-NPC Spawned: 放浪の剣士 at (512.0, 224.0)
-NPC Spawned: はぐれ魔道士 at (1216.0, 576.0)
-NPC Spawned: 村の守備隊 at (544.0, 864.0)
+Dungeon placed at: (26, 8)
+NPC Spawned: 村の長老 at (1344.0, 448.0)
+NPC Spawned: はぐれ魔道士 at (512.0, 1216.0)
+NPC Spawned: 放浪の剣士 at (1344.0, 352.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
@@ -58,8 +58,8 @@ _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 Spawned enemy: フレイムスキャッター at (28, 25)
 Log added: フレイムスキャッター は小さな火球を放った！
-Player took 3 damage. HP: 9997/10000
 Log added: Player に命中！ (3)
+Player took 3 damage. HP: 9997/10000
 Applied status: burn Params: { "duration": 3, "damage": 1 }
 Log added: 炎上 状態になった！
 Enemy turns processing complete. Starting player turn.
@@ -68,53 +68,53 @@ Log added: 💨 蒸気が立ち込めた！
 Log added: フレイムスキャッター は炎の種をまき散らした！
 Enemy turns processing complete. Starting player turn.
 Spawned enemy: 毒キノコ at (26, 25)
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9995/10000
 Paralyze check: Risk 0.40 vs Roll 0.79
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9993/10000
 Paralyze check: Risk 0.40 vs Roll 0.84
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9991/10000
 Paralyze check: Risk 0.40 vs Roll 0.95
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9989/10000
 Paralyze check: Risk 0.40 vs Roll 0.86
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9987/10000
 Paralyze check: Risk 0.40 vs Roll 0.73
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9985/10000
 Paralyze check: Risk 0.40 vs Roll 0.41
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9983/10000
 Paralyze check: Risk 0.40 vs Roll 0.42
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9981/10000
 Paralyze check: Risk 0.40 vs Roll 0.64
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
+毒キノコ attacks Player for 2 damage!
+Log added: 毒キノコ → Player：2ダメージ
 Player took 2 damage. HP: 9979/10000
 Paralyze check: Risk 0.40 vs Roll 0.23
 Applied status: paralysis Params: { "duration": 3 }
 Log added: 麻痺 状態になった！
 Applied paralysis to player
-毒キノコ attacks Player for 2 damage!
-Log added: 毒キノコの攻撃！ Playerに2のダメージを与えた。
 Enemy turns processing complete. Starting player turn.
 Spawned enemy: 動く鎧 at (26, 25)
 Spawned enemy: 重装骸骨 at (26, 25)

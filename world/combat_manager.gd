@@ -107,6 +107,21 @@ func handle_attack(attacker, defender):
 	# Ensure defensive reduction isn't too punishing for player early on
 	var final_damage = max(1, damage - effective_def)
 	
+	print(attacker_name, " attacks ", defender_name, " for ", final_damage, " damage!")
+	var crit_text = " (会心!)" if is_crit else ""
+	var message = "%s → %s：%dダメージ%s" % [attacker_name, defender_name, final_damage, crit_text]
+	var is_player_atk = (attacker == main_node.player) if is_instance_valid(attacker) else false
+	var instinct_msg = ""
+	if is_player_atk and is_instance_valid(attacker) and attacker.has_method("get_battle_instinct_state"):
+		var st = attacker.get_battle_instinct_state()
+		var bonus = float(st.get("bonus", 0.0))
+		if bonus > 0.0:
+			var cnt = int(st.get("count", 0))
+			instinct_msg = " [闘争本能 +%d%%(隣接%d)]" % [int(round(bonus * 100.0)), cnt]
+	var color = Color(1.0, 0.5, 0.5) if is_crit else (Color.WHITE if is_player_atk else Color.PALE_VIOLET_RED)
+	_log(message + instinct_msg, color)
+
+
 	if is_instance_valid(defender):
 		if defender.has_method("take_damage"):
 			defender.take_damage(final_damage, attacker, ["normal"], is_crit)
@@ -205,19 +220,6 @@ func handle_attack(attacker, defender):
 					if main_node.has_method("_draw_map"):
 						main_node._draw_map()
 
-	print(attacker_name, " attacks ", defender_name, " for ", final_damage, " damage!")
-	var crit_text = " (会心!)" if is_crit else ""
-	var message = "%sの攻撃！ %sに%dのダメージを与えた。%s" % [attacker_name, defender_name, final_damage, crit_text]
-	var is_player_atk = (attacker == main_node.player) if is_instance_valid(attacker) else false
-	var instinct_msg = ""
-	if is_player_atk and is_instance_valid(attacker) and attacker.has_method("get_battle_instinct_state"):
-		var st = attacker.get_battle_instinct_state()
-		var bonus = float(st.get("bonus", 0.0))
-		if bonus > 0.0:
-			var cnt = int(st.get("count", 0))
-			instinct_msg = " [闘争本能 +%d%%(隣接%d)]" % [int(round(bonus * 100.0)), cnt]
-	var color = Color(1.0, 0.5, 0.5) if is_crit else (Color.WHITE if is_player_atk else Color.PALE_VIOLET_RED)
-	_log(message + instinct_msg, color)
 
 	# Ensure the main scene redraws and visibility updates after combat
 	if main_node:

@@ -45,10 +45,15 @@ ERROR: Failed loading resource: res://default_environment.tres.
    GDScript backtrace (most recent call first):
        [0] _ready (res://world/main.gd:253)
        [1] run_test (res://workdesk/connector_growth_test.gd:15)
-Dungeon placed at: (12, 24)
-NPC Spawned: はぐれ魔道士 at (160.0, 448.0)
-NPC Spawned: はぐれ魔道士 at (608.0, 1216.0)
-NPC Spawned: はぐれ魔道士 at (1120.0, 544.0)
+Dungeon placed at: (38, 5)
+NPC Spawned: 村人 at (192.0, 1152.0)
+NPC Spawned: 放浪の剣士 at (704.0, 224.0)
+NPC Spawned: 村人 at (800.0, 1312.0)
+NPC Spawned: はぐれ魔道士 at (320.0, 1024.0)
+NPC Spawned: 商人 at (192.0, 1376.0)
+NPC Spawned: 村人 at (800.0, 928.0)
+NPC Spawned: 村の長老 at (416.0, 1440.0)
+NPC Spawned: 村の守備隊 at (1248.0, 160.0)
 Log added: 平穏な里に辿り着いた。
 Equipment grid changed!
 Stats Updated: HP: 10/10, ATK: 2, DEF: 0

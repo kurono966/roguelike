@@ -34,6 +34,16 @@ func run_test():
 	check(player.level_hp_bonus == hp_before and player.level_mp_bonus == mp_before, "HP/MP still grow automatically")
 	await process_frame
 	check(paused and is_instance_valid(player._growth_selection), "Growth selection did not pause game")
+	check(player.is_level_up_sound_playing() and not player._growth_selection.content.visible, "Choices appeared before level-up sound finished")
+	check(not player.choose_level_growth("strength") and not player.choose_connector_growth("red"), "Growth accepted input during level-up sound")
+	var blocked_key = InputEventKey.new()
+	blocked_key.keycode = KEY_1
+	blocked_key.pressed = true
+	player._growth_selection._unhandled_key_input(blocked_key)
+	check(player.pending_growth_choices == 2, "Key input consumed growth during sound")
+	while player.is_level_up_sound_playing():
+		await player.level_up_audio_finished
+	check(player._growth_selection.content.visible and paused, "Choices did not appear after audio completion")
 	check(player._growth_selection.buttons.size() == 3, "Missing growth options")
 	var turns = TestTurns.new()
 	main.add_child(turns)

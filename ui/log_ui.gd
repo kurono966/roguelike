@@ -3,11 +3,9 @@ extends CanvasLayer
 # 強化されたログUI - RichTextLabelを使用して装飾をサポート
 var log_rich_label: RichTextLabel
 var log_panel: Panel
+var mode_label: Label
 var log_history: Array = []
-var _last_log_message: String = ""
-var _last_log_bbcode: String = ""
-var _last_log_count: int = 0
-const MAX_LINES = 50  # 履歴として保持する行数
+const MAX_LINES = 250  # 履歴として保持する行数
 enum DisplayMode { NORMAL, EXPANDED, HIDDEN }
 var display_mode: DisplayMode = DisplayMode.NORMAL
 
@@ -38,12 +36,18 @@ func _ready():
 	log_panel.theme = main_theme
 	add_child(log_panel)
 	
+	mode_label = Label.new()
+	mode_label.position = Vector2(10, 5)
+	mode_label.add_theme_font_size_override("font_size", 12)
+	mode_label.add_theme_color_override("font_color", Color(0.65, 0.67, 0.72))
+	log_panel.add_child(mode_label)
+
 	# RichTextLabelの作成
 	log_rich_label = RichTextLabel.new()
 	log_rich_label.bbcode_enabled = true
 	log_rich_label.set_anchors_preset(Control.PRESET_FULL_RECT)
 	log_rich_label.offset_left = 10
-	log_rich_label.offset_top = 5
+	log_rich_label.offset_top = 25
 	log_rich_label.offset_right = -10
 	log_rich_label.offset_bottom = -5
 	
@@ -105,43 +109,51 @@ func add_log(message: String, color: Color = Color.WHITE):
 		else:
 			bb_message = "[color=#%s]%s[/color]" % [hex_color, message]
 		
-		# 同一内容の連続ログは1行にまとめ、末尾の回数だけを更新する。
-		# 間に別のログが入った場合は別イベントとして扱う。
-		if message == _last_log_message and bb_message == _last_log_bbcode and not log_history.is_empty():
-			_last_log_count += 1
-			log_history[log_history.size() - 1] = {
-				"text": bb_message,
-				"count": _last_log_count,
-			}
+		var context = _get_log_context()
+		var detail = _is_detail_message(message)
+		if not log_history.is_empty() and log_history.back().get("raw", "") == message and log_history.back().get("text", "") == bb_message and log_history.back().get("context", "") == context:
+			log_history.back()["count"] += 1
 		else:
-			_last_log_message = message
-			_last_log_bbcode = bb_message
-			_last_log_count = 1
-			log_history.append({
-				"text": bb_message,
-				"count": _last_log_count,
-			})
+			log_history.append({"text": bb_message, "raw": message, "count": 1, "detail": detail, "context": context})
+		if log_history.size() > MAX_LINES:
+			log_history = log_history.slice(log_history.size() - MAX_LINES)
 		_update_display()
 		print("Log added: ", message)
 
+func _get_log_context() -> String:
+	var player = get_tree().get_first_node_in_group("player")
+	if not player: return ""
+	var main = player.get_parent()
+	if not main or not "_turn_count" in main: return ""
+	var floor_name = "地上" if main.current_floor == 0 else "%d階" % main.current_floor
+	return "%s / T%d" % [floor_name, main._turn_count]
+
+func _is_detail_message(message: String) -> bool:
+	for prefix in ["HP回復 +", "MP回復 +", "水の中で傷が癒える", "結晶の魔力でMPが回復した", "装備変更:", "遠距離武器が再使用可能", "'H'", "'L'"]:
+		if message.begins_with(prefix): return true
+	return message.contains("ターゲットを選択してください") or message.ends_with("のターゲットを選択してください")
+
 func _update_display():
-	if not log_rich_label:
-		return
-		
-	var display_lines = log_history
-	if log_history.size() > MAX_LINES:
-		log_history = log_history.slice(log_history.size() - MAX_LINES)
-		display_lines = log_history
-	
+	if not log_rich_label: return
+	var scroll = log_rich_label.get_v_scroll_bar()
+	var preserve_scroll = display_mode == DisplayMode.EXPANDED and scroll.value < scroll.max_value - scroll.page - 2.0
+	var old_scroll = scroll.value
+	log_rich_label.scroll_following = not preserve_scroll
 	var full_text = ""
-	for entry in display_lines:
+	var last_context = ""
+	for entry in log_history:
+		if display_mode != DisplayMode.EXPANDED and entry.get("detail", false): continue
+		var context: String = entry.get("context", "")
+		var prefix = ""
+		if context != "" and context != last_context:
+			prefix = "[color=#858994]〈%s〉[/color] " % context
+		last_context = context
 		var line: String = entry.get("text", "")
 		var count: int = entry.get("count", 1)
-		if count > 1:
-			line += " x %d" % count
-		full_text += line + "\n"
-	
+		if count > 1: line += " [color=#a6a6a6]×%d[/color]" % count
+		full_text += prefix + line + "\n"
 	log_rich_label.text = full_text
+	if preserve_scroll: scroll.call_deferred("set", "value", old_scroll)
 
 func _input(event):
 	if event.is_action_pressed("toggle_log") and not event.is_echo():
@@ -156,9 +168,10 @@ func _apply_display_mode():
 	if not log_panel or not log_rich_label: return
 	log_panel.visible = display_mode != DisplayMode.HIDDEN
 	var expanded = display_mode == DisplayMode.EXPANDED
+	if mode_label: mode_label.text = "ログ履歴・詳細を表示中   L：非表示" if expanded else "ログ   L：拡大して詳細を見る"
 	var viewport_size = get_viewport().get_visible_rect().size
 	var available = (viewport_size - Vector2(40, 40)).max(Vector2.ONE)
-	var panel_size = Vector2(500, 130)
+	var panel_size = Vector2(500, 160)
 	if expanded:
 		panel_size = Vector2(maxf(500, viewport_size.x * 0.8), maxf(130, viewport_size.y * 0.7))
 		panel_size = panel_size.min(Vector2(1100, 700))
@@ -172,3 +185,5 @@ func _apply_display_mode():
 			log_rich_label.add_theme_font_size_override(font_key, 20)
 		else:
 			log_rich_label.remove_theme_font_size_override(font_key)
+
+	_update_display()

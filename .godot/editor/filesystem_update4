@@ -60,3 +60,5 @@ res://skills/skill_database.gd
 res://ui/skill_menu.gd
 res://ui/status_ui.gd
 res://workdesk/floor_first_turn_test.gd
+res://workdesk/nearby_skill_test.gd
+res://workdesk/log_cleanup_test.gd

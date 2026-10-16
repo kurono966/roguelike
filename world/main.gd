@@ -4030,13 +4030,13 @@ func _execute_ranged_attack(target_pos: Vector2):
 					is_crit = true
 					dmg *= 2
 					
-			if is_instance_valid(hit_entity):
-				hit_entity.take_damage(dmg, player, ["normal"], is_crit)
 			if has_node("/root/LogUI"):
 				var e_name = hit_entity.name
 				if is_instance_valid(hit_entity) and "enemy_name" in hit_entity: e_name = hit_entity.enemy_name
 				var crit_text = " (会心!)" if is_crit else ""
 				get_node("/root/LogUI").add_log("%s を撃って %s に %d ダメージ！%s" % [_targeting_item.name, e_name, dmg, crit_text], Color.ORANGE)
+			if is_instance_valid(hit_entity):
+				hit_entity.take_damage(dmg, player, ["normal"], is_crit)
 		else:
 			# Miss
 			if has_node("/root/LogUI"):
@@ -4225,14 +4225,14 @@ func _execute_throw(target_pos: Vector2):
 					is_crit = true
 					damage *= 2
 			
-			if is_instance_valid(hit_entity):
-				hit_entity.take_damage(damage, player, ["normal"], is_crit)
 			
 			if has_node("/root/LogUI"):
 				var entity_name = hit_entity.name
 				if "enemy_name" in hit_entity: entity_name = hit_entity.enemy_name
 				var crit_text = " (会心!)" if is_crit else ""
 				get_node("/root/LogUI").add_log("%s を投げて %s に %d ダメージ！%s" % [_targeting_item.name, entity_name, damage, crit_text], Color.ORANGE)
+			if is_instance_valid(hit_entity):
+				hit_entity.take_damage(damage, player, ["normal"], is_crit)
 	else:
 		# Drop item on ground
 		var world_item = WorldItemScene.instantiate()
@@ -6390,9 +6390,9 @@ func _apply_chain_lightning(source, current_target, damage: int, chain_left: int
 	var neighbors = _find_chain_neighbors_by_pos(target_pos_center, hit_list, current_target, snapshot)
 	_spawn_skill_particles(target_pos_center, "lightning", 0.4)
 	var target_name = current_target.enemy_name if "enemy_name" in current_target else current_target.name
-	current_target.take_damage(damage, source, ["electric"])
 	if has_node("/root/LogUI"):
 		get_node("/root/LogUI").add_log("[雷] %s に電撃が走る！ (%d)" % [target_name, damage], Color.YELLOW)
+	current_target.take_damage(damage, source, ["electric"])
 	if is_instance_valid(current_target) and not current_target.is_queued_for_deletion() and current_target.has_method("apply_effect") and randf() < 0.3:
 		current_target.apply_effect("paralysis" if current_target == player else "paralyze", {"duration": 2})
 	# Particle lifetimes supply the animation; damage never waits across turns.
@@ -6521,12 +6521,12 @@ func _handle_ranged_attack(attacker, target_grid: Vector2i, damage: int, type: S
 	if target:
 		if target.has_method("take_damage"):
 			var elements = ["fire"] if type == "fire" else ["normal"]
-			target.take_damage(damage, attacker, elements)
 			if has_node("/root/LogUI"):
 				var t_name = target.name
 				if "enemy_name" in target: t_name = target.enemy_name
 				elif target == player: t_name = "Player"
 				get_node("/root/LogUI").add_log("%s に命中！ (%d)" % [t_name, damage], Color.WHITE)
+			target.take_damage(damage, attacker, elements)
 		if type == "web" and target.has_method("apply_effect"):
 			target.apply_effect("paralysis" if target == player else "paralyze", {"duration": 3})
 		if type == "paralyze" and target.has_method("apply_effect"):
@@ -7546,7 +7546,6 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 				
 		if dmg > 0 and is_instance_valid(hit_entity):
 			var elems = _get_skill_elements(_targeting_skill)
-			hit_entity.take_damage(dmg, player, elems)
 			# 影の行動記録（方向スキル）
 			if shadow_clone_manager:
 				shadow_clone_manager.record(player, {"type": "skill", "kind": "shot", "skill_id": current_skill_id, "target_grid": hit_pos, "damage": dmg, "elements": elems, "particle": projectile_particle_type})
@@ -7556,6 +7555,7 @@ func _execute_directional_skill(target_pos: Vector2, _targeting_skill: Dictionar
 					e_name = hit_entity.enemy_name
 				var crit_text = " (会心!)" if is_crit else ""
 				get_node("/root/LogUI").add_log("%s が命中！ %s に %d ダメージ！%s" % [_targeting_skill.get("name", "?"), e_name, dmg, crit_text], Color.ORANGE)
+			hit_entity.take_damage(dmg, player, elems)
 				
 		var effect = _targeting_skill.get("effect", "")
 		if effect != "" and is_instance_valid(hit_entity) and hit_entity.has_method("apply_effect"):
