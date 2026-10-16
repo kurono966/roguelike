@@ -58,6 +58,10 @@ func try_move_player(direction: Vector2) -> bool:
 		is_processing_action = false
 		return false
 	
+	if not main_node.can_step_height(player_grid, target_grid):
+		is_processing_action = false
+		return false
+
 	# Check for enemy to attack
 	if _try_attack_adjacent_enemy():
 		is_processing_action = false

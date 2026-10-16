@@ -27,30 +27,33 @@ WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpin
 Current Skills: []
 [ItemDatabase] Loaded 40 items from resources
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
 Current Skills: []
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
 Current Skills: []
 Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:237)
+       [0] _ready (res://world/main.gd:239)
        [1] _run (res://workdesk/floor_first_turn_test.gd:33)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:237)
+       [0] _ready (res://world/main.gd:239)
        [1] _run (res://workdesk/floor_first_turn_test.gd:33)
-Dungeon placed at: (16, 46)
-NPC Spawned: 村の長老 at (672.0, 608.0)
-NPC Spawned: 村の守備隊 at (992.0, 384.0)
-NPC Spawned: 村の守備隊 at (1216.0, 1152.0)
-NPC Spawned: 村の長老 at (1152.0, 1088.0)
-NPC Spawned: はぐれ魔道士 at (1312.0, 1376.0)
+Dungeon placed at: (39, 38)
+NPC Spawned: 村人 at (960.0, 320.0)
+NPC Spawned: 村人 at (512.0, 544.0)
+NPC Spawned: 商人 at (1408.0, 1024.0)
+NPC Spawned: はぐれ魔道士 at (1024.0, 288.0)
+NPC Spawned: 村人 at (1248.0, 352.0)
+NPC Spawned: 村人 at (1440.0, 1056.0)
+NPC Spawned: はぐれ魔道士 at (1248.0, 224.0)
+NPC Spawned: 放浪の剣士 at (1120.0, 1152.0)
 Log added: 平穏な里に辿り着いた。
 下り階段を下りた！ Floor: 2
 Log added: 下り階段を下りた！ 階層 2 へ (Branch 0)
@@ -58,29 +61,29 @@ Ammo replenished. Current Reserve: 20
 Log added: 弾薬を補充した (予備: 20)
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
-Spawned enemy: 雑魚虫 at (37, 17)
-Spawned enemy: 毒キノコ at (38, 17)
-Spawned enemy: 小鬼 at (39, 26)
-Spawned enemy: 小鬼 at (10, 10)
-Spawned enemy: オーク at (12, 19)
-Spawned enemy: 人魂 at (12, 18)
-Spawned enemy: 雑魚虫 at (28, 37)
-Spawned enemy: オーク at (28, 36)
-Spawned enemy: ワイルド・コウモリ at (34, 43)
-Spawned enemy: 人魂 at (45, 31)
+Spawned enemy: 人魂 at (46, 24)
+Spawned enemy: 雑魚虫 at (45, 25)
+Spawned enemy: 毒キノコ at (21, 39)
+Spawned enemy: 毒キノコ at (27, 43)
+Spawned enemy: オーク at (42, 32)
+Spawned enemy: 小鬼 at (24, 4)
+Spawned enemy: 毒キノコ at (3, 28)
+Spawned enemy: 毒キノコ at (6, 29)
+Spawned enemy: 雑魚虫 at (36, 44)
+Spawned enemy: オーク at (39, 7)
 Spawning items...
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1184.0, 576.0)
+Item spawned at: (864.0, 1344.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (288.0, 256.0)
+Item spawned at: (1344.0, 1152.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (192.0, 608.0)
+Item spawned at: (736.0, 160.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (704.0, 736.0)
+Item spawned at: (480.0, 480.0)
 [ItemDatabase] Loaded 40 items from resources
-Item spawned at: (1376.0, 1344.0)
+Item spawned at: (992.0, 672.0)
 Total items spawned: 5
-Total traps spawned: 2
+Total traps spawned: 5
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]

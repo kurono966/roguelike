@@ -13,6 +13,8 @@ var _minimap_texture_rect: TextureRect
 var _minimap_image: Image
 var _minimap_texture: ImageTexture
 var _floor_label: Label
+var _height_legend: Label
+var _current_height_label: Label
 
 var main_scene: Node2D
 
@@ -78,6 +80,14 @@ func _setup_minimap():
 	_minimap_texture_rect.stretch_mode = TextureRect.STRETCH_SCALE
 	_minimap_texture_rect.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	vbox.add_child(_minimap_texture_rect)
+	_current_height_label = Label.new()
+	_current_height_label.add_theme_font_size_override("font_size", 13)
+	vbox.add_child(_current_height_label)
+	_height_legend = Label.new()
+	_height_legend.text = "▲ 高地　・通常　▼ 低地\n縞の崖：直接移動不可"
+	_height_legend.add_theme_font_size_override("font_size", 12)
+	_height_legend.add_theme_color_override("font_color", Color(0.78, 0.77, 0.72))
+	vbox.add_child(_height_legend)
 
 const WorldCell = MapDefinitions.WorldCell
 
@@ -139,6 +149,8 @@ func update_minimap():
 		_minimap_texture_rect.texture = _minimap_texture
 
 	var is_world = main_scene._is_on_world_map
+	_height_legend.visible = not is_world
+	_current_height_label.visible = not is_world
 
 	for x in range(map_w):
 		for y in range(map_h):
@@ -149,12 +161,17 @@ func update_minimap():
 				if main_scene._explored_tiles[x][y]:
 					var is_visible = main_scene._visible_tiles[x][y]
 					color = _get_minimap_tile_color(main_scene._map_data[x][y], is_visible)
+					if ElevationMap.is_land(main_scene._map_data[x][y]) and not main_scene._is_stairs_cell(main_scene._map_data[x][y]):
+						var height = main_scene.get_tile_height(Vector2i(x, y))
+						if height == ElevationMap.LOW: color = color.darkened(0.3).lerp(Color(0.12, 0.27, 0.46), 0.25)
+						elif height == ElevationMap.HIGH: color = color.lightened(0.25).lerp(Color(0.75, 0.62, 0.32), 0.2)
 			_minimap_image.set_pixel(x, y, color)
 
 	if is_instance_valid(main_scene.player):
 		var p = main_scene.tile_map.local_to_map(main_scene.player.position)
 		if p.x >= 0 and p.x < map_w and p.y >= 0 and p.y < map_h:
 			_minimap_image.set_pixel(p.x, p.y, Color(1.0, 0.2, 0.2, 1.0))
+			_current_height_label.text = "現在：%s" % ["▼ 低地", "・通常", "▲ 高地"][main_scene.get_tile_height(p)]
 
 	_minimap_texture.update(_minimap_image)
 

@@ -94,6 +94,8 @@ func process_enemy_turns():
 	main_node._process_steam()
 	main_node._process_poison_gas()
 	main_node._process_frozen_tiles()
+	if main_node.liquid_manager:
+		main_node.liquid_manager.process_turn()
 	
 	var all_actors = []
 	all_actors.append_array(main_node.get_tree().get_nodes_in_group("enemies"))

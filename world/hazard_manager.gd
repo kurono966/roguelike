@@ -38,7 +38,7 @@ func spawn_hazard_visual(grid_pos: Vector2i, type: String):
 	img.fill(Color(0.2, 0.8, 0.2, 0.5) if type == "acid_puddle" else Color.RED)
 	sprite.texture = ImageTexture.create_from_image(img)
 	sprite.position = Vector2(grid_pos) * main.TILE_SIZE + Vector2(main.TILE_SIZE / 2.0, main.TILE_SIZE / 2.0)
-	sprite.z_index = 0 # On floor
+	sprite.z_index = 2 # Above elevation/grass, below items and actors.
 	sprite.add_to_group("hazard_visuals")
 	sprite.set_meta("grid_pos", grid_pos)
 	main.add_child(sprite)

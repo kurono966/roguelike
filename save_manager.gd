@@ -73,6 +73,14 @@ func save_game(player: CharacterBody2D, main: Node2D) -> bool:
 	config.set_value("world", "dungeon_village_pos_x", main._dungeon_village_pos.x if "_dungeon_village_pos" in main else 0)
 	config.set_value("world", "dungeon_village_pos_y", main._dungeon_village_pos.y if "_dungeon_village_pos" in main else 0)
 	config.set_value("world", "map_data", main._map_data if "_map_data" in main else [])
+	config.set_value("world", "height_data", main._height_data)
+	var liquid_entries: Array = []
+	for pos in main._liquid_state:
+		var entry = main._liquid_state[pos].duplicate(true)
+		entry["x"] = pos.x
+		entry["y"] = pos.y
+		liquid_entries.append(entry)
+	config.set_value("world", "liquid_state", liquid_entries)
 	config.set_value("world", "explored_tiles", main._explored_tiles if "_explored_tiles" in main else []) # 2D Array directly supported by ConfigFile
 	
 	var enemies_array: Array = []

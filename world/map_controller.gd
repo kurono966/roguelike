@@ -12,9 +12,9 @@ var visible_tiles: Array = []
 var explored_tiles: Array = []
 
 # Pathfinding
-var astar_grid: AStarGrid2D
-var astar_grid_swim: AStarGrid2D
-var astar_grid_fly: AStarGrid2D
+var astar_grid: ElevationPathGrid
+var astar_grid_swim: ElevationPathGrid
+var astar_grid_fly: ElevationPathGrid
 
 # Map state
 var current_floor: int = 0
@@ -63,14 +63,17 @@ func setup_pathfinding():
 	# Build each movement mode once, using the live map held by Main.
 	if main_node:
 		map_data = main_node._map_data
+		main_node._height_data = ElevationMap.normalize(main_node._height_data, MAP_WIDTH, MAP_HEIGHT)
+		ElevationMap.flatten_roads(main_node._height_data, map_data)
 	if astar_grid == null:
-		astar_grid = AStarGrid2D.new()
-		astar_grid_swim = AStarGrid2D.new()
-		astar_grid_fly = AStarGrid2D.new()
+		astar_grid = ElevationPathGrid.new()
+		astar_grid_swim = ElevationPathGrid.new()
+		astar_grid_fly = ElevationPathGrid.new()
 	for grid in [astar_grid, astar_grid_swim, astar_grid_fly]:
 		grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
 		grid.cell_size = Vector2.ONE
 		grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
+		grid.heights = [] if main_node._is_on_world_map else main_node._height_data
 		grid.jumping_enabled = false
 		if grid.is_dirty():
 			grid.update()

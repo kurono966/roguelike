@@ -49,6 +49,11 @@ const SHOP_OFFERS = [
 
 const CellType = MapDefinitions.CellType
 var _map_data = []
+var _height_data: Array = []
+var _liquid_state: Dictionary = {}
+var liquid_manager
+var _elevation_overlay: Node2D
+var _elevation_blur: Node2D
 var _current_branch = 0 # 0: Normal, 1: Dangerous/Alternative
 var _previous_branch = 0 # Track the branch we came from for upstairs
 var _descended_stair_type = 0 # Track the stair type we descended from
@@ -66,9 +71,9 @@ var _overworld_preview_maps = {} # Terrain-only local overworld previews around 
 var _visible_tiles = [] # Stores current visibility state
 var _explored_tiles = [] # Stores tiles the player has seen
 var _rooms = []
-var _astar_grid = AStarGrid2D.new()
-var _astar_grid_swim = AStarGrid2D.new()
-var _astar_grid_fly = AStarGrid2D.new()
+var _astar_grid = ElevationPathGrid.new()
+var _astar_grid_swim = ElevationPathGrid.new()
+var _astar_grid_fly = ElevationPathGrid.new()
 var combat_manager: CombatManager
 var turn_manager: TurnManager
 var visibility_manager: VisibilityManager
@@ -172,6 +177,8 @@ func _ready():
 	
 	hazard_manager = HazardManager.new()
 	hazard_manager.setup(self)
+	liquid_manager = preload("res://world/liquid_manager.gd").new()
+	liquid_manager.main = self
 	add_child(hazard_manager)
 	
 	tileset_manager = TilesetManager.new()
@@ -332,6 +339,7 @@ func _ready():
 		PlayerUi.update_hp(player.hp, player.max_hp)
 
 	minimap_controller.setup(self)
+	_draw_height_overlay()
 	minimap_controller.update_minimap()
 
 
@@ -1017,6 +1025,9 @@ func _try_move_character(character, direction: Vector2):
 							get_node("/root/LogUI").add_log("そちらは海か山で進めない！", Color(0.9, 0.2, 0.2))
 		return false
 
+	if not can_step_height(current_grid_pos, target_grid_pos):
+		return false
+
 	# AI movement must respect known traps even when bypassing A* (flee/wander).
 	if character != player and _is_revealed_trap(target_grid_pos):
 		return false
@@ -1433,6 +1444,8 @@ func _update_tooltip():
 			else:
 				# Show terrain info for non-stairs tiles
 				tooltip_text = _get_terrain_tooltip(cell_type)
+			if tooltip_text != "" and not _is_on_world_map:
+				tooltip_text += "\n高さ: %s" % ["低地 (0)", "通常 (1)", "高地 (2)"][get_tile_height(grid_pos)]
 	
 	if tooltip_text != "":
 		GameUI.show_tooltip(tooltip_text)
@@ -1962,6 +1975,8 @@ func _find_path_to_nearest_stairs(start_grid: Vector2i) -> Array:
 				if neighbor_x in [CellType.WALL, CellType.WOOD_WALL] or neighbor_y in [CellType.WALL, CellType.WOOD_WALL]:
 					continue
 
+			if not can_step_height(current, nxt):
+				continue
 			visited[nxt] = true
 			came_from[nxt] = current
 			queue.push_back(nxt)
@@ -2059,6 +2074,8 @@ func _find_path_to_nearest_unexplored(start_grid: Vector2i) -> Array:
 			if visited.has(nxt):
 				continue
 			if not _is_auto_explore_walkable(nxt):
+				continue
+			if not can_step_height(current, nxt):
 				continue
 			visited[nxt] = true
 			came_from[nxt] = current
@@ -2380,10 +2397,12 @@ func _spawn_single_npc(type: Dictionary, pos: Vector2):
 	print("NPC Spawned: ", npc.enemy_name, " at ", pos)
 
 func _generate_map(local_type: int = -1):
+	_liquid_state.clear()
 	var preview_key = "local_overworld_%d_%d" % [_world_player_pos.x, _world_player_pos.y]
 	if current_floor == 0 and _overworld_preview_maps.has(preview_key):
 		var preview = _overworld_preview_maps[preview_key]
 		_map_data = preview["map_data"].duplicate(true)
+		_height_data = ElevationMap.normalize(preview.get("height_data", []), MAP_WIDTH, MAP_HEIGHT)
 		_rooms = preview["rooms"].duplicate(true)
 		_overworld_preview_maps.erase(preview_key)
 		_visible_tiles.resize(MAP_WIDTH)
@@ -2408,6 +2427,7 @@ func _generate_map(local_type: int = -1):
 			
 	var result = map_controller.generate_map(current_floor, _current_branch, local_type, is_starting, is_dungeon)
 	_map_data = map_controller.map_data
+	_height_data = ElevationMap.generate(_map_data)
 	_rooms = map_controller.rooms
 	
 	_visible_tiles.resize(MAP_WIDTH)
@@ -2508,7 +2528,8 @@ func _get_overworld_preview_map(chunk_pos: Vector2i) -> Dictionary:
 	if _floor_caches.has(cache_key):
 		return {
 			"map_data": _floor_caches[cache_key]["map_data"],
-			"rooms": _floor_caches[cache_key]["rooms"]
+			"rooms": _floor_caches[cache_key]["rooms"],
+			"height_data": _floor_caches[cache_key].get("height_data", [])
 		}
 	if _overworld_preview_maps.has(cache_key):
 		return _overworld_preview_maps[cache_key]
@@ -2524,7 +2545,8 @@ func _get_overworld_preview_map(chunk_pos: Vector2i) -> Dictionary:
 	
 	_overworld_preview_maps[cache_key] = {
 		"map_data": result["map_data"].duplicate(true),
-		"rooms": result["rooms"].duplicate(true)
+		"rooms": result["rooms"].duplicate(true),
+		"height_data": ElevationMap.generate(result["map_data"])
 	}
 	return _overworld_preview_maps[cache_key]
 
@@ -2701,9 +2723,7 @@ func _draw_map():
 
 					# Tint burning grass tiles red
 					if _burning_grass.has(pos):
-						var fire_overlay = ColorRect.new()
-						fire_overlay.color = Color(1.0, 0.3, 0.0, 0.5)
-						fire_overlay.size = Vector2(TILE_SIZE, TILE_SIZE)
+						var fire_overlay = preload("res://world/fire_tile_overlay.gd").new()
 						fire_overlay.position = Vector2(tile_coords) * TILE_SIZE
 						fire_overlay.add_to_group("fire_overlays")
 						add_child(fire_overlay)
@@ -2780,6 +2800,7 @@ func _draw_map():
 						trap_label_mem.add_to_group("fire_overlays")
 						add_child(trap_label_mem)
 
+	_draw_height_overlay()
 	minimap_controller.update_minimap()
 
 
@@ -3065,6 +3086,8 @@ func _save_current_floor_to_cache_with_key(floor_key: String):
 			
 	_floor_caches[floor_key] = {
 		"map_data": _map_data.duplicate(true),
+		"height_data": _height_data.duplicate(true),
+		"liquid_state": _liquid_state.duplicate(true),
 		"rooms": _rooms.duplicate(true),
 		"explored_tiles": _explored_tiles.duplicate(true),
 		"burning_grass": _burning_grass.duplicate(),
@@ -3143,6 +3166,8 @@ func _save_current_floor_to_cache():
 			
 	_floor_caches[floor_key] = {
 		"map_data": _map_data.duplicate(true),
+		"height_data": _height_data.duplicate(true),
+		"liquid_state": _liquid_state.duplicate(true),
 		"rooms": _rooms.duplicate(true),
 		"explored_tiles": _explored_tiles.duplicate(true),
 		"burning_grass": _burning_grass.duplicate(),
@@ -3160,6 +3185,8 @@ func _load_floor_from_cache(floor_key: String, is_upward: bool, is_seamless: boo
 		
 	var cache = _floor_caches[floor_key]
 	_map_data = cache["map_data"].duplicate(true)
+	_height_data = ElevationMap.normalize(cache.get("height_data", []), MAP_WIDTH, MAP_HEIGHT)
+	_liquid_state = cache.get("liquid_state", {}).duplicate(true)
 	_rooms = cache["rooms"].duplicate(true)
 	_explored_tiles = cache["explored_tiles"].duplicate(true)
 	_burning_grass = cache["burning_grass"].duplicate()
@@ -5416,6 +5443,12 @@ func _load_game():
 	print("[Load] Deserializing map data... (Elapsed: %d ms)" % (Time.get_ticks_msec() - start_time))
 	# Deserialize map
 	_map_data = _deserialize_map(world_data.get("map_data", []), false)
+	_height_data = ElevationMap.normalize(world_data.get("height_data", []), MAP_WIDTH, MAP_HEIGHT)
+	_liquid_state.clear()
+	for entry in world_data.get("liquid_state", []):
+		var pos = Vector2i(int(entry.x), int(entry.y))
+		if _is_grid_in_bounds(pos):
+			_liquid_state[pos] = {"kind": int(entry.kind), "volume": int(entry.volume), "ground": int(entry.ground)}
 	var compressed_explored = world_data.get("explored_tiles", [])
 	if save_mgr and save_mgr.has_method("decompress_explored_tiles"):
 		_explored_tiles = save_mgr.decompress_explored_tiles(compressed_explored, MAP_WIDTH, MAP_HEIGHT)
@@ -7606,6 +7639,7 @@ func _init_world_map():
 	# Generate local overworld for the starting village
 	var result = generator.generate_map(0, 0, WorldCell.VILLAGE, self, true, false)
 	_map_data = result["map_data"]
+	_height_data = ElevationMap.generate(_map_data)
 	_rooms = result["rooms"]
 	generator.free()
 	
@@ -7829,6 +7863,7 @@ func _draw_world_map():
 					
 			tile_map.set_cell(LAYER_VISIBLE, tile_coords, 0, atlas_coords)
 			
+	_draw_height_overlay()
 	if minimap_controller:
 		minimap_controller.update_minimap()
 
@@ -7995,3 +8030,33 @@ func _update_shadow_cell(cell: Vector2i):
 		shadow_manager.rebuild(_map_data)
 	else:
 		shadow_manager.update_cell(cell, cell_type)
+
+# Height remains independent of CellType; future flight/fall rules belong here.
+func get_tile_height(pos: Vector2i) -> int:
+	return ElevationMap.get_height(_height_data, pos)
+
+func can_step_height(from: Vector2i, to: Vector2i) -> bool:
+	return _is_on_world_map or ElevationMap.can_step(_height_data, from, to)
+
+func set_tile_height(pos: Vector2i, value: int):
+	if not _is_grid_in_bounds(pos): return
+	_height_data[pos.x][pos.y] = ElevationMap.NORMAL if _map_data[pos.x][pos.y] == CellType.ASH else clampi(value, ElevationMap.LOW, ElevationMap.HIGH)
+	# Rebind grids after load/normalization without changing terrain obstacles.
+	for grid in [_astar_grid, _astar_grid_swim, _astar_grid_fly]:
+		grid.heights = [] if _is_on_world_map else _height_data
+	_draw_height_overlay()
+
+func _draw_height_overlay():
+	if not is_instance_valid(_elevation_overlay):
+		_elevation_overlay = load("res://world/elevation_overlay.gd").new()
+		_elevation_overlay.main = self
+		_elevation_overlay.z_index = 1
+		add_child(_elevation_overlay)
+	if not is_instance_valid(_elevation_blur):
+		_elevation_blur = preload("res://world/elevation_blur.gd").new()
+		_elevation_blur.main = self
+		# Same layer, after the terrain overlay; fire/items/actors stay sharp above it.
+		_elevation_overlay.add_child(_elevation_blur)
+	_elevation_overlay.visible = not _is_on_world_map
+	_elevation_overlay.queue_redraw()
+	_elevation_blur.queue_redraw()

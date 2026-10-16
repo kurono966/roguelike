@@ -296,9 +296,7 @@ func draw_map():
 					
 					# Tint burning grass tiles red
 					if burning_grass.has(pos):
-						var fire_overlay = ColorRect.new()
-						fire_overlay.color = Color(1.0, 0.3, 0.0, 0.5)
-						fire_overlay.size = Vector2(TILE_SIZE, TILE_SIZE)
+						var fire_overlay = preload("res://world/fire_tile_overlay.gd").new()
 						fire_overlay.position = Vector2(tile_coords) * TILE_SIZE
 						fire_overlay.add_to_group("fire_overlays")
 						main_node.add_child(fire_overlay)
@@ -332,3 +330,5 @@ func draw_map():
 					memory_tile_map.set_cell(0, Vector2i(x, y), -1)
 				elif tile_map.get_layers_count() > LAYER_MEMORY:
 					tile_map.set_cell(LAYER_MEMORY, Vector2i(x, y), -1)
+
+	main_node._draw_height_overlay()

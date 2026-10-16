@@ -27,32 +27,32 @@ WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpin
 Current Skills: []
 [ItemDatabase] Loaded 40 items from resources
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
 Current Skills: []
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
 Current Skills: []
 Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
    at: load (scene/resources/resource_format_text.cpp:1430)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:237)
+       [0] _ready (res://world/main.gd:239)
        [1] _run (res://workdesk/auto_pickup_test.gd:15)
 ERROR: Failed loading resource: res://default_environment.tres.
    at: _load (core/io/resource_loader.cpp:343)
    GDScript backtrace (most recent call first):
-       [0] _ready (res://world/main.gd:237)
+       [0] _ready (res://world/main.gd:239)
        [1] _run (res://workdesk/auto_pickup_test.gd:15)
-Dungeon placed at: (15, 21)
-NPC Spawned: 商人 at (864.0, 736.0)
-NPC Spawned: 村人 at (1216.0, 224.0)
-NPC Spawned: 商人 at (352.0, 544.0)
-NPC Spawned: 商人 at (768.0, 480.0)
-NPC Spawned: 村の守備隊 at (512.0, 960.0)
-NPC Spawned: はぐれ魔道士 at (1088.0, 896.0)
-NPC Spawned: 放浪の剣士 at (736.0, 608.0)
+Dungeon placed at: (28, 40)
+NPC Spawned: 村の長老 at (992.0, 352.0)
+NPC Spawned: 商人 at (736.0, 1024.0)
+NPC Spawned: 村の長老 at (992.0, 320.0)
+NPC Spawned: 商人 at (1312.0, 640.0)
+NPC Spawned: はぐれ魔道士 at (320.0, 736.0)
+NPC Spawned: 村人 at (1280.0, 1344.0)
+NPC Spawned: 村の守備隊 at (608.0, 1088.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar

@@ -61,6 +61,15 @@ func _run():
 	_check(main._burning_grass[pos].turns_remaining == 5, "Incorrect burn lifetime")
 	_blocked(pos)
 	_check(not await main._try_move_character(main.player, Vector2.RIGHT), "Player walked through burning wood")
+	for renderer in [main, main.visibility_manager]:
+		if renderer == main: renderer._draw_map()
+		else: renderer.draw_map()
+		var found_visible_fire = false
+		for overlay in get_tree().get_nodes_in_group("fire_overlays"):
+			if overlay.is_queued_for_deletion() or overlay.position != Vector2(pos) * 32: continue
+			if overlay.get_script() == load("res://world/fire_tile_overlay.gd"):
+				found_visible_fire = overlay.z_index > main._elevation_overlay.z_index and overlay.z_index < 4
+		_check(found_visible_fire, "Fire renderer is hidden behind elevation/vegetation")
 	# Persistence uses the existing fire-state dictionary and unchanged tile ID.
 	main._save_current_floor_to_cache_with_key("wood_test")
 	_check(main._load_floor_from_cache("wood_test", false), "Could not reload burning floor")
