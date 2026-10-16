@@ -6,6 +6,8 @@ var summary: Label
 var buttons: Array[Button] = []
 var choices: VBoxContainer
 var hint: Label
+var content: CenterContainer
+var shade: ColorRect
 var _previous_paused = false
 var _owns_pause = false
 
@@ -15,16 +17,16 @@ func _ready():
 	_previous_paused = get_tree().paused
 	_owns_pause = true
 	get_tree().paused = true
-	var shade = ColorRect.new()
+	shade = ColorRect.new()
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.color = Color(0.02, 0.02, 0.04, 0.88)
 	add_child(shade)
-	var center = CenterContainer.new()
-	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	add_child(center)
+	content = CenterContainer.new()
+	content.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	add_child(content)
 	var panel = PanelContainer.new()
 	panel.theme = load("res://ui/themes/main_theme.tres")
-	center.add_child(panel)
+	content.add_child(panel)
 	var margin = MarginContainer.new()
 	for side in ["left", "right", "top", "bottom"]:
 		margin.add_theme_constant_override("margin_" + side, 20)
@@ -49,6 +51,13 @@ func refresh():
 	if not player.has_pending_growth_choices():
 		close()
 		return
+	# Keep the modal/input lock active while hiding choices until audio ends.
+	if player.is_level_up_sound_playing():
+		shade.color.a = 0.2
+		content.hide()
+		return
+	shade.color.a = 0.88
+	content.show()
 	var color_turn = player.is_connector_growth_turn()
 	var remaining_levels = maxi(player.pending_growth_choices, player.pending_connector_choices)
 	title.text = "LEVEL UP — Lv.%d：%s" % [player.level - remaining_levels + 1, "コネクタの色を選択" if color_turn else "能力を選択"]
@@ -76,7 +85,7 @@ func refresh():
 	buttons.front().grab_focus()
 
 func _choose(key: String):
-	if not _owns_pause: return
+	if not _owns_pause or player.is_level_up_sound_playing(): return
 	if player.is_connector_growth_turn():
 		player.choose_connector_growth(key)
 	else:
@@ -84,10 +93,17 @@ func _choose(key: String):
 
 func _unhandled_key_input(event: InputEvent):
 	if not event is InputEventKey or not event.pressed or event.is_echo(): return
+	if player.is_level_up_sound_playing():
+		get_viewport().set_input_as_handled()
+		return
 	var options = player.get_growth_options()
 	if event.keycode >= KEY_1 and event.keycode < KEY_1 + options.size():
 		_choose(str(options[event.keycode - KEY_1].key))
 	get_viewport().set_input_as_handled()
+
+func _input(_event: InputEvent):
+	if player.is_level_up_sound_playing():
+		get_viewport().set_input_as_handled()
 
 func close():
 	_release_pause()

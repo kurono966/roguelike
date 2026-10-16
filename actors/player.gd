@@ -36,7 +36,9 @@ var gold: int = 0:  # 所持金
 			_on_gold_changed(old_gold, value)
 var exp: int = 0  # 現在の経験値
 var exp_to_next_level: int = 10  # 次のレベルまでに必要な経験値
-var hit_rate: float = 0.85 # Base hit chance (Accuracy)
+var hit_rate: float:
+	get:
+		return get_raw_hit_rate()
 var level_hp_bonus: int = 0 # Extra HP gained from leveling up
 var initial_hp_bonus: int = 0 # Bonus from character creation
 var level_mp_bonus: int = 0 
@@ -408,11 +410,8 @@ func _on_equipment_grid_changed():
 		PlayerUi.update_hp(hp, max_hp)
 		PlayerUi.update_mp(mp, max_mp)
 	
-	# Calculate organization bonus
-	hit_rate = 0.85
-	
+	# Calculate organization bonus (hit_rate is now derived via get_raw_hit_rate())
 	var bonus = get_inventory_bonus_state()
-	hit_rate += bonus.hit_bonus + float(equipment_stats.get("hit_bonus", 0.0))
 	
 	var total_atk = attack_power
 	var total_def = defense_power
@@ -474,31 +473,87 @@ func get_inventory_bonus_state() -> Dictionary:
 		
 	return result
 
+const SKILL_LEARNING_REQUIREMENTS = {
+	"fireball": {"level": 2, "str": 0, "dex": 0, "int": 8},
+	"iceball": {"level": 3, "str": 0, "dex": 0, "int": 10},
+	"helm_splitter": {"level": 3, "str": 9, "dex": 0, "int": 0},
+	"super_seoi_nage": {"level": 5, "str": 10, "dex": 2, "int": 0},
+	"freeze": {"level": 4, "str": 0, "dex": 0, "int": 9},
+	"gale_thrust": {"level": 4, "str": 0, "dex": 9, "int": 0},
+	"grass_snipe": {"level": 5, "str": 0, "dex": 10, "int": 0},
+	"wall": {"level": 7, "str": 0, "dex": 12, "int": 10},
+	"lightning": {"level": 5, "str": 0, "dex": 0, "int": 13},
+	"blood_beam": {"level": 6, "str": 12, "dex": 0, "int": 8},
+	"teleport": {"level": 6, "str": 0, "dex": 3, "int": 12},
+	"cyclone_slash": {"level": 6, "str": 11, "dex": 8, "int": 0},
+	"explosion": {"level": 8, "str": 0, "dex": 0, "int": 16},
+	"collapse": {"level": 10, "str": 20, "dex": 0, "int": 20},
+	"meteor": {"level": 12, "str": 0, "dex": 0, "int": 22}
+}
+
+# Remaining growth points use the same unmodified base stats as natural learning.
+# Level is shown separately and is not added to the stat shortfall.
+func get_nearby_skill_unlocks(max_missing: int = 5, include_learned: bool = false) -> Array:
+	var result = []
+	var values = {"str": strength, "dex": dexterity, "int": intelligence}
+	var labels = {"str": "力", "dex": "技", "int": "知力", "red": "赤", "blue": "青", "yellow": "黄", "purple": "紫"}
+	for skill_id in SKILL_LEARNING_REQUIREMENTS:
+		if not include_learned and base_known_skills.has(skill_id): continue
+		var req = SKILL_LEARNING_REQUIREMENTS[skill_id]
+		var missing = 0
+		var details = []
+		for key in values:
+			var deficit = maxi(0, int(req.get(key, 0)) - int(values[key]))
+			if deficit > 0:
+				missing += deficit
+				details.append("%s +%d" % [labels[key], deficit])
+		for color in SKILL_COLOR_REQUIREMENTS.get(skill_id, {}):
+			var deficit = maxi(0, int(SKILL_COLOR_REQUIREMENTS[skill_id][color]) - get_connector_affinity(color))
+			if deficit > 0:
+				missing += deficit
+				details.append("%s +%d" % [labels[color], deficit])
+		if max_missing >= 0 and missing > max_missing: continue
+		var skill = SkillDatabase.get_skill_by_id(skill_id)
+		result.append({"id": skill_id, "name": skill.get("name", skill_id), "missing": missing,
+			"details": details, "required_level": int(req.level), "level_ready": level >= int(req.level)})
+	result.sort_custom(func(a, b):
+		if a.missing != b.missing: return a.missing < b.missing
+		if a.required_level != b.required_level: return a.required_level < b.required_level
+		return a.id < b.id)
+	return result
+
+func get_all_natural_skill_requirements_text() -> String:
+	var lines = []
+	var labels = {"str": "力", "dex": "技", "int": "知力", "red": "赤", "blue": "青", "yellow": "黄", "purple": "紫"}
+	for skill in get_nearby_skill_unlocks(-1, true):
+		var req = SKILL_LEARNING_REQUIREMENTS[skill.id]
+		var required = ["Lv.%d" % skill.required_level]
+		for key in ["str", "dex", "int"]:
+			if int(req.get(key, 0)) > 0: required.append("%s %d" % [labels[key], req[key]])
+		for color in SKILL_COLOR_REQUIREMENTS.get(skill.id, {}):
+			required.append("%s %d" % [labels[color], SKILL_COLOR_REQUIREMENTS[skill.id][color]])
+		var state = "習得済" if base_known_skills.has(skill.id) else "不足合計 %d" % skill.missing
+		var missing_text = "・".join(skill.details) if not skill.details.is_empty() else "能力条件達成"
+		lines.append("%s（%s）\n  必要：%s\n  残り：%s%s" % [skill.name, state, " / ".join(required), missing_text,
+			" / レベル不足" if not skill.level_ready else ""])
+	return "\n\n".join(lines)
+
+func get_nearby_skill_unlocks_text() -> String:
+	var lines = []
+	for skill in get_nearby_skill_unlocks():
+		lines.append("%s — 不足合計 %d\n  %s / 必要Lv.%d%s" % [skill.name, skill.missing,
+			"・".join(skill.details) if not skill.details.is_empty() else "能力条件達成",
+			skill.required_level, "（レベル不足）" if not skill.level_ready else "（レベル条件達成）"])
+	return "\n".join(lines) if not lines.is_empty() else "該当する未習得スキルはありません。"
+
 func _check_skill_learning():
-	var skill_requirements = {
-		"fireball": {"level": 2, "str": 0, "dex": 0, "int": 8},
-		"iceball": {"level": 3, "str": 0, "dex": 0, "int": 10},
-		"helm_splitter": {"level": 3, "str": 9, "dex": 0, "int": 0},
-		"super_seoi_nage": {"level": 5, "str": 10, "dex": 2, "int": 0},
-		"freeze": {"level": 4, "str": 0, "dex": 0, "int": 9},
-		"gale_thrust": {"level": 4, "str": 0, "dex": 9, "int": 0},
-		"grass_snipe": {"level": 5, "str": 0, "dex": 10, "int": 0},
-		"wall": {"level": 7, "str": 0, "dex": 12, "int": 10},
-		"lightning": {"level": 5, "str": 0, "dex": 0, "int": 13},
-		"blood_beam": {"level": 6, "str": 12, "dex": 0, "int": 8},
-		"teleport": {"level": 6, "str": 0, "dex": 3, "int": 12},
-		"cyclone_slash": {"level": 6, "str": 11, "dex": 8, "int": 0},
-		"explosion": {"level": 8, "str": 0, "dex": 0, "int": 16},
-		"collapse": {"level": 10, "str": 20, "dex": 0, "int": 20},
-		"meteor": {"level": 12, "str": 0, "dex": 0, "int": 22}
-	}
-	
+
 	var learned_any = false
-	for skill_id in skill_requirements.keys():
+	for skill_id in SKILL_LEARNING_REQUIREMENTS.keys():
 		if base_known_skills.has(skill_id):
 			continue
 			
-		var req = skill_requirements[skill_id]
+		var req = SKILL_LEARNING_REQUIREMENTS[skill_id]
 		# 装備やバフを除いた生ステータスで判定
 		if level >= req["level"] and strength >= req["str"] and dexterity >= req["dex"] and intelligence >= req["int"] and meets_skill_color_requirements(skill_id):
 			base_known_skills.append(skill_id)
@@ -874,6 +929,7 @@ func _finish_growth_choice():
 	if not has_pending_growth_choices(): growth_choices_finished.emit()
 
 func choose_connector_growth(color: String) -> bool:
+	if is_level_up_sound_playing(): return false
 	if not is_connector_growth_turn() or not connector_affinity.has(color): return false
 	connector_affinity[color] = get_connector_affinity(color) + 1
 	pending_connector_choices -= 1
@@ -898,7 +954,6 @@ func get_skill_color_requirements_text(filter_color: String = "") -> String:
 
 func _refresh_growth_stats():
 	var stats = _get_equipment_stats()
-	hit_rate = 0.85 + float(get_inventory_bonus_state().hit_bonus) + float(stats.hit_bonus)
 	max_hp = BASE_MAX_HP + initial_hp_bonus + level_hp_bonus + stats.max_hp + int((strength + stats.strength) / 3)
 	max_mp = BASE_MAX_MP + level_mp_bonus + (intelligence + stats.intelligence) * 2 + stats.max_mp
 	hp = max_hp
@@ -916,6 +971,7 @@ func _show_growth_selection():
 	add_child(_growth_selection)
 
 func choose_level_growth(key: String) -> bool:
+	if is_level_up_sound_playing(): return false
 	if pending_growth_choices <= 0 or is_connector_growth_turn(): return false
 	var label = ""
 	for option in GROWTH_OPTIONS:
@@ -984,6 +1040,7 @@ func level_up():
 		add_child(lvl_up_text)
 
 	play_level_up_sound()
+	_show_growth_selection()
 
 	# ---
 
@@ -2007,6 +2064,19 @@ func _create_fall_sound() -> AudioStream:
 	return stream
 
 var _level_up_sound_stream: AudioStream = null
+var _level_up_audio_players: Array[AudioStreamPlayer] = []
+signal level_up_audio_finished
+
+func is_level_up_sound_playing() -> bool:
+	return not _level_up_audio_players.is_empty()
+
+func _on_level_up_audio_finished(audio: AudioStreamPlayer):
+	_level_up_audio_players.erase(audio)
+	audio.queue_free()
+	if not is_level_up_sound_playing():
+		if is_instance_valid(_growth_selection) and not _growth_selection.is_queued_for_deletion():
+			_growth_selection.refresh()
+		level_up_audio_finished.emit()
 var _pickup_sound_stream: AudioStream = null
 var _door_open_sound_stream: AudioStream = null
 var _door_close_sound_stream: AudioStream = null
@@ -2016,7 +2086,14 @@ var _reload_sound_stream: AudioStream = null
 func play_level_up_sound():
 	if _level_up_sound_stream == null:
 		_level_up_sound_stream = _create_level_up_sound()
-	_play_generated_stream(_level_up_sound_stream)
+	var audio = AudioStreamPlayer.new()
+	audio.stream = _level_up_sound_stream
+	# Growth selection pauses the game, but its sound must finish normally.
+	audio.process_mode = Node.PROCESS_MODE_ALWAYS
+	add_child(audio)
+	_level_up_audio_players.append(audio)
+	audio.finished.connect(_on_level_up_audio_finished.bind(audio))
+	audio.play()
 
 func play_pickup_sound():
 	if _pickup_sound_stream == null:

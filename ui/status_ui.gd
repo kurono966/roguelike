@@ -227,7 +227,10 @@ func update_status_info():
 	left_text += "\n[b]コネクタ適性[/b]\n"
 	left_text += "[color=#ff4d40]赤 %d[/color] / [color=#5599ff]青 %d[/color] / [color=#ffe04d]黄 %d[/color] / [color=#bd66ff]紫 %d[/color]\n" % [player.get_connector_affinity("red"), player.get_connector_affinity("blue"), player.get_connector_affinity("yellow"), player.get_connector_affinity("purple")]
 	left_text += "接続1辺あたり：赤は攻撃、青は防御、黄は命中、紫は会心を強化。\n"
-	left_text += "\n[b]自然習得に必要な色[/b]\n（レベル・能力の条件も必要）\n" + player.get_skill_color_requirements_text() + "\n"
+	left_text += "\n[b]習得間近のスキル（不足合計5以下）[/b]\n力・技・知力と4色の不足分を合計。レベルは別判定。\n"
+	left_text += player.get_nearby_skill_unlocks_text() + "\n"
+	left_text += "\n[b]すべての自然習得スキル[/b]\n不足合計が少ない順。同数なら必要レベル順。\n"
+	left_text += player.get_all_natural_skill_requirements_text() + "\n"
 	left_rich_label.text = left_text
 
 	# Right Column (Combat Stats and Equipment)
