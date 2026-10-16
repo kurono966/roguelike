@@ -8,6 +8,8 @@ var _last_log_message: String = ""
 var _last_log_bbcode: String = ""
 var _last_log_count: int = 0
 const MAX_LINES = 50  # 履歴として保持する行数
+enum DisplayMode { NORMAL, EXPANDED, HIDDEN }
+var display_mode: DisplayMode = DisplayMode.NORMAL
 
 func get_panel_style() -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
@@ -51,11 +53,13 @@ func _ready():
 	log_rich_label.scroll_following = true
 	
 	log_panel.add_child(log_rich_label)
+	get_viewport().size_changed.connect(_apply_display_mode)
+	_apply_display_mode()
 	
 	# 初期メッセージ
 	add_log("ローグライクへようこそ！", Color.GOLD)
 	add_log("'H' キーでヘルプを表示", Color.CYAN)
-	add_log("'L'キーでログの表示/非表示", Color.GRAY)
+	add_log("'L'キーでログ：通常 → 拡大 → 非表示", Color.GRAY)
 	
 	print("Enhanced LogUI initialized!")
 
@@ -140,9 +144,31 @@ func _update_display():
 	log_rich_label.text = full_text
 
 func _input(event):
-	if event.is_action_pressed("toggle_log"):
+	if event.is_action_pressed("toggle_log") and not event.is_echo():
 		toggle_visibility()
+		get_viewport().set_input_as_handled()
 
 func toggle_visibility():
-	if log_panel:
-		log_panel.visible = !log_panel.visible
+	display_mode = (int(display_mode) + 1) % DisplayMode.size() as DisplayMode
+	_apply_display_mode()
+
+func _apply_display_mode():
+	if not log_panel or not log_rich_label: return
+	log_panel.visible = display_mode != DisplayMode.HIDDEN
+	var expanded = display_mode == DisplayMode.EXPANDED
+	var viewport_size = get_viewport().get_visible_rect().size
+	var available = (viewport_size - Vector2(40, 40)).max(Vector2.ONE)
+	var panel_size = Vector2(500, 130)
+	if expanded:
+		panel_size = Vector2(maxf(500, viewport_size.x * 0.8), maxf(130, viewport_size.y * 0.7))
+		panel_size = panel_size.min(Vector2(1100, 700))
+	panel_size = panel_size.min(available)
+	log_panel.offset_left = 20
+	log_panel.offset_right = 20 + panel_size.x
+	log_panel.offset_bottom = -20
+	log_panel.offset_top = -20 - panel_size.y
+	for font_key in ["normal_font_size", "bold_font_size", "italics_font_size", "bold_italics_font_size", "mono_font_size"]:
+		if expanded:
+			log_rich_label.add_theme_font_size_override(font_key, 20)
+		else:
+			log_rich_label.remove_theme_font_size_override(font_key)

@@ -262,6 +262,8 @@ func _load_enemy_sprite():
 	var ascii_char = _get_ascii_char()
 	var has_glow = id in ["hitodama", "crystal_golem", "ice_spirit", "spark_slime", "flame_scatterer", "ember_lizard", "crystal_shard", "dragon", "grim_reaper"]
 	sprite.texture = AsciiArtGenerator.create_ascii_sprite(ascii_char, base_color.lightened(0.25), has_glow)
+	if id == "gravekeeper" and not is_npc and not is_hostile_to_player_only:
+		sprite.texture = AsciiArtGenerator.create_gravekeeper_sprite()
 	sprite.modulate = Color.WHITE
 	sprite.position = Vector2(16, 16)
 	sprite.scale = Vector2.ONE

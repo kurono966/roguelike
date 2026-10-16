@@ -5,6 +5,42 @@ class_name AsciiArtGenerator
 
 const TILE_SIZE = 32
 
+# Code-only 16px design, rendered at 2x: hood, ghostly eyes, clasp and shovel.
+# No imported textures or image files are involved.
+static func create_gravekeeper_sprite() -> Texture2D:
+	var pixels = [
+		"     oooo   sss ",
+		"    ohhhho  s s ",
+		"   ohHHhhho sss ",
+		"   ohffffho  w  ",
+		"   ohfefefho w  ",
+		"   ohffffho  w  ",
+		"    ohffho   w  ",
+		"   ohhbhhho  w  ",
+		"  ohHhbHhhho w  ",
+		" ohHhhlhhhhaaw  ",
+		" ohHhhlhhhho w  ",
+		"  ohhhlhhhho s  ",
+		"  ohHhlHhhhoSSS ",
+		" ohHhhlHhhhoSsS ",
+		" oooo ooooo SSS ",
+		"            sss "
+	]
+	var palette = {
+		"o": Color("16131f"), "h": Color("51405f"), "H": Color("9276ac"),
+		"f": Color("22232e"), "e": Color("85ffca"), "b": Color("d7b875"),
+		"l": Color("302b43"), "a": Color("a89b8b"), "w": Color("927350"),
+		"s": Color("686e79"), "S": Color("c0c6ce")
+	}
+	var img = Image.create(TILE_SIZE, TILE_SIZE, false, Image.FORMAT_RGBA8)
+	img.fill(Color.TRANSPARENT)
+	for y in range(pixels.size()):
+		for x in range(pixels[y].length()):
+			var key = pixels[y].substr(x, 1)
+			if palette.has(key):
+				img.fill_rect(Rect2i(x * 2, y * 2, 2, 2), palette[key])
+	return ImageTexture.create_from_image(img)
+
 const GLYPHS: Dictionary = {
 	"@": [ # Player / Hero (@ glyph with distinct knight/rogue helmet feel)
 		"  ###  ",
