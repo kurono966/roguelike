@@ -57,6 +57,42 @@ func _run():
 		if is_instance_valid(item):
 			item.queue_free()
 		await get_tree().process_frame
+	# A failed pickup must not attract subsequent paths, even after restarting
+	# exploration or freeing bag space. Other items of the same type still count.
+	var bag = main.player.equipment_component.bag_data
+	bag.clear()
+	var blocker = BaseItem.new("test_blocker", "Full bag", null, -1, 10, 4)
+	_check(bag.place_item(blocker, 0, 0), "Could not fill bag")
+	main.player.position = Vector2(26, 25) * 32
+	var failed = load("res://items/world_item.tscn").instantiate()
+	failed.position = Vector2(27, 25) * 32
+	failed.set_item(ItemDatabase.get_item_by_id("potion").duplicate(true))
+	failed.add_to_group("items")
+	main.add_child(failed)
+	main._is_auto_exploring = true
+	await main._try_move_character(main.player, Vector2.RIGHT)
+	_check(failed.item_data.auto_pickup_ignored, "Movement pickup failure was not remembered")
+	main._auto_pickup_items_at_feet()
+	_check(main._is_auto_exploring, "Full bag stopped exploration")
+	main._stop_auto_explore()
+	bag.clear()
+	main.player.position = Vector2(25, 25) * 32
+	_check(main._find_path_to_nearest_visible_item(Vector2i(25, 25)).is_empty(), "Failed item was targeted again")
+	var other = load("res://items/world_item.tscn").instantiate()
+	other.position = Vector2(28, 25) * 32
+	other.set_item(ItemDatabase.get_item_by_id("potion").duplicate(true))
+	other.add_to_group("items")
+	main.add_child(other)
+	var next = main._find_path_to_nearest_visible_item(Vector2i(25, 25))
+	_check(not next.is_empty() and Vector2i(next.back()) == Vector2i(28, 25), "Ignoring one potion ignored other potions")
+	var serializer = load("res://save_manager.gd").new()
+	var restored = main._deserialize_item(serializer._serialize_item(failed.item_data))
+	_check(restored.auto_pickup_ignored, "Save/load forgot ignored item")
+	serializer.free()
+	_check(main.player.pickup_item(failed.item_data), "Ignored item could not be manually picked up")
+	_check(not failed.item_data.auto_pickup_ignored, "Manual pickup did not reset ignored state")
+	failed.queue_free()
+	other.queue_free()
 	print("AUTO_PICKUP_TEST failures=", failures)
 	main.queue_free()
 	await get_tree().process_frame

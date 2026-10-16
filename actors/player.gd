@@ -1069,12 +1069,14 @@ func replenish_ammo(amount: int):
 
 func pickup_item(item_data: BaseItem) -> bool:
 	if equipment_component.add_to_bag(item_data):
+		item_data.auto_pickup_ignored = false
 		print("Picked up: ", item_data.name)
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s を拾った" % item_data.name, Color(0.5, 1.0, 1.0))
 		play_pickup_sound()
 		return true
 	else:
+		item_data.auto_pickup_ignored = true
 		print("Inventory full!")
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("インベントリがいっぱいで %s を拾えない" % item_data.name, Color(1.0, 0.5, 0.5))

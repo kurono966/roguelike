@@ -27,6 +27,7 @@ extends Resource
 @export var connectors: Array[Dictionary] = [] # {cell: Vector2i, direction: Vector2i, color: String}
 
 var grid_position: Vector2i = Vector2i(-1, -1)
+var auto_pickup_ignored: bool = false # Per item; manual pickup remains available.
 
 # Helper to check if this is a consumable item
 func is_consumable() -> bool:

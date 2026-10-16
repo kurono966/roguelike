@@ -206,6 +206,7 @@ func _serialize_item(item: BaseItem) -> Dictionary:
 		"id": item.id,
 		"name": item.display_name,
 		"equipment_type": item.equipment_type,
+		"auto_pickup_ignored": item.auto_pickup_ignored,
 		"heal": item.heal,
 		"restore_mp": item.restore_mp,
 		"restore_hunger": item.restore_hunger,

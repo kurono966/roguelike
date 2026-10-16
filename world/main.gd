@@ -1272,6 +1272,8 @@ func _try_move_character(character, direction: Vector2):
 			var item_center = child.position + Vector2(TILE_SIZE/2.0, TILE_SIZE/2.0)
 			var child_grid_pos = Vector2i(int(item_center.x / TILE_SIZE), int(item_center.y / TILE_SIZE))
 			if child_grid_pos == target_grid_pos:
+				if _is_auto_exploring and child.item_data and child.item_data.auto_pickup_ignored:
+					continue
 				# Attempt to pick up
 				if player.pickup_item(child.item_data):
 					child.queue_free()
@@ -1811,10 +1813,10 @@ func _auto_pickup_items_at_feet():
 		if is_instance_valid(wi) and not wi.is_queued_for_deletion() and wi is Node2D:
 			if tile_map.local_to_map(wi.position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0)) == player_grid:
 				if "item_data" in wi and wi.item_data:
+					if wi.item_data.auto_pickup_ignored:
+						continue
 					if player.pickup_item(wi.item_data):
 						wi.queue_free()
-					else:
-						_stop_auto_explore("インベントリがいっぱいでアイテムを拾えません。")
 
 func _is_auto_explore_walkable(grid_pos: Vector2i) -> bool:
 	if grid_pos.x < 0 or grid_pos.x >= MAP_WIDTH or grid_pos.y < 0 or grid_pos.y >= MAP_HEIGHT:
@@ -1853,6 +1855,8 @@ func _find_path_to_nearest_visible_item(start_grid: Vector2i) -> Array:
 		if not is_instance_valid(item) or item.is_queued_for_deletion():
 			continue
 		if not (item is Node2D):
+			continue
+		if "item_data" in item and item.item_data and item.item_data.auto_pickup_ignored:
 			continue
 		# Match movement pickup: older placements include a -4px visual offset.
 		var item_grid = tile_map.local_to_map(item.position + Vector2(TILE_SIZE / 2.0, TILE_SIZE / 2.0))
@@ -5773,6 +5777,7 @@ func _deserialize_item(item_dict: Dictionary) -> BaseItem:
 	item.prefix_name = item_dict.get("prefix_name", "")
 	item.suffix_name = item_dict.get("suffix_name", "")
 	item.generated_level = item_dict.get("generated_level", 0)
+	item.auto_pickup_ignored = bool(item_dict.get("auto_pickup_ignored", false))
 	item.effects = item_dict.get("effects", {}).duplicate(true)
 	
 	# Proper handling for typed array Arary[String]
@@ -5788,8 +5793,10 @@ func _deserialize_item(item_dict: Dictionary) -> BaseItem:
 		item.equipment_type = definition.equipment_type
 		if not definition.is_equippable() and item.id != base_id:
 			var saved_position = item.grid_position
+			var ignored = item.auto_pickup_ignored
 			item = definition.duplicate(true) as BaseItem
 			item.grid_position = saved_position
+			item.auto_pickup_ignored = ignored
 	item.heal = int(item_dict.get("heal", definition.heal if definition else 0))
 	item.restore_mp = int(item_dict.get("restore_mp", definition.restore_mp if definition else 0))
 	item.restore_hunger = int(item_dict.get("restore_hunger", definition.restore_hunger if definition else 0))
