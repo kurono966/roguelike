@@ -1,5 +1,3 @@
-ERROR: Could not create directory: 'user://D:'.
-   at: make_dir_recursive (core/io/dir_access.cpp:178)
 Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
 
 InputManager: _ready() called
@@ -27,14 +25,14 @@ WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpin
    GDScript backtrace (most recent call first):
        [0] run_test (res://workdesk/butcher_village_test.gd:13)
 Current Skills: []
-[ItemDatabase] Loaded 41 items from resources
+[ItemDatabase] Loaded 42 items from resources
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 1 [◎完璧]: 会心+25% 命中+10%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 1 [◎完璧]: 会心+25% 命中+10%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
 Current Skills: []
 Equipment grid changed!
-Stats Updated: HP: 10/10, ATK: 2, DEF: 3 [〇良好]: 会心+15%
-Log added: 装備変更: HP 10, 攻撃 2, 防御 3 [〇良好]: 会心+15%
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
 Current Skills: []
 Current Skills: ["heal"]
 ERROR: Cannot open file 'res://default_environment.tres'.
@@ -47,15 +45,14 @@ ERROR: Failed loading resource: res://default_environment.tres.
    GDScript backtrace (most recent call first):
        [0] _ready (res://world/main.gd:241)
        [1] run_test (res://workdesk/butcher_village_test.gd:14)
-Dungeon placed at: (43, 23)
-NPC Spawned: 放浪の剣士 at (1056.0, 864.0)
-NPC Spawned: 放浪の剣士 at (544.0, 320.0)
-NPC Spawned: 村の長老 at (192.0, 224.0)
-NPC Spawned: 村の守備隊 at (352.0, 704.0)
-NPC Spawned: 村の長老 at (704.0, 1408.0)
-NPC Spawned: はぐれ魔道士 at (256.0, 992.0)
-NPC Spawned: 村の守備隊 at (288.0, 960.0)
-NPC Spawned: 村の守備隊 at (256.0, 1088.0)
+Dungeon placed at: (48, 7)
+NPC Spawned: 村の長老 at (480.0, 1216.0)
+NPC Spawned: 村の守備隊 at (128.0, 736.0)
+NPC Spawned: はぐれ魔道士 at (1056.0, 832.0)
+NPC Spawned: 村の長老 at (1408.0, 128.0)
+NPC Spawned: 村の守備隊 at (896.0, 128.0)
+NPC Spawned: 村の長老 at (768.0, 1248.0)
+NPC Spawned: 放浪の剣士 at (1184.0, 1024.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
@@ -65,13 +62,14 @@ _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
-[ItemDatabase] Loaded 41 items from resources
+[ItemDatabase] Loaded 42 items from resources
 Log added: コウモリ の死体を解体し、肉を取り出した。
-[ItemDatabase] Loaded 41 items from resources
-Log added: 小鬼 の死体を解体し、肉を取り出した。
+Log added: 解体開始：1ターン、成功率95%、特別入手率2%（成功時）。Escで中断
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 Enemy turns processing complete. Starting player turn.
+[ItemDatabase] Loaded 42 items from resources
+Log added: 小鬼 の死体を解体し、肉を取り出した。
 Log added: 足元や隣に解体できる死体がない。
 下り階段を下りた！ Floor: 6
 Log added: 下り階段を下りた！ 階層 6 へ (Branch 0)
@@ -79,11 +77,15 @@ Ammo replenished. Current Reserve: 20
 Log added: 弾薬を補充した (予備: 20)
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
-NPC Spawned: 村人 at (864.0, 352.0)
-NPC Spawned: はぐれ魔道士 at (896.0, 352.0)
-NPC Spawned: 村の守備隊 at (384.0, 1120.0)
+NPC Spawned: 村の長老 at (992.0, 576.0)
+NPC Spawned: 放浪の剣士 at (576.0, 224.0)
+NPC Spawned: 放浪の剣士 at (672.0, 704.0)
+NPC Spawned: 放浪の剣士 at (832.0, 224.0)
+NPC Spawned: 村の長老 at (1216.0, 224.0)
 Log added: 平穏な里に辿り着いた。
 Spawning items...
-Total items spawned: 0
+[ItemDatabase] Loaded 42 items from resources
+Item spawned at: (1088.0, 320.0)
+Total items spawned: 1
 Total traps spawned: 0
 BUTCHER_VILLAGE_TEST failures=0

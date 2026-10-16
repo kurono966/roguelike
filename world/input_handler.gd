@@ -88,6 +88,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 
 	var action_floor_epoch = main_node._floor_epoch
+	if main_node._is_butchering:
+		if event.is_action_pressed("ui_cancel") or (event is InputEventKey and event.pressed and event.keycode in [KEY_ESCAPE, KEY_B]):
+			main_node._is_butchering = false
+		get_viewport().set_input_as_handled()
+		return
 	# Block input if major UI is open
 	var game_ui = get_node_or_null("/root/GameUI")
 	if game_ui:

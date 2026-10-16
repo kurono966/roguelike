@@ -2212,7 +2212,12 @@ func _continue_rest():
 	_is_processing_action = false
 
 func _handle_attack(attacker, defender):
-	if attacker == player: player.set_pending_action("attack")
+	if attacker == player:
+		player.set_pending_action("attack")
+		# 攻撃で敵が倒れたり移動した場合も、元のクリック経路へ前進しない。
+		if _is_path_following:
+			_has_pending_path_target = false
+			_cancel_active_auto_movement()
 	# 影の行動記録（近接攻撃）
 	if shadow_clone_manager:
 		shadow_clone_manager.record(attacker, {"type": "attack", "target_ref": defender})
@@ -2231,17 +2236,47 @@ func _handle_attack(attacker, defender):
 func _spawn_enemies():
 	enemy_manager.spawn_enemies_for_floor(current_floor, _current_branch, _rooms)
 
+var _is_butchering = false
+
 func _handle_butcher():
 	if _is_processing_action or _current_game_state != TurnPhase.PLAYER_TURN: return
 	var action_floor_epoch = _floor_epoch
-	if not corpse_manager or not corpse_manager.butcher_near_player():
+	var corpse = corpse_manager.find_butcher_target() if corpse_manager else null
+	if corpse == null:
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("足元や隣に解体できる死体がない。", Color.GRAY)
 		return
+	var stats = corpse_manager.get_butchery_stats(player)
+	var origin = player.position
+	var log_ui = get_node_or_null("/root/LogUI")
+	if log_ui:
+		log_ui.add_log("解体開始：%dターン、成功率%d%%、特別入手率%d%%（成功時）。Escで中断" % [stats.turns, roundi(stats.success * 100), roundi(stats.special * 100)], Color(0.8, 0.65, 0.45))
+	_is_butchering = true
 	_is_processing_action = true
-	_current_game_state = TurnPhase.ENEMY_TURN
-	await _end_player_turn(action_floor_epoch, "butcher")
+	var completed = 0
+	for step in range(stats.turns):
+		if not _is_butchering or action_floor_epoch != _floor_epoch: break
+		if not is_instance_valid(player) or player.hp <= 0 or player.position != origin: break
+		if not is_instance_valid(corpse) or not corpse_manager.corpses.has(corpse): break
+		var hp_before = player.hp
+		_current_game_state = TurnPhase.ENEMY_TURN
+		await _end_player_turn(action_floor_epoch, "butcher")
+		if action_floor_epoch != _floor_epoch: return
+		if not is_instance_valid(player) or player.hp <= 0 or player.hp < hp_before or player.position != origin: break
+		completed = step + 1
+		if completed < stats.turns:
+			var hp_before_pause = player.hp
+			await get_tree().create_timer(0.08).timeout
+			if not is_instance_valid(player) or player.hp < hp_before_pause: break
+	if action_floor_epoch != _floor_epoch: return
+	if _is_butchering and completed == stats.turns:
+		corpse_manager.finish_butchering(corpse, stats)
+	elif log_ui:
+		log_ui.add_log("解体を中断した。", Color.GRAY)
+	_is_butchering = false
 	_is_processing_action = false
+	if is_instance_valid(player) and player.hp > 0:
+		_current_game_state = TurnPhase.PLAYER_TURN
 
 func _spawn_ally_near_player(data: Dictionary):
 	if not player or not is_instance_valid(player):
@@ -3448,6 +3483,7 @@ func _change_floor(target_floor: int, target_branch: int = 0, is_upward: bool = 
 		if target_floor > 3:
 			return
 	_floor_epoch += 1
+	_is_butchering = false
 	if corpse_manager: corpse_manager.clear_all()
 	player.take_pending_action()
 	player.record_action("stairs", false)

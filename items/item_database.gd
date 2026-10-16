@@ -8,6 +8,7 @@ const ITEM_DATA_DIR = "res://items/data"
 # directory listing), so we must enumerate .tres files explicitly here.
 const ITEM_RESOURCE_FILES = [
 	"butchered_meat.tres",
+	"prime_meat.tres",
 	"berry.tres",
 	"cross_shield.tres",
 	"ether.tres",
@@ -390,7 +391,7 @@ static func get_random_item(floor_depth: int = 1) -> BaseItem:
 	var items = get_all_items()
 	
 	# Monster part IDs that should only drop from enemies
-	var monster_parts = ["slime_leg", "minotaur_horn", "goblin_arm", "spider_leg", "spark_core", "butchered_meat"]
+	var monster_parts = ["slime_leg", "minotaur_horn", "goblin_arm", "spider_leg", "spark_core", "butchered_meat", "prime_meat"]
 	
 	# Filter based on floor and type
 	var spawnable_items = []

@@ -26,7 +26,8 @@ func run_test():
 	var adjacent = manager.add_corpse("goblin", "小鬼", Vector2(26, 25) * 32)
 	var underfoot = manager.add_corpse("bat", "コウモリ", main.player.position)
 	var distant = manager.add_corpse("goblin", "小鬼", Vector2(29, 25) * 32)
-	check(manager.butcher_near_player(), "Butchering failed")
+	check(manager.find_butcher_target() == underfoot, "Did not select corpse underfoot")
+	check(manager.finish_butchering(underfoot, {"success": 1.0, "special": 0.0}), "Butchering failed")
 	check(not manager.corpses.has(underfoot) and manager.corpses.has(adjacent), "Did not prefer corpse underfoot")
 	check(manager.corpses.has(distant), "Consumed distant corpse")
 	var meat_count = 0
@@ -37,6 +38,16 @@ func run_test():
 	check(meat_count == 1, "Wrong meat yield")
 	var turn_before = main._turn_count
 	var gold_before = main.player.gold
+	main.player.strength = 31
+	main.player.dexterity = 30
+	var seed_found = false
+	for seed_value in range(100):
+		manager.rng.seed = seed_value
+		if manager.rng.randf() < 0.95:
+			manager.rng.seed = seed_value
+			seed_found = true
+			break
+	check(seed_found, "Could not seed successful roll")
 	await main._handle_butcher()
 	check(main._turn_count == turn_before + 1 and main.player.last_action_id == "butcher", "Butcher did not consume exactly one turn")
 	check(main.player.gold == gold_before and not manager.corpses.has(adjacent), "Butcher changed gold or left corpse")

@@ -38,8 +38,15 @@ func remove_corpse(corpse):
 func clear_all():
 	for corpse in corpses.duplicate(): remove_corpse(corpse)
 
-func butcher_near_player() -> bool:
-	if main._is_on_world_map: return false
+func get_butchery_stats(player) -> Dictionary:
+	return {
+		"turns": clampi(31 - player.get_total_strength() * 1.5, 1, 30),
+		"success": clampf(0.45 + player.get_total_dexterity() * 0.05, 0.05, 0.95),
+		"special": clampf(player.get_total_intelligence() * 0.02, 0.0, 0.5),
+	}
+
+func find_butcher_target():
+	if main._is_on_world_map: return null
 	var origin = main.tile_map.local_to_map(main.player.position)
 	var target = null
 	var best_distance = INF
@@ -52,12 +59,24 @@ func butcher_near_player() -> bool:
 		if distance < best_distance:
 			target = corpse
 			best_distance = distance
-	if target == null: return false
+	return target
+
+func finish_butchering(target, stats: Dictionary) -> bool:
+	if not is_instance_valid(target) or not corpses.has(target): return false
+	var log_ui = main.get_node_or_null("/root/LogUI")
+	if rng.randf() >= stats.success:
+		if log_ui: log_ui.add_log("%s の解体に失敗し、死体を損なった。" % target.enemy_name, Color.GRAY)
+		remove_corpse(target)
+		return false
 	var meat = ItemDatabase.get_item_by_id("butchered_meat")
 	if meat == null: return false
 	main.spawn_world_item(meat, Vector2(target.death_grid) * MapDefinitions.TILE_SIZE)
-	var log_ui = main.get_node_or_null("/root/LogUI")
 	if log_ui: log_ui.add_log("%s の死体を解体し、肉を取り出した。" % target.enemy_name, Color(0.8, 0.65, 0.45))
+	if rng.randf() < stats.special:
+		var special_meat = ItemDatabase.get_item_by_id("prime_meat")
+		if special_meat:
+			main.spawn_world_item(special_meat, Vector2(target.death_grid) * MapDefinitions.TILE_SIZE)
+			if log_ui: log_ui.add_log("希少な部位を見極め、上質な肉も取り出した！", Color.GOLD)
 	remove_corpse(target)
 	return true
 

@@ -65,3 +65,4 @@ res://workdesk/log_cleanup_test.gd
 res://ui/entity_list_ui.gd
 res://ui/dialog_menu.tscn
 res://ui/game_ui.gd
+res://workdesk/butcher_village_test.gd

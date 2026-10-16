@@ -1,0 +1,231 @@
+ERROR: Could not create directory: 'user://D:'.
+   at: make_dir_recursive (core/io/dir_access.cpp:178)
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+
+InputManager: _ready() called
+Setting up numpad inputs...
+Inventory toggle key (I/ESC) has been set up
+Log toggle key (L) has been set up
+Skill toggle key (K) has been set up
+  - Mapped TAB and S to target_enemy
+  - Mapped Kp 7 to ui_up_left
+  - Mapped Home to ui_up_left
+  - Mapped Kp 9 to ui_up_right
+  - Mapped PageUp to ui_up_right
+  - Mapped Kp 1 to ui_down_left
+  - Mapped End to ui_down_left
+  - Mapped Kp 3 to ui_down_right
+  - Mapped PageDown to ui_down_right
+InputMap actions: [&"ui_accept", &"ui_select", &"ui_cancel", &"ui_close_dialog", &"ui_close_dialog.macos", &"ui_focus_next", &"ui_focus_prev", &"ui_left", &"ui_right", &"ui_up", &"ui_down", &"ui_page_up", &"ui_page_down", &"ui_home", &"ui_end", &"ui_accessibility_drag_and_drop", &"ui_cut", &"ui_copy", &"ui_focus_mode", &"ui_paste", &"ui_undo", &"ui_redo", &"ui_text_completion_query", &"ui_text_completion_accept", &"ui_text_completion_replace", &"ui_text_newline", &"ui_text_newline_blank", &"ui_text_newline_above", &"ui_text_indent", &"ui_text_dedent", &"ui_text_backspace", &"ui_text_backspace_word", &"ui_text_backspace_word.macos", &"ui_text_backspace_all_to_left", &"ui_text_backspace_all_to_left.macos", &"ui_text_delete", &"ui_text_delete_word", &"ui_text_delete_word.macos", &"ui_text_delete_all_to_right", &"ui_text_delete_all_to_right.macos", &"ui_text_caret_left", &"ui_text_caret_word_left", &"ui_text_caret_word_left.macos", &"ui_text_caret_right", &"ui_text_caret_word_right", &"ui_text_caret_word_right.macos", &"ui_text_caret_up", &"ui_text_caret_down", &"ui_text_caret_line_start", &"ui_text_caret_line_start.macos", &"ui_text_caret_line_end", &"ui_text_caret_line_end.macos", &"ui_text_caret_page_up", &"ui_text_caret_page_down", &"ui_text_caret_document_start", &"ui_text_caret_document_start.macos", &"ui_text_caret_document_end", &"ui_text_caret_document_end.macos", &"ui_text_caret_add_below", &"ui_text_caret_add_below.macos", &"ui_text_caret_add_above", &"ui_text_caret_add_above.macos", &"ui_text_scroll_up", &"ui_text_scroll_up.macos", &"ui_text_scroll_down", &"ui_text_scroll_down.macos", &"ui_text_select_all", &"ui_text_select_word_under_caret", &"ui_text_select_word_under_caret.macos", &"ui_text_add_selection_for_next_occurrence", &"ui_text_skip_selection_for_next_occurrence", &"ui_text_clear_carets_and_selection", &"ui_text_toggle_insert_mode", &"ui_menu", &"ui_text_submit", &"ui_unicode_start", &"ui_graph_duplicate", &"ui_graph_delete", &"ui_graph_follow_left", &"ui_graph_follow_left.macos", &"ui_graph_follow_right", &"ui_graph_follow_right.macos", &"ui_filedialog_delete", &"ui_filedialog_up_one_level", &"ui_filedialog_refresh", &"ui_filedialog_show_hidden", &"ui_filedialog_find", &"ui_filedialog_focus_path", &"ui_filedialog_focus_path.macos", &"ui_swap_input_direction", &"ui_colorpicker_delete_preset", &"ui_up_left", &"ui_up_right", &"ui_down_left", &"ui_down_right", &"target_enemy", &"toggle_inventory", &"toggle_log", &"toggle_skills", &"toggle_fullscreen"]
+Log added: ローグライクへようこそ！
+Log added: 'H' キーでヘルプを表示
+Log added: 'L'キーでログ：通常 → 拡大 → 非表示
+Enhanced LogUI initialized!
+GameUI loaded successfully
+WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpinan8qo8qn - using text path instead: res://icon.svg
+   at: load (scene/resources/resource_format_text.cpp:500)
+   GDScript backtrace (most recent call first):
+       [0] run_test (res://workdesk/butchery_duration_test.gd:13)
+Current Skills: []
+[ItemDatabase] Loaded 42 items from resources
+Equipment grid changed!
+Stats Updated: HP: 10/15, ATK: 2, DEF: 0 [◎完璧]: 会心+25% 命中+10%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 0 [◎完璧]: 会心+25% 命中+10%
+Current Skills: []
+Equipment grid changed!
+Stats Updated: HP: 10/15, ATK: 2, DEF: 2 [〇良好]: 会心+15%
+Log added: 装備変更: HP 15, 攻撃 2, 防御 2 [〇良好]: 会心+15%
+Current Skills: []
+Current Skills: ["heal"]
+ERROR: Cannot open file 'res://default_environment.tres'.
+   at: load (scene/resources/resource_format_text.cpp:1430)
+   GDScript backtrace (most recent call first):
+       [0] _ready (res://world/main.gd:241)
+       [1] run_test (res://workdesk/butchery_duration_test.gd:14)
+ERROR: Failed loading resource: res://default_environment.tres.
+   at: _load (core/io/resource_loader.cpp:343)
+   GDScript backtrace (most recent call first):
+       [0] _ready (res://world/main.gd:241)
+       [1] run_test (res://workdesk/butchery_duration_test.gd:14)
+Dungeon placed at: (5, 4)
+NPC Spawned: 商人 at (1280.0, 704.0)
+NPC Spawned: 商人 at (352.0, 1280.0)
+NPC Spawned: はぐれ魔道士 at (160.0, 928.0)
+NPC Spawned: 商人 at (320.0, 992.0)
+NPC Spawned: 村人 at (320.0, 928.0)
+Log added: 平穏な里に辿り着いた。
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Equipment grid changed!
+Stats Updated: HP: 10/10, ATK: 2, DEF: 0
+Current Skills: ["heal"]
+[ItemDatabase] Loaded 42 items from resources
+Log added: 小鬼 の死体を解体し、肉を取り出した。
+[ItemDatabase] Loaded 42 items from resources
+Log added: 希少な部位を見極め、上質な肉も取り出した！
+Log added: 小鬼 の解体に失敗し、死体を損なった。
+Log added: 解体開始：30ターン、成功率95%、特別入手率50%（成功時）。Escで中断
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+[ItemDatabase] Loaded 42 items from resources
+Log added: 小鬼 の死体を解体し、肉を取り出した。
+Log added: 解体開始：30ターン、成功率95%、特別入手率50%（成功時）。Escで中断
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+Log added: 解体を中断した。
+Log added: 解体開始：30ターン、成功率95%、特別入手率50%（成功時）。Escで中断
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+Player took 1 damage. HP: 9/10
+Log added: 解体を中断した。
+Log added: 解体開始：30ターン、成功率95%、特別入手率50%（成功時）。Escで中断
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Enemy turns processing complete. Starting player turn.
+下り階段を下りた！ Floor: 2
+Log added: 下り階段を下りた！ 階層 2 へ (Branch 0)
+Ammo replenished. Current Reserve: 20
+Log added: 弾薬を補充した (予備: 20)
+_update_skill_ui() called with skills: ["heal"]
+PlayerUi found, calling update_skill_bar
+Spawned enemy: 小鬼 at (18, 4)
+Spawned enemy: 人魂 at (20, 4)
+Spawned enemy: オーク at (31, 32)
+Spawned enemy: 墓守 at (32, 31)
+Spawned enemy: 人魂 at (27, 21)
+Spawned enemy: 小鬼 at (32, 7)
+Spawned enemy: 墓守 at (31, 7)
+Spawned enemy: 毒キノコ at (17, 20)
+Spawned enemy: オーク at (19, 24)
+Spawned enemy: 毒キノコ at (13, 11)
+Spawned enemy: 小鬼 at (17, 30)
+Spawned enemy: 小鬼 at (39, 40)
+Spawning items...
+[ItemDatabase] Loaded 42 items from resources
+Item spawned at: (288.0, 896.0)
+[ItemDatabase] Loaded 42 items from resources
+Item spawned at: (1344.0, 864.0)
+[ItemDatabase] Loaded 42 items from resources
+Item spawned at: (800.0, 1152.0)
+[ItemDatabase] Loaded 42 items from resources
+Item spawned at: (1248.0, 1344.0)
+Total items spawned: 4
+Total traps spawned: 5
+BUTCHERY_DURATION_TEST failures=0
+WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
+   at: cleanup (core/object/object.cpp:2663)
+ERROR: 1 resources still in use at exit (run with --verbose for details).
+   at: clear (core/io/resource.cpp:810)
