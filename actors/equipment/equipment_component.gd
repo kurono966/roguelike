@@ -16,6 +16,7 @@ func _ready():
 	
 	# Initialize Equipment Grid (e.g., 6x6)
 	equipment_data = InventoryGridData.new(Vector2i(6, 6))
+	equipment_data.equipment_only = true
 	
 	emit_signal("component_initialized")
 
@@ -28,6 +29,8 @@ func add_to_bag(item: BaseItem) -> bool:
 
 # Helper to equip item (find free space in equipment grid)
 func equip_item(item: BaseItem) -> bool:
+	if item == null or not item.is_equippable():
+		return false
 	var pos = equipment_data.find_free_space(item)
 	if pos.x != -1:
 		return equipment_data.place_item(item, pos.x, pos.y)

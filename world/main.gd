@@ -5695,16 +5695,25 @@ func _deserialize_player(p, data: Dictionary):
 		p.equipment_component.bag_data.clear()
 		
 		# Load equipment items
+		var unequippable_items: Array[BaseItem] = []
 		for item_dict in equipment_data.get("items", []):
 			var item = _deserialize_item(item_dict)
 			if item:
-				p.equipment_component.equipment_data.add_item(item)
+				if not item.is_equippable():
+					unequippable_items.append(item)
+				else:
+					p.equipment_component.equipment_data.add_item(item)
 		
 		# Load bag items
 		for item_dict in bag_data.get("items", []):
 			var item = _deserialize_item(item_dict)
 			if item:
 				p.equipment_component.bag_data.add_item(item)
+		# Preserve existing bag placements before returning formerly equipped consumables.
+		for item in unequippable_items:
+			item.grid_position = Vector2i(-1, -1)
+			if not p.equipment_component.add_to_bag(item):
+				spawn_world_item(item, p.position)
 	
 	# 4. HP/MP (Set LAST so intermediate equipment changes don't cap them incorrectly)
 	p.max_hp = data.get("max_hp", 10)
@@ -5773,6 +5782,20 @@ func _deserialize_item(item_dict: Dictionary) -> BaseItem:
 	var skills = item_dict.get("granted_skills", [])
 	for s in skills:
 		item.granted_skills.append(str(s))
+
+	# Older generators mistook consumable effects for equipment affixes.
+	var base_id = item.id.split("_generated_")[0]
+	var definition = ItemDatabase.get_item_by_id(base_id)
+	if definition:
+		item.equipment_type = definition.equipment_type
+		if not definition.is_equippable() and item.id != base_id:
+			var saved_position = item.grid_position
+			item = definition.duplicate(true) as BaseItem
+			item.grid_position = saved_position
+	item.heal = int(item_dict.get("heal", definition.heal if definition else 0))
+	item.restore_mp = int(item_dict.get("restore_mp", definition.restore_mp if definition else 0))
+	item.restore_hunger = int(item_dict.get("restore_hunger", definition.restore_hunger if definition else 0))
+	item.ensure_connectors()
 	
 	return item
 

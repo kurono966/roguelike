@@ -368,7 +368,7 @@ func _on_view_item_activated(item, source_view, is_equipped):
 		_unequip_item(item)
 	elif source_view == floor_view:
 		# 床アイテムのデフォルトアクション
-		if item.equipment_type >= 0:
+		if item.is_equippable():
 			# 装備を試みる
 			if player and player.equipment_component and player.equipment_component.equip_item(item):
 				_remove_world_item_of(item)
@@ -385,7 +385,7 @@ func _on_view_item_activated(item, source_view, is_equipped):
 				player.trigger_turn_end()
 	else:
 		# バッグ内
-		if item.equipment_type >= 0:
+		if item.is_equippable():
 			_equip_item(item)
 		else:
 			_use_item(item)

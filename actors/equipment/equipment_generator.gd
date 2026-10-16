@@ -29,7 +29,9 @@ const SUFFIXES = [
 
 static func enhance_item(base_item: BaseItem, level: int = 1) -> BaseItem:
 	if not _is_equipment(base_item):
-		return base_item.duplicate(true) as BaseItem
+		var copy = base_item.duplicate(true) as BaseItem
+		copy.ensure_connectors()
+		return copy
 
 	var item = base_item.duplicate(true) as BaseItem
 	if item == null:
@@ -62,6 +64,8 @@ static func enhance_item(base_item: BaseItem, level: int = 1) -> BaseItem:
 
 static func _generate_connectors(item: BaseItem, rng: RandomNumberGenerator):
 	item.connectors.clear()
+	if not item.is_equippable():
+		return
 	var colors = ["red", "blue", "yellow", "purple"]
 	var preferred = "yellow"
 	if item.attack > item.defense and item.attack > 0:
@@ -83,19 +87,7 @@ static func _generate_connectors(item: BaseItem, rng: RandomNumberGenerator):
 		item.connectors.append({"cell": candidate.cell, "direction": candidate.direction, "color": color})
 
 static func _is_equipment(item: BaseItem) -> bool:
-	if item.heal > 0 or item.restore_mp > 0 or item.restore_hunger > 0:
-		return false
-	if item.id.begins_with("scroll_") or item.id == "warp_grass":
-		return false
-	return item.attack != 0 \
-		or item.defense != 0 \
-		or item.max_hp != 0 \
-		or item.max_mp != 0 \
-		or item.strength != 0 \
-		or item.dexterity != 0 \
-		or item.intelligence != 0 \
-		or not item.effects.is_empty() \
-		or not item.granted_skills.is_empty()
+	return item != null and item.is_equippable()
 
 static func _roll_rarity(rng: RandomNumberGenerator) -> int:
 	var roll = rng.randf()

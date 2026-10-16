@@ -12,14 +12,13 @@ func show_context_menu(item: BaseItem, screen_position: Vector2, context_type: S
 	clear()
 	
 	# 消費アイテムかどうかの判定
-	var is_consumable = item.heal > 0 or item.restore_mp > 0 or item.restore_hunger > 0 or \
-		item.id in ["potion_str", "scroll_teleport", "warp_grass", "scroll_mapping", "scroll_observation", "potion_root", "potion_double"]
+	var is_consumable = item.is_consumable()
 	
 	if context_type == "floor":
 		add_item("拾う", 4)
 		
 		# 装備可能なら装備オプション
-		if item.equipment_type >= 0:
+		if item.is_equippable():
 			add_item("装備", 2)
 			
 		# 消費アイテムなら使用オプション
@@ -34,7 +33,7 @@ func show_context_menu(item: BaseItem, screen_position: Vector2, context_type: S
 		
 		if context_type == "equipment":
 			add_item("外す", 3)
-		elif item.equipment_type >= 0:
+		elif item.is_equippable():
 			# 装備可能なら装備オプション
 			add_item("装備", 2)
 		

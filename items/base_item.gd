@@ -32,6 +32,10 @@ var grid_position: Vector2i = Vector2i(-1, -1)
 func is_consumable() -> bool:
 	return equipment_type == -1
 
+# Equipment eligibility is defined by its type, never by its stats or effects.
+func is_equippable() -> bool:
+	return not EquipmentSlot.get_allowed_slots(equipment_type).is_empty()
+
 var name: String:
 	get:
 		return display_name
@@ -124,6 +128,9 @@ func rotate():
 	connectors = new_connectors
 
 func ensure_connectors():
+	if not is_equippable():
+		connectors.clear()
+		return
 	if not connectors.is_empty() or shape.is_empty():
 		return
 	# Consumables don't need connectors

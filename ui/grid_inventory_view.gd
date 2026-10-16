@@ -247,6 +247,7 @@ func _create_item_view(item: BaseItem) -> Control:
 	item_control.item = item
 	item_control.parent_grid = self
 	
+	item.ensure_connectors()
 	if not item.connectors.is_empty():
 		_add_connector_visuals(item_control, item)
 	

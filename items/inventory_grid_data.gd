@@ -5,6 +5,7 @@ signal grid_changed
 
 var size: Vector2i
 var items: Array[BaseItem] = []
+var equipment_only: bool = false
 
 # 2D array storing references to items. null means empty.
 # dimensions: [x][y]
@@ -28,6 +29,8 @@ func clear():
 	grid_changed.emit()
 
 func can_place_item(item: BaseItem, x: int, y: int, ignore_item: BaseItem = null) -> bool:
+	if item == null or (equipment_only and not item.is_equippable()):
+		return false
 	if x < 0 or y < 0: return false
 	
 	for cell in item.shape:

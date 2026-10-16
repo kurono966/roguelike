@@ -40,3 +40,8 @@ res://world/liquid_manager.gd
 res://workdesk/liquid_flow_test.gd
 res://world/elevation_blur.gd
 res://workdesk/height_visibility_test.gd
+res://assets/ascii_art_generator.gd
+res://actors/equipment/equipment_component.gd
+res://actors/equipment/equipment_generator.gd
+res://items/inventory_grid_data.gd
+res://ui/unified_inventory_ui.gd
