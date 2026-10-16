@@ -68,6 +68,9 @@ func _setup_minimap():
 	_floor_label.text = "地上"
 	_floor_label.add_theme_color_override("font_color", Color(0.9, 0.88, 0.85)) # Warm off-white
 	header_hbox.add_child(_floor_label)
+	map_title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_floor_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	preload("res://ui/panel_drag.gd").attach(_minimap_panel, header_hbox)
 
 	var sep = ColorRect.new()
 	sep.color = Color(0.25, 0.25, 0.28, 0.4)

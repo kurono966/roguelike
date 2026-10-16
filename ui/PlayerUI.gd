@@ -91,6 +91,7 @@ func _ready():
 	header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	header.add_theme_color_override("font_color", Color(0.85, 0.68, 0.25)) # Dull Gold
 	vbox.add_child(header)
+	preload("res://ui/panel_drag.gd").attach(status_panel, header)
 	
 	# Separator line
 	var sep1 = ColorRect.new()
@@ -367,10 +368,13 @@ func _ensure_info_container():
 	_info_container.name = "BottomLeftInfo"
 	_info_container.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	_info_container.offset_left = 20
-	_info_container.offset_bottom = -160 # Aligned with the log panel
+	# ログ上端（下から180px）から10px空け、情報は上方向へ伸ばす。
+	_info_container.offset_top = -190
+	_info_container.offset_bottom = -190
 	_info_container.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_info_container.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_info_container)
+	preload("res://ui/panel_drag.gd").attach(_info_container, _info_container)
 
 func create_ammo_label_if_needed():
 	if ammo_label: return
@@ -434,7 +438,16 @@ func create_skill_bar():
 	skill_bar_container.add_theme_constant_override("separation", 6)
 	skill_bar_container.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	skill_bar_container.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	shortcut_panel.add_child(skill_bar_container)
+	var shortcut_vbox = VBoxContainer.new()
+	shortcut_panel.add_child(shortcut_vbox)
+	var drag_header = Label.new()
+	drag_header.text = "⋮⋮ ショートカット ⋮⋮"
+	drag_header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	drag_header.add_theme_font_size_override("font_size", 12)
+	drag_header.add_theme_color_override("font_color", Color(0.65, 0.65, 0.7))
+	shortcut_vbox.add_child(drag_header)
+	shortcut_vbox.add_child(skill_bar_container)
+	preload("res://ui/panel_drag.gd").attach(shortcut_panel, drag_header)
 	
 	# Initialize 9 slots
 	for i in range(MAX_SKILL_SLOTS):

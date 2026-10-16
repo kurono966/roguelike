@@ -4,6 +4,7 @@ extends CanvasLayer
 var log_rich_label: RichTextLabel
 var log_panel: Panel
 var mode_label: Label
+var _panel_drag: Node
 var log_history: Array = []
 const MAX_LINES = 250  # 履歴として保持する行数
 enum DisplayMode { NORMAL, EXPANDED, HIDDEN }
@@ -41,6 +42,10 @@ func _ready():
 	mode_label.add_theme_font_size_override("font_size", 12)
 	mode_label.add_theme_color_override("font_color", Color(0.65, 0.67, 0.72))
 	log_panel.add_child(mode_label)
+	mode_label.set_anchors_preset(Control.PRESET_TOP_WIDE)
+	mode_label.offset_left = 10
+	mode_label.offset_right = -10
+	_panel_drag = preload("res://ui/panel_drag.gd").attach(log_panel, mode_label)
 
 	# RichTextLabelの作成
 	log_rich_label = RichTextLabel.new()
@@ -180,6 +185,9 @@ func _apply_display_mode():
 	log_panel.offset_right = 20 + panel_size.x
 	log_panel.offset_bottom = -20
 	log_panel.offset_top = -20 - panel_size.y
+	if _panel_drag:
+		log_panel.position += _panel_drag.displacement
+		_panel_drag.call_deferred("_clamp_panel")
 	for font_key in ["normal_font_size", "bold_font_size", "italics_font_size", "bold_italics_font_size", "mono_font_size"]:
 		if expanded:
 			log_rich_label.add_theme_font_size_override(font_key, 20)

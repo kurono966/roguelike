@@ -1,0 +1,51 @@
+Godot Engine v4.6.3.stable.official.7d41c59c4 - https://godotengine.org
+ERROR: Could not create editor data directory: C:/Users/krnm3/AppData/Roaming/Godot
+   at: EditorPaths (editor/file_system/editor_paths.cpp:200)
+ERROR: Could not create editor config directory: C:/Users/krnm3/AppData/Roaming/Godot
+   at: EditorPaths (editor/file_system/editor_paths.cpp:215)
+
+ERROR: Could not open 'user://' directory: 'user://'.
+   at: _get_and_create_snapshot_storage_dir (modules/objectdb_profiler/editor/objectdb_profiler_panel.cpp:154)
+ERROR: Safe save failed. This may be a permissions problem, but also may happen because you are running a paranoid antivirus. If this is the case, please switch to Windows Defender or disable the 'safe save' option in editor settings. This makes it work, but increases the risk of file corruption in a crash.
+   at: _close (drivers/windows/file_access_windows.cpp:276)
+ERROR: Cannot open directory 'C:/Users/krnm3/AppData/Roaming/Godot/feature_profiles'.
+   at: _update_profile_list (editor/settings/editor_feature_profile.cpp:390)
+[   0% ] first_scan_filesystem | Started プロジェクトの初期化 (5 steps)
+[   0% ] first_scan_filesystem | ファイル構造をスキャン中...
+[  16% ] first_scan_filesystem | グローバルクラス名を読み込み中...
+[  33% ] first_scan_filesystem | GDExtensionを検証中...
+[  50% ] first_scan_filesystem | 自動読み込みスクリプトを作成中...
+[  66% ] first_scan_filesystem | プラグインを初期化中...
+[  83% ] first_scan_filesystem | ファイルスキャンを開始...
+[ DONE ] first_scan_filesystem
+
+[   0% ] update_scripts_classes | Started グローバルクラスを登録中... (12 steps)
+[   0% ] update_scripts_classes | 
+[   7% ] update_scripts_classes | 
+[  15% ] update_scripts_classes | 
+[  23% ] update_scripts_classes | 
+[  30% ] update_scripts_classes | 
+[  38% ] update_scripts_classes | 
+[  46% ] update_scripts_classes | 
+[  53% ] update_scripts_classes | 
+[  61% ] update_scripts_classes | 
+[  69% ] update_scripts_classes | 
+[  76% ] update_scripts_classes | 
+[  84% ] update_scripts_classes | 
+[ DONE ] update_scripts_classes
+
+[   0% ] loading_editor_layout | Started エディターの読み込み (5 steps)
+[   0% ] loading_editor_layout | エディターレイアウトを読み込み中...
+[  16% ] loading_editor_layout | ドックを読み込み中...
+[  33% ] loading_editor_layout | シーンを再オープン中...
+WARNING: res://actors/enemy/enemy.tscn:4 - ext_resource, invalid UID: uid://kpinan8qo8qn - using text path instead: res://icon.svg
+   at: load (scene/resources/resource_format_text.cpp:500)
+[  50% ] loading_editor_layout | 中央エディターを読み込み中...
+[  66% ] loading_editor_layout | プラグインのウィンドウレイアウトを読み込み中...
+[  83% ] loading_editor_layout | エディターレイアウトの準備完了。
+[ DONE ] loading_editor_layout
+
+ERROR: Can't save resource to empty path. Provide non-empty path or a Resource with non-empty resource_path.
+   at: save (core/io/resource_saver.cpp:106)
+ERROR: Error saving editor settings to 
+   at: save (editor/settings/editor_settings.cpp:1404)

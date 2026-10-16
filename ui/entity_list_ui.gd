@@ -19,6 +19,7 @@ func _ready():
 	# Get references from scene
 	panel = $Panel
 	list_container = $Panel/VBox/ListContainer
+	preload("res://ui/panel_drag.gd").attach(panel, $Panel/VBox/Header)
 
 func _get_panel_style() -> StyleBoxFlat:
 	var style = StyleBoxFlat.new()
