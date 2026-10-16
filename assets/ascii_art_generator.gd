@@ -15,6 +15,17 @@ const GLYPHS: Dictionary = {
 		" #     ",
 		"  #### "
 	],
+	"hostile_npc": [ # Preserve the NPC's @ silhouette with two raised horns.
+		" #     # ",
+		" ##   ## ",
+		"   ###   ",
+		"  #   #  ",
+		"  # ###  ",
+		"  # # #  ",
+		"  # ###  ",
+		"  #      ",
+		"   ####  "
+	],
 	# Lowercase enemies
 	"z": [ # Zakomushi / Vermin
 		" ##### ",

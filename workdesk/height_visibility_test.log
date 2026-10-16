@@ -45,12 +45,11 @@ ERROR: Failed loading resource: res://default_environment.tres.
    GDScript backtrace (most recent call first):
        [0] _ready (res://world/main.gd:247)
        [1] _run (res://workdesk/height_visibility_test.gd:16)
-Warning: Failed to place dungeon on the world map. Placing fallback.
-Fallback Dungeon placed at: (49, 2)
-NPC Spawned: 村の守備隊 at (928.0, 320.0)
-NPC Spawned: 商人 at (1216.0, 160.0)
-NPC Spawned: はぐれ魔道士 at (224.0, 1440.0)
-NPC Spawned: 村人 at (640.0, 352.0)
+Dungeon placed at: (39, 3)
+NPC Spawned: 商人 at (1280.0, 1024.0)
+NPC Spawned: 村人 at (448.0, 128.0)
+NPC Spawned: 放浪の剣士 at (1280.0, 992.0)
+NPC Spawned: はぐれ魔道士 at (640.0, 160.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
@@ -60,7 +59,12 @@ _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
-Enemy took 1 damage. HP: 4
+Enemy turns processing complete. Starting player turn.
+Enemy took 1 damage. HP: 99
+ザコムシ attacks ザコムシ for 1 damage!
+Log added: ザコムシの攻撃！ ザコムシに1のダメージを与えた。
+Enemy turns processing complete. Starting player turn.
+Enemy took 1 damage. HP: 98
 Log added: ザコムシ に命中！ (1)
 HEIGHT_VISIBILITY_TEST failures=0
 WARNING: ObjectDB instances leaked at exit (run with --verbose for details).

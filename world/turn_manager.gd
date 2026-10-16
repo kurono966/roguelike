@@ -141,25 +141,9 @@ func process_enemy_turns():
 			target_grid_pos = tile_map.local_to_map(target_node.position)
 			dist_to_target = Vector2(enemy_grid_pos).distance_to(Vector2(target_grid_pos))
 			
-			# Blind effect: severely limits vision range (1 tile max)
-			var vision_range = 10
-			if enemy.has_method("is_blinded") and enemy.is_blinded():
-				vision_range = 1
-			
-			if dist_to_target <= vision_range:
-				if main_node._has_line_of_sight(enemy_grid_pos, target_grid_pos):
-					target_visible_to_enemy = true
-			
-			# Hiding in Grass Logic (only against player)
-			if target_node == player and main_node._map_data[target_grid_pos.x][target_grid_pos.y] == CellType.GRASS:
-				if dist_to_target > 1.5:
-					target_visible_to_enemy = false
-					
+			target_visible_to_enemy = can_actor_see(enemy, target_node)
+
 		# AI Decision Making
-		var is_enemy_in_fov = false
-		if main_node.visibility_manager and enemy_grid_pos.x >= 0 and enemy_grid_pos.x < MAP_WIDTH and enemy_grid_pos.y >= 0 and enemy_grid_pos.y < MAP_HEIGHT:
-			is_enemy_in_fov = main_node.visibility_manager.visible_tiles[enemy_grid_pos.x][enemy_grid_pos.y]
-			
 		var moved = false
 		var acted = false
 		var is_terrified = "fear" in enemy and enemy.fear >= 50
@@ -196,7 +180,7 @@ func process_enemy_turns():
 						acted = true
 		
 		# Update Memory
-		if is_instance_valid(enemy) and is_enemy_in_fov and target_visible_to_enemy and is_instance_valid(target_node):
+		if is_instance_valid(enemy) and target_visible_to_enemy and is_instance_valid(target_node):
 			if "last_known_player_pos" in enemy:
 				enemy.last_known_player_pos = target_grid_pos
 		
@@ -308,7 +292,8 @@ func process_enemy_turns():
 			if not is_instance_valid(enemy) or enemy.is_queued_for_deletion(): continue
 			var enemy_grid_pos = tile_map.local_to_map(enemy.position)
 			var dist = ally_grid_pos.distance_to(enemy_grid_pos)
-			if dist <= ally.attack_range:
+			if enemy == ally or enemy.is_in_group("allies"): continue
+			if dist <= ally.attack_range and can_actor_see(ally, enemy):
 				nearby_enemies.append({"enemy": enemy, "dist": dist, "pos": enemy_grid_pos})
 		
 		# Sort by distance and attack closest
@@ -398,9 +383,22 @@ func _get_closest_hostile(actor: Node2D) -> Node2D:
 	for h in hostiles:
 		if not is_instance_valid(h) or h.is_queued_for_deletion(): continue
 		if ("hp" in h and h.hp <= 0): continue
+		if not can_actor_see(actor, h): continue
 		var d = actor.position.distance_to(h.position)
 		if d < min_dist:
 			min_dist = d
 			closest = h
 			
 	return closest
+
+func can_actor_see(actor: Node2D, target: Node2D) -> bool:
+	if not is_instance_valid(actor) or not is_instance_valid(target) or target.is_queued_for_deletion(): return false
+	var origin = tile_map.local_to_map(actor.position)
+	var destination = tile_map.local_to_map(target.position)
+	var distance = Vector2(origin).distance_to(Vector2(destination))
+	var vision_range = 1.0 if actor.has_method("is_blinded") and actor.is_blinded() else 10.0
+	if distance > vision_range or not main_node._has_line_of_sight(origin, destination): return false
+	# Keep existing player grass concealment for hostile observers.
+	if target == player and main_node._map_data[destination.x][destination.y] == CellType.GRASS and distance > 1.5:
+		return false
+	return true

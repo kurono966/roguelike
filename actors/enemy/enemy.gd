@@ -212,7 +212,9 @@ func _load_enemy_sprite():
 	var id = enemy_id.to_lower()
 	
 	# Override base_color with unique color per enemy type for distinguishability
-	if not is_npc:
+	if is_hostile_to_player_only:
+		base_color = Color(0.9, 0.4, 0.4)
+	elif not is_npc:
 		var unique_colors = {
 			"zakomushi": Color(0.0, 1.0, 0.0),
 			"bat": Color(0.5, 0.0, 0.5),
@@ -351,6 +353,8 @@ func _draw():
 			draw_rect(Rect2(bar_x, bar_y, fill_width, 1), Color(1,1,1,0.3))
 
 func _get_ascii_char() -> String:
+	if is_hostile_to_player_only:
+		return "hostile_npc"
 	if is_npc:
 		return "@"
 	

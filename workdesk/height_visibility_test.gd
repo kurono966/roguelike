@@ -49,6 +49,23 @@ func _run():
 	check(not main._visible_tiles[27][25] and not main._explored_tiles[27][25], "Hidden valley leaked into FOV/exploration")
 	check(not enemy.visible and not main.visibility_manager.is_entity_visible_to_player(enemy), "Enemy behind ridge remained visible")
 	check(not main._has_line_of_sight(observer, target) and not main._has_line_of_sight(target, observer), "AI/attack LOS ignored the ridge")
+	check(not main.turn_manager.can_actor_see(enemy, main.player), "Enemy perception ignored ridge")
+	var npc = load("res://actors/enemy/enemy.tscn").instantiate()
+	npc.position = Vector2(observer) * 32
+	npc.is_npc = true
+	npc.add_to_group("npcs")
+	npc.add_to_group("entities")
+	main.add_child(npc)
+	check(not main.turn_manager.can_actor_see(npc, enemy), "Friendly NPC perception ignored ridge")
+	npc.add_to_group("allies")
+	check(not main.turn_manager.can_actor_see(npc, enemy), "Ally perception ignored ridge")
+	npc.attack_range = 4
+	npc.hit_rate = 1.0
+	enemy.hp = 100
+	enemy.max_hp = 100
+	enemy.status_effects["paralyze"] = {"duration": 20}
+	await main.turn_manager.process_enemy_turns()
+	check(enemy.hp == 100, "Ally attacked a target hidden behind high terrain")
 	var hp_before = enemy.hp
 	await main._handle_ranged_attack(main.player, target, 1, "arrow")
 	check(enemy.hp == hp_before, "Projectile passed through a terrain ridge")
@@ -58,6 +75,11 @@ func _run():
 	main._calculate_fov()
 	check(main._visible_tiles[27][25] and enemy.visible, "High observer cannot see into the valley")
 	check(main._has_line_of_sight(observer, target), "High-to-low LOS incorrectly blocked")
+	check(main.turn_manager.can_actor_see(npc, enemy), "Ally cannot see from high ground")
+	check(main.turn_manager.can_actor_see(enemy, npc), "Enemy cannot recognize visible high target")
+	check(main.turn_manager._get_closest_hostile(enemy) != null, "Enemy did not acquire a visible NPC/player")
+	await main.turn_manager.process_enemy_turns()
+	check(enemy.hp < hp_before, "Ally did not attack after target became visible")
 	await main._handle_ranged_attack(main.player, target, 1, "arrow")
 	check(enemy.hp < hp_before, "Projectile could not reach a visible low target")
 	# Each solid obstacle remains opaque even to high observers.
