@@ -21,6 +21,7 @@ func save_game(player: CharacterBody2D, main: Node2D) -> bool:
 	config.set_value("player", "dexterity", player.dexterity if "dexterity" in player else 10)
 	config.set_value("player", "intelligence", player.intelligence if "intelligence" in player else 10)
 	config.set_value("player", "level", player.level if "level" in player else 1)
+	config.set_value("player", "pending_growth_choices", player.pending_growth_choices)
 	config.set_value("player", "exp", player.exp if "exp" in player else 0)
 	config.set_value("player", "exp_to_next_level", player.exp_to_next_level if "exp_to_next_level" in player else 10)
 	config.set_value("player", "gold", player.gold if "gold" in player else 0)

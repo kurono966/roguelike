@@ -52,3 +52,5 @@ res://actors/enemy/enemy_data.gd
 res://world/corpse_manager.gd
 res://ui/help_ui.gd
 res://ui/log_ui.gd
+res://autoloads/game_state.gd
+res://ui/character_creation.gd

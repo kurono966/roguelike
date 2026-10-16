@@ -27,6 +27,8 @@ var skill_ids: Array[String] = ["", "heal", "blank_shot", "fireball", "teleport"
 func _ready():
 	var gs = get_node_or_null("/root/GameState")
 	is_detailed_mode = gs.detailed_character_creation if gs else false
+	growth_option.hide()
+	$Panel/VBoxContainer/DetailedContainer/GrowthLabel.hide()
 	class_container.visible = not is_detailed_mode
 	detailed_container.visible = is_detailed_mode
 	
@@ -68,7 +70,7 @@ func _update_ui():
 		txt_custom += "Max MP: %d\n" % (5 + custom_int * 2)
 		if swim_check.button_pressed:
 			txt_custom += "[color=cyan]Ability: Swimming[/color]\n"
-		txt_custom += "\nGrowth: %s\n" % _get_selected_growth_label()
+		txt_custom += "\nGrowth: Choose on each level up\n"
 		txt_custom += "Skill: %s\n" % _get_selected_skill_label()
 		txt_custom += "\n%s" % _get_build_summary()
 		txt_custom += "[/center]"

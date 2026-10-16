@@ -16,6 +16,7 @@ func setup(main: Node2D):
 	tile_map = main.tile_map
 
 func end_player_turn():
+	await player.wait_for_growth_choices()
 	# Check for bonus action (e.g. Speed Bonus)
 	if player and ("bonus_action_available" in player and player.bonus_action_available):
 		player.bonus_action_available = false
@@ -53,6 +54,7 @@ func end_player_turn():
 		main_node.shadow_clone_manager.tick()
 
 func start_player_turn():
+	await player.wait_for_growth_choices()
 	if player.hp <= 0: return
 
 	main_node._check_drowning()
@@ -82,6 +84,7 @@ func start_player_turn():
 	main_node._current_game_state = main_node.TurnPhase.PLAYER_TURN
 
 func process_enemy_turns():
+	await player.wait_for_growth_choices()
 	tile_map.clear_layer(main_node.LAYER_DEBUG)
 	
 	if main_node.has_method("_check_and_pull_neighbor_enemies"):
@@ -102,6 +105,7 @@ func process_enemy_turns():
 	all_actors.append_array(main_node.get_tree().get_nodes_in_group("npcs"))
 	
 	for child in all_actors:
+		await player.wait_for_growth_choices()
 		# GLOBAL DEATH CHECK
 		if player.hp <= 0:
 			print("Player is dead. Stopping enemy turns.")
@@ -120,6 +124,7 @@ func process_enemy_turns():
 		# Process status effects (DOT)
 		if child.has_method("process_turn_effects"):
 			child.process_turn_effects()
+		await player.wait_for_growth_choices()
 			
 		# Check if enemy died from DOT
 		if not is_instance_valid(child) or child.is_queued_for_deletion(): continue
@@ -277,9 +282,12 @@ func process_enemy_turns():
 	for ally in allies:
 		if not is_instance_valid(ally) or ally.is_queued_for_deletion(): continue
 		
+		await player.wait_for_growth_choices()
 		# Process status effects
 		if ally.has_method("process_turn_effects"):
 			ally.process_turn_effects()
+		await player.wait_for_growth_choices()
+		if not is_instance_valid(ally) or ally.is_queued_for_deletion(): continue
 		
 		# Skip if paralyzed
 		if ally.has_method("is_paralyzed") and ally.is_paralyzed():

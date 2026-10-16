@@ -759,50 +759,69 @@ func gain_exp(amount: int):
 	while exp >= exp_to_next_level:
 		level_up()
 
+signal growth_choices_finished
+var pending_growth_choices: int = 0
+var _growth_selection = null
+const GROWTH_OPTIONS = [
+	{"key": "strength", "label": "力 +1", "detail": "物理攻撃を強化。力3ごとに最大HPも上昇。"},
+	{"key": "dexterity", "label": "技 +1", "detail": "命中・会心・射撃などを強化。"},
+	{"key": "intelligence", "label": "知力 +1", "detail": "魔法を強化。最大MPも2上昇。"}
+]
+
+func _refresh_growth_stats():
+	var stats = _get_equipment_stats()
+	max_hp = BASE_MAX_HP + initial_hp_bonus + level_hp_bonus + stats.max_hp + int((strength + stats.strength) / 3)
+	max_mp = BASE_MAX_MP + level_mp_bonus + (intelligence + stats.intelligence) * 2 + stats.max_mp
+	hp = max_hp
+	mp = max_mp
+	if PlayerUi:
+		PlayerUi.update_level(level)
+		PlayerUi.update_hp(hp, max_hp)
+		PlayerUi.update_mp(mp, max_mp)
+
+func _show_growth_selection():
+	if pending_growth_choices <= 0 or not is_inside_tree(): return
+	if is_instance_valid(_growth_selection): return
+	_growth_selection = preload("res://ui/level_growth_selection.gd").new()
+	_growth_selection.player = self
+	add_child(_growth_selection)
+
+func choose_level_growth(key: String) -> bool:
+	if pending_growth_choices <= 0: return false
+	var label = ""
+	for option in GROWTH_OPTIONS:
+		if option.key == key: label = option.label
+	if label == "": return false
+	match key:
+		"strength": strength += 1
+		"dexterity": dexterity += 1
+		"intelligence": intelligence += 1
+		"hp": level_hp_bonus += 5
+		"mp": level_mp_bonus += 3
+	pending_growth_choices -= 1
+	_refresh_growth_stats()
+	_check_skill_learning()
+	var log_ui = get_node_or_null("/root/LogUI")
+	if log_ui: log_ui.add_log("成長を選択：%s" % label, Color.GOLD)
+	if is_instance_valid(_growth_selection): _growth_selection.refresh()
+	if pending_growth_choices == 0: growth_choices_finished.emit()
+	return true
+
+func wait_for_growth_choices():
+	while pending_growth_choices > 0:
+		await growth_choices_finished
+
 # レベルアップ処理
 func level_up():
 	level += 1
 	exp -= exp_to_next_level
 	exp_to_next_level = int(exp_to_next_level * 1.5)  # 次のレベルに必要な経験値を1.5倍
 	
-	# ステータスアップ (Growth System)
-	var gs = get_node_or_null("/root/GameState")
-	var rates = {"str": 0.5, "dex": 0.5, "int": 0.5, "hp": 2.0}
-	if gs:
-		rates = gs.get_growth_rates(gs.player_class)
-	
-	# Handle fractional growth
-	_accumulate_growth("str", rates.str)
-	_accumulate_growth("dex", rates.dex)
-	_accumulate_growth("int", rates.int)
-	
-	# Apply whole number increases
-	strength += _get_accumulated_increase("str")
-	dexterity += _get_accumulated_increase("dex")
-	intelligence += _get_accumulated_increase("int")
-	
-	# HP Growth (Always meaningful even if fractional, so we can accumulate similarly or just floor it)
-	# For HP, usually we get at least some. Let's use similar accumulator.
-	_accumulate_growth("hp", rates.hp)
-	level_hp_bonus += _get_accumulated_increase("hp")
-	
-	# Recalculate max HP with new bonus and current equipment
-	var equipment_stats = _get_equipment_stats()
-	max_hp = BASE_MAX_HP + initial_hp_bonus + level_hp_bonus + equipment_stats.max_hp
-	hp = max_hp  # HPを全回復
-	
-	# MP Growth
-	# INT contributes to MP directly (already handled in max_mp calc), but we can add a small flat bonus per level too
-	level_mp_bonus += 1 
-	
-	# Recalculate Max MP
-	var stats_mp_bonus = equipment_stats.get("max_mp", 0)
-	var total_int = intelligence + equipment_stats.intelligence # Note: equipment_stats.intelligence might need to be added to base if we want it to scale MP? 
-	# Actually, max_mp calculation should ideally be a property getter or helper method to avoid duplication.
-	# But for now:
-	max_mp = BASE_MAX_MP + level_mp_bonus + (total_int * 2) + stats_mp_bonus
-	mp = max_mp # Restore MP
-	
+	# Each level grants a player-selected increase, independent of class.
+	pending_growth_choices += 1
+	_refresh_growth_stats()
+	call_deferred("_show_growth_selection")
+
 	print("Level Up! Now level ", level)
 	print("Stats increased! HP: ", max_hp, " MP: ", max_mp, " STR: ", strength, " DEX: ", dexterity, " INT: ", intelligence)
 	
@@ -843,7 +862,7 @@ func level_up():
 
 	# ログに表示
 	if has_node("/root/LogUI"):
-		get_node("/root/LogUI").add_log("レベルアップ！ Lv.%d になった！ (MP+%d)" % [level, (max_mp - mp)], Color(1.0, 0.8, 0.0))
+		get_node("/root/LogUI").add_log("レベルアップ！ Lv.%d：上昇させる能力を選択してください。" % level, Color(1.0, 0.8, 0.0))
 
 	# Update UI
 	if PlayerUi:

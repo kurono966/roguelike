@@ -5643,6 +5643,7 @@ func _load_game():
 	
 	_current_game_state = TurnPhase.PLAYER_TURN
 	print("[Load] Load complete! (Total Time: %d ms)" % (Time.get_ticks_msec() - start_time))
+	player.call_deferred("_show_growth_selection")
 
 func _deserialize_map(map_array: Array, is_bool_map: bool = false) -> Array:
 	var map = []
@@ -5671,6 +5672,8 @@ func _deserialize_map(map_array: Array, is_bool_map: bool = false) -> Array:
 	return map
 
 func _deserialize_player(p, data: Dictionary):
+	if is_instance_valid(p._growth_selection): p._growth_selection.close()
+	p.pending_growth_choices = maxi(0, int(data.get("pending_growth_choices", 0)))
 	if "is_moving" in p:
 		p.is_moving = false
 	# 0. Load Class

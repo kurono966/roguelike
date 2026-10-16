@@ -56,7 +56,7 @@ func set_class_stats(class_id: int):
 			
 	# Initial Skills setup
 	match class_id:
-		0: initial_skills = ["heal", "blank_shot", "freeze"]
+		0: initial_skills = ["blank_shot"]
 		1: initial_skills = [] # Warrior
 		2: initial_skills = ["teleport"] # Rogue
 		3: initial_skills = ["fireball", "lightning"] # Mage
