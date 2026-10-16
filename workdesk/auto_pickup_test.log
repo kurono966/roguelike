@@ -45,10 +45,12 @@ ERROR: Failed loading resource: res://default_environment.tres.
    GDScript backtrace (most recent call first):
        [0] _ready (res://world/main.gd:253)
        [1] _run (res://workdesk/auto_pickup_test.gd:15)
-Dungeon placed at: (32, 10)
-NPC Spawned: はぐれ魔道士 at (640.0, 576.0)
-NPC Spawned: 村の守備隊 at (736.0, 352.0)
-NPC Spawned: 村の長老 at (384.0, 1440.0)
+Dungeon placed at: (26, 47)
+NPC Spawned: はぐれ魔道士 at (1216.0, 960.0)
+NPC Spawned: 村の長老 at (1248.0, 800.0)
+NPC Spawned: はぐれ魔道士 at (384.0, 896.0)
+NPC Spawned: はぐれ魔道士 at (224.0, 608.0)
+NPC Spawned: 村の長老 at (1440.0, 1056.0)
 Log added: 平穏な里に辿り着いた。
 _update_skill_ui() called with skills: ["heal"]
 PlayerUi found, calling update_skill_bar
@@ -94,5 +96,3 @@ Log added: インベントリがいっぱいで 癒やしの霊薬 を拾えな�
 Picked up: 癒やしの霊薬
 Log added: 癒やしの霊薬 を拾った
 AUTO_PICKUP_TEST failures=0
-WARNING: ObjectDB instances leaked at exit (run with --verbose for details).
-   at: cleanup (core/object/object.cpp:2663)

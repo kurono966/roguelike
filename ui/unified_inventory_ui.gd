@@ -328,7 +328,7 @@ func _on_item_dropped(item: BaseItem):
 	_update_stats()
 
 	if player and player.has_method("trigger_turn_end"):
-		player.trigger_turn_end()
+		player.trigger_turn_end("inventory_move")
 
 var is_throw_mode = false
 
@@ -374,7 +374,7 @@ func _on_view_item_activated(item, source_view, is_equipped):
 				_remove_world_item_of(item)
 				_refresh_floor_items()
 				_update_stats()
-				player.trigger_turn_end()
+				player.trigger_turn_end("equip")
 		else:
 			# 消費アイテム等はそのまま使用（拾わずに使用）
 			if player and player.has_method("use_item"):
@@ -382,7 +382,7 @@ func _on_view_item_activated(item, source_view, is_equipped):
 				_remove_world_item_of(item)
 				_refresh_floor_items()
 				_update_stats()
-				player.trigger_turn_end()
+				player.trigger_turn_end("item:" + item.id)
 	else:
 		# バッグ内
 		if item.is_equippable():
@@ -400,7 +400,7 @@ func _on_floor_item_pickup(item):
 		# Add log? "Picked up X"
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("%s を拾った" % item.name, Color(0.5, 1.0, 1.0))
-		player.trigger_turn_end()
+		player.trigger_turn_end("pickup")
 	else:
 		if has_node("/root/LogUI"):
 			get_node("/root/LogUI").add_log("インベントリがいっぱいです", Color(1, 0.5, 0.5))
@@ -416,7 +416,7 @@ func _on_floor_item_action(item):
 		_remove_world_item_of(item)
 		_refresh_floor_items()
 		_update_stats()
-		player.trigger_turn_end()
+		player.trigger_turn_end("equip")
 
 func _remove_world_item_of(item: BaseItem):
 	if item.has_meta("world_item_ref"):
@@ -515,7 +515,7 @@ func _on_item_drop_to_floor(item: BaseItem, origin_grid):
 		_update_stats()
 
 		if player and player.has_method("trigger_turn_end"):
-			player.trigger_turn_end()
+			player.trigger_turn_end("drop:" + item.id)
  
 		# If item is floor item, Main needs to know to remove it. 
 		# BaseItem metadata "world_item_ref" can be used by Main!

@@ -355,7 +355,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			if log_ui and log_ui.has_method("add_log"):
 				log_ui.add_log("待機中...", Color(0.7, 0.7, 0.7))
 			print("Player waits.")
-			await main_node._end_player_turn(action_floor_epoch)
+			await main_node._end_player_turn(action_floor_epoch, "wait")
 		main_node._is_processing_action = false
 		return
 
@@ -652,6 +652,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			return
 
 		if event.keycode == KEY_SPACE or event.keycode == KEY_KP_5 or event.keycode == KEY_CLEAR or _is_numpad_wait_key(event):
+			player.set_pending_action("wait")
 			action_taken = true
 
 		var direction = Vector2.ZERO

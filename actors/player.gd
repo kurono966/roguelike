@@ -36,6 +36,37 @@ var gold: int = 0:  # 所持金
 			_on_gold_changed(old_gold, value)
 var exp: int = 0  # 現在の経験値
 var exp_to_next_level: int = 10  # 次のレベルまでに必要な経験値
+var last_action_id: String = ""
+var _pending_action_id: String = ""
+var _pending_action_epoch: int = -1
+
+func set_pending_action(action_id: String):
+	_pending_action_id = action_id
+	var main = get_parent()
+	_pending_action_epoch = main._floor_epoch if main and "_floor_epoch" in main else -1
+
+func take_pending_action(fallback: String = "wait") -> String:
+	var main = get_parent()
+	var valid = not main or not "_floor_epoch" in main or _pending_action_epoch == main._floor_epoch
+	var result = _pending_action_id if valid and _pending_action_id != "" else fallback
+	_pending_action_id = ""
+	return result
+
+func record_action(action_id: String, enemies_visible: bool) -> int:
+	if action_id == "": return 0
+	var changed = last_action_id != "" and action_id != last_action_id
+	last_action_id = action_id
+	var gs = get_node_or_null("/root/GameState")
+	if not gs or gs.player_class != 0 or not enemies_visible or not changed: return 0
+	if action_id.begins_with("disabled:"): return 0
+	var restored = mini(1, maxi(0, max_mp - mp))
+	if restored > 0:
+		mp += restored
+		if PlayerUi: PlayerUi.update_mp(mp, max_mp)
+		var log_ui = get_node_or_null("/root/LogUI")
+		if log_ui: log_ui.add_log("適応力：MP +1", Color.CYAN)
+	return restored
+
 var hit_rate: float:
 	get:
 		return get_raw_hit_rate()
@@ -1293,7 +1324,8 @@ func update_on_grass(is_on_grass: bool):
 
 signal turn_end_triggered
 
-func trigger_turn_end():
+func trigger_turn_end(action_id: String = ""):
+	if action_id != "": set_pending_action(action_id)
 	turn_end_triggered.emit()
 
 # Growth accumulators
@@ -1488,6 +1520,7 @@ func use_item(item: BaseItem):
 				get_node("/root/LogUI").add_log("%s は使えない。" % item.name, Color.GRAY)
 
 func _consume_item(item, log_msg):
+	set_pending_action("item:" + item.id)
 	# Remove item from inventory (Try bag first, then equipment)
 	var removed = false
 	if equipment_component.bag_data.remove_item(item):
@@ -1782,6 +1815,7 @@ func _execute_self_skill(skill):
 	on_skill_executed(skill)
 
 func on_skill_executed(skill, auto_end_turn: bool = true):
+	set_pending_action("skill:" + str(skill.id))
 	mp -= skill.mp_cost
 	
 	# Set Cooldown

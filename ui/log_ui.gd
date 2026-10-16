@@ -129,7 +129,7 @@ func _get_log_context() -> String:
 	return "%s / T%d" % [floor_name, main._turn_count]
 
 func _is_detail_message(message: String) -> bool:
-	for prefix in ["HP回復 +", "MP回復 +", "水の中で傷が癒える", "結晶の魔力でMPが回復した", "装備変更:", "遠距離武器が再使用可能", "'H'", "'L'"]:
+	for prefix in ["適応力：", "HP回復 +", "MP回復 +", "水の中で傷が癒える", "結晶の魔力でMPが回復した", "装備変更:", "遠距離武器が再使用可能", "'H'", "'L'"]:
 		if message.begins_with(prefix): return true
 	return message.contains("ターゲットを選択してください") or message.ends_with("のターゲットを選択してください")
 

@@ -195,6 +195,8 @@ func update_status_info():
 	if player.has_knockback:
 		traits.append("[color=orange]・ノックバック付与 (攻撃時敵を弾き飛ばす)[/color]")
 	
+	if gs and gs.player_class == 0:
+		traits.append("[color=cyan]・適応力 (視界内に敵がいる時、前と異なる行動でMP+1)[/color]")
 	# Check for class specific abilities
 	if gs and gs.player_class == 2: # Rogue
 		traits.append("[color=green]・草眼 (草むらのなかの視界が広い)[/color]")

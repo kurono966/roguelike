@@ -92,6 +92,8 @@ func _update_ui():
 	if gs.initial_can_swim:
 		txt += "[color=cyan]Ability: Swimming[/color]\n"
 		
+	if gs.player_class == 0:
+		txt += "[color=cyan]Passive: 適応力（敵が視界内にいる時、異なる行動でMP+1）[/color]\n"
 	if gs.player_class == 2: # Rogue
 		txt += "[color=green]Ability: 草眼[/color]\n"
 	

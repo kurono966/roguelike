@@ -15,10 +15,19 @@ func setup(main: Node2D):
 	player = main.player
 	tile_map = main.tile_map
 
-func end_player_turn():
+func end_player_turn(action_id: String = ""):
 	var floor_epoch = main_node._floor_epoch
 	await player.wait_for_growth_choices()
 	if floor_epoch != main_node._floor_epoch: return
+	var pending_action = player.take_pending_action()
+	var committed_action = action_id if action_id != "" else pending_action
+	var sees_enemy = false
+	if not main_node._is_on_world_map:
+		for enemy in main_node._get_visible_enemies():
+			if enemy.hp > 0 and main_node._is_hostile(player, enemy):
+				sees_enemy = true
+				break
+	player.record_action(committed_action, sees_enemy)
 	# Check for bonus action (e.g. Speed Bonus)
 	if player and ("bonus_action_available" in player and player.bonus_action_available):
 		player.bonus_action_available = false
@@ -75,7 +84,7 @@ func start_player_turn():
 			await main_node.get_tree().create_timer(0.15).timeout
 			if floor_epoch != main_node._floor_epoch: return
 			
-			await end_player_turn()
+			await end_player_turn("disabled:paralysis")
 			if floor_epoch != main_node._floor_epoch: return
 			return
 		elif player.has_status_effect("sleep"):
@@ -87,7 +96,7 @@ func start_player_turn():
 			await main_node.get_tree().create_timer(0.15).timeout
 			if floor_epoch != main_node._floor_epoch: return
 			
-			await end_player_turn()
+			await end_player_turn("disabled:sleep")
 			if floor_epoch != main_node._floor_epoch: return
 			return
 
